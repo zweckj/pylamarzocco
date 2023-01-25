@@ -32,6 +32,14 @@ class LMCloud:
     def machine_mode(self):
         return self.local_get_config()[MACHINE_MODE]
 
+    @property 
+    def steam_temp(self):
+        return self.local_get_config()[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
+
+    @property
+    def coffee_temp(self):
+        return self.local_get_config()[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
+
     def __init__(self, ip, port):
         self._local_ip = ip
         self._local_port = port
@@ -104,5 +112,49 @@ class LMCloud:
             data = {"status": power_status}
             url = f"{GW_MACHINE_BASE_URL}/{self.machine_info[SERIAL_NUMBER]}/status"
             print(url)
+            response = await self.client.post(url, json=data)
+            return response
+
+    '''
+    Turn Steamboiler on or off
+    '''
+    async def set_steam(self, steam_state):
+        if not type(steam_state) == bool:
+            print("Steam state must be boolean")
+            exit(1)
+        else:
+            data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
+            url = f"{GW_MACHINE_BASE_URL}/{self.machine_info[SERIAL_NUMBER]}/enable-boiler"
+            response = await self.client.post(url, json=data)
+            return response
+
+    '''
+    Set steamboiler temperature (in Celsius)
+    '''
+    async def set_steam_temp(self, temperature):
+        if not type(temperature) == int:
+            print("Steam temp must be integer")  
+            exit(1)
+        elif not temperature == 131 and not temperature == 128 and not temperature == 126:
+            print("Steam temp must be one of 126, 128, 131 (°C)")
+            exit(1)
+        else:
+            data = { "identifier": STEAM_BOILER_NAME, "value": temperature}
+            url = f"{GW_MACHINE_BASE_URL}/{self.machine_info[SERIAL_NUMBER]}/target-boiler"
+            response = await self.client.post(url, json=data)
+            return response
+
+    '''
+    Set coffee boiler temperature (in Celsius)
+    '''
+    async def set_coffee_temp(self, temperature):
+
+        if temperature > 104 or temperature < 85:
+            print("Coffee temp must be between 85 and 104 (°C)")
+            exit(1)
+        else:
+            temperature = round(temperature, 1)
+            data = { "identifier": COFFEE_BOILER_NAME, "value": temperature}
+            url = f"{GW_MACHINE_BASE_URL}/{self.machine_info[SERIAL_NUMBER]}/target-boiler"
             response = await self.client.post(url, json=data)
             return response
