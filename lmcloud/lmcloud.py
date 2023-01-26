@@ -28,7 +28,7 @@ class LMCloud:
         if self._lm_local_api:
             return self._lm_local_api.power_status
         else:
-            self._update_current_config_sync()
+            self._sync_config_obj_task()
             if self._config["MACHINE_MODE"] == "BrewingMode":
                 return "on"
             else:
@@ -170,15 +170,15 @@ class LMCloud:
     '''
     Load the config into a variable in this class
     '''
-    async def _update_current_config(self):
+    async def _sync_config_obj(self):
         self._config = await self.get_config()
 
     '''
     Call above function in a separate task
     '''
-    def _update_current_config_sync(self):
+    def _sync_config_obj_task(self):
         loop = asyncio.get_running_loop()
-        loop.create_task(self._update_current_config())
+        loop.create_task(self._sync_config_obj())
 
     '''
     Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
