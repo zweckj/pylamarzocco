@@ -1,9 +1,10 @@
 from .const import *
 from .credentials import Credentials
 from .exceptions import *
+from .lmlocalapi import LMLocalAPI
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-import requests
+
 
 class LMCloud:  
 
@@ -19,37 +20,15 @@ class LMCloud:
     def machine_info(self):
         return self._machine_info
 
-    @property
-    def local_port(self):
-        return self._local_port
-    
-    @property
-    def local_ip(self):
-        return self._local_ip
-
-    # current power status / machine mode (on/standby)
-    @property
-    def machine_mode(self):
-        return self.local_get_config()[MACHINE_MODE]
-
-    @property 
-    def steam_temp(self):
-        return self.local_get_config()[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
-
-    @property
-    def coffee_temp(self):
-        return self.local_get_config()[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
-
-    def __init__(self, ip, port):
-        self._local_ip = ip
-        self._local_port = port
-
+    def __init__(self):
+        pass
 
     @classmethod
     async def create(cls, credentials: Credentials, ip, port):
-        self = cls(ip, port)
+        self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
+        self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         return self
         
     '''
@@ -90,15 +69,6 @@ class LMCloud:
             machine_info[MODEL_NAME] = fleet["machine"]["model"]["name"]
             return machine_info
 
-
-    '''
-    Get current config of machine from local API
-    '''
-    def local_get_config(self):
-        headers = {"Authorization": f"Bearer {self.machine_info[KEY]}"}
-        response = requests.get(f"http://{self._local_ip}:{self._local_port}/api/v1/config", headers=headers)
-        if response.status_code == 200:
-            return response.json()["data"]
 
     '''
     Turn power of machine on or off
