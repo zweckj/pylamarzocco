@@ -16,7 +16,7 @@ class LMLocalAPI:
 
     # current power status / machine mode (on/standby)
     @property
-    def machine_mode(self):
+    def power_status(self):
         return self.local_get_config()[MACHINE_MODE]
 
     @property 
