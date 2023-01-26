@@ -4,7 +4,7 @@ from .exceptions import *
 from .lmlocalapi import LMLocalAPI
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from authlib.oauth2.auth import OAuth2Token
+import asyncio
 
 
 class LMCloud:  
@@ -22,6 +22,17 @@ class LMCloud:
     @property
     def machine_info(self):
         return self._machine_info
+
+    @property
+    def power_status(self):
+        if self._lm_local_api:
+            return self._lm_local_api.power_status
+        else:
+            self._update_current_config_sync()
+            if self._config["MACHINE_MODE"] == "BrewingMode":
+                return "on"
+            else:
+                return "off"
 
     def __init__(self):
         pass
@@ -150,12 +161,24 @@ class LMCloud:
     '''
     Get configuration from cloud
     '''
-    async def get_remote_config(self):
+    async def get_config(self):
         url = f"{self._gw_url_with_serial}/configuration"
         response = await self.client.get(url)
         if response.status_code == 200:
             return response.json()["data"]
 
+    '''
+    Load the config into a variable in this class
+    '''
+    async def _update_current_config(self):
+        self._config = await self.get_config()
+
+    '''
+    Call above function in a separate task
+    '''
+    def _update_current_config_sync(self):
+        loop = asyncio.get_running_loop()
+        loop.create_task(self._update_current_config())
 
     '''
     Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
