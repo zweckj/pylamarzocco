@@ -20,6 +20,7 @@ async def main():
     # lmcloud.local_get_config()
     # await lmcloud.set_steam(True)
     #await lmcloud.set_coffee_temp(93.5)
-    await lmcloud.set_steam_temp(131)
+    # await lmcloud.set_steam_temp(131)
+    print(await lmcloud.get_coffee_boiler_enabled())
 
 asyncio.run(main())

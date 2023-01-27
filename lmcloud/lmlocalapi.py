@@ -15,17 +15,27 @@ class LMLocalAPI:
         return self._local_ip
 
     # current power status / machine mode (on/standby)
-    @property
-    def power_status(self):
-        return self.local_get_config()[MACHINE_MODE]
+    def get_coffee_boiler_enabled(self):
+        boilers = self.local_get_config()["boilers"]
+        coffee_boiler = next(item for item in boilers if item["id"] == COFFEE_BOILER_NAME)
+        return coffee_boiler["isEnabled"]
 
-    @property 
-    def steam_temp(self):
+    def get_steam_boiler_enabled(self):
+        boilers = self.local_get_config()["boilers"]
+        coffee_boiler = next(item for item in boilers if item["id"] == STEAM_BOILER_NAME)
+        return coffee_boiler["isEnabled"]
+
+    def get_steam_temp(self):
         return self.local_get_config()[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
 
-    @property
-    def coffee_temp(self):
+    def get_coffee_temp(self):
         return self.local_get_config()[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
+
+    def get_plumbin_enabled(self):
+        return self.local_get_config()[PLUMBED_IN]
+
+    def get_schedule(self):
+        return convert_schedule(self.local_get_config()[WEEKLY_SCHEDULING_CONFIG])
 
     def __init__(self, local_ip, local_port, local_bearer):
         self._local_ip = local_ip

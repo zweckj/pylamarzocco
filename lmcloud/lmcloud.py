@@ -5,7 +5,7 @@ from .lmlocalapi import LMLocalAPI
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from datetime import datetime
-import asyncio, logging
+import logging
 
 _logger = logging.getLogger(__name__)
 
@@ -13,8 +13,6 @@ class LMCloud:
 
     @property
     def client(self):
-        # if self._client.token.is_expired:
-        #     self._client.refresh_token(url=TOKEN_URL)
         return self._client
 
     @client.setter
@@ -25,19 +23,56 @@ class LMCloud:
     def machine_info(self):
         return self._machine_info
 
-    @property
-    def power_status(self):
+    async def get_coffee_boiler_enabled(self):
         if self._lm_local_api:
-            return self._lm_local_api.power_status
+            return self._lm_local_api.get_coffee_boiler_enabled()
         else:
-            self._sync_config_obj_task()
-            if self._config["MACHINE_MODE"] == "BrewingMode":
-                return "On"
-            else:
-                return "StandBy"
+            await self._update_config_obj()
+            coffee_boiler = next(item for item in self._config[str.upper(BOILERS)] if item["id"] == COFFEE_BOILER_NAME)
+            return coffee_boiler["isEnabled"]
+
+    async def get_steam_boiler_enabled(self):
+        if self._lm_local_api:
+            return self._lm_local_api.get_coffee_steam_enabled()
+        else:
+            await self._update_config_obj()
+            coffee_boiler = next(item for item in self._config[str.upper(BOILERS)] if item["id"] == STEAM_BOILER_NAME)
+            return coffee_boiler["isEnabled"]
+
+    async def get_coffee_temp(self):
+        if self._lm_local_api:
+            return self._lm_local_api.get_coffee_temp()
+        else:
+            await self._update_config_obj()
+            return self._config[str.upper(BOILER_TARGET_TEMP)][COFFEE_BOILER_NAME]
+
+    async def get_steam_temp(self):
+        if self._lm_local_api:
+            return self._lm_local_api.get_steam_temp()
+        else:
+            await self._update_config_obj()
+            return self._config[str.upper(BOILER_TARGET_TEMP)][STEAM_BOILER_NAME]
+
+    async def get_plumbin_enabled(self):
+        if self._lm_local_api:
+            return self._lm_local_api.get_plumbin_enabled()
+        else:
+            await self._update_config_obj()
+            return self._config[str.upper(PLUMBED_IN)]
+
+    async def get_schedule(self):
+        if self._lm_local_api:
+            return self._lm_local_api.get_schedule()
+        else:
+            await self._update_config_obj()
+            return convert_schedule(self._config[str.upper(WEEKLY_SCHEDULING_CONFIG)])
+
+ 
 
     def __init__(self):
         _logger.setLevel(logging.DEBUG)
+        self._lm_local_api   = None
+        self. _config        = None
 
     '''
     Initialize a cloud only client
@@ -108,8 +143,8 @@ class LMCloud:
         power_status = str.upper(power_status)
         if not power_status in ["ON", "STANDBY"]:
             msg = "Power status can only be on or standby"
-            self._logger.debug()
-            exit(1)
+            self._logger.debug(msg)
+            raise ValueError(msg)
         else:
             data = {"status": power_status}
             url = f"{self._gw_url_with_serial}/status"
@@ -123,7 +158,7 @@ class LMCloud:
         if not type(steam_state) == bool:
             msg = "Steam state must be boolean"
             _logger.debug(msg)
-            raise ValueError(msg)
+            raise TypeError(msg)
         else:
             data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
             url = f"{self._gw_url_with_serial}/enable-boiler"
@@ -137,7 +172,7 @@ class LMCloud:
         if not type(temperature) == int:
             msg = "Steam temp must be integer"
             _logger.debug(msg)
-            raise ValueError(msg)
+            raise TypeError(msg)
         elif not temperature == 131 and not temperature == 128 and not temperature == 126:
             msg = "Steam temp must be one of 126, 128, 131 (°C)"
             _logger.debug(msg)
@@ -176,7 +211,7 @@ class LMCloud:
     '''
     Load the config into a variable in this class
     '''
-    async def _sync_config_obj(self):
+    async def _update_config_obj(self):
         if self._config:
             # wait at least 10 seconds between config uüpdates to not flood the remote API
             if (datetime.now() - self._last_config_update).total_seconds() < 10:
@@ -185,18 +220,15 @@ class LMCloud:
         self._last_config_update = datetime.now()
 
     '''
-    Call above function in a separate task
-    '''
-    def _sync_config_obj_task(self):
-        loop = asyncio.get_running_loop()
-        loop.create_task(self._sync_config_obj())
-
-    '''
     Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
     '''
     async def _set_pre_brew_infusion(self, mode):
         if mode != "Disabled" and mode != "TypeB" and mode != "Enabled":
             msg = "Pre-Infusion/Pre-Brew can only be TypeB (PreInfusion), Enabled (Pre-Brew) or Disabled"
+            _logger.debug(msg)
+            raise ValueError(msg)
+        elif mode == "TypedB" and not (await self.get_plumbin_enabled()):
+            msg = "Pre-Infusion can only be enabled when plumbin is enabled"
             _logger.debug(msg)
             raise ValueError(msg)
         else:
@@ -224,7 +256,7 @@ class LMCloud:
         if type(prebrewOnTime) != int or type(prebrewOffTime) != int:
             msg = "Prebrew times must be in ms (integer)"
             _logger.debug(msg)
-            raise ValueError(msg)
+            raise TypeError(msg)
         else:
             if prebrewOnTime % 100 != 0 or prebrewOffTime % 100 != 0:
                 msg = "Prebrew times must be multiple of 100"
@@ -248,7 +280,7 @@ class LMCloud:
         if not type(enable) == bool:
             msg = "Enable param must be boolean"
             _logger.debug(msg)
-            raise ValueError(msg)
+            raise TypeError(msg)
         else:
             data = {"enable": enable}
             url = f"{self._gw_url_with_serial}/enable-plumbin"
