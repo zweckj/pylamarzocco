@@ -26,7 +26,9 @@ class LMCloud:
 
 
     '''
-    Getters for current machine configuration
+    *******************************************
+    ***  Getters for current machine state ****
+    *******************************************
     '''
 
     # will return current machine mode (Brewing/StandBy)
@@ -91,7 +93,9 @@ class LMCloud:
     
 
     '''
-    Functions
+    *******************************************
+    ***********  Functions ********************
+    *******************************************
     '''
 
     def __init__(self):
@@ -156,6 +160,31 @@ class LMCloud:
         if self.client.token.is_expired():
             await self.client.refresh_token(TOKEN_URL)
 
+    '''
+    Get configuration from cloud
+    '''
+    async def get_config(self):
+        url = f"{self._gw_url_with_serial}/configuration"
+        self.client.update_token()
+        response = await self.client.get(url)
+        if response.status_code == 200:
+            return response.json()["data"]
+
+    '''
+    Load the config into a variable in this class
+    '''
+    async def _update_config_obj(self):
+        if self._config:
+            # wait at least 10 seconds between config uüpdates to not flood the remote API
+            if (datetime.now() - self._last_config_update).total_seconds() < 10:
+                return
+        self._config = await self.get_config()
+        self._last_config_update = datetime.now()
+
+
+    '''
+    Get Basic machine info from the customer endpoint
+    '''
     async def _get_machine_info(self):
         self.client.update_token()
         response = await self.client.get(CUSTOMER_URL)
@@ -235,27 +264,6 @@ class LMCloud:
             self.client.update_token()
             response = await self.client.post(url, json=data)
             return response
-
-    '''
-    Get configuration from cloud
-    '''
-    async def get_config(self):
-        url = f"{self._gw_url_with_serial}/configuration"
-        self.client.update_token()
-        response = await self.client.get(url)
-        if response.status_code == 200:
-            return response.json()["data"]
-
-    '''
-    Load the config into a variable in this class
-    '''
-    async def _update_config_obj(self):
-        if self._config:
-            # wait at least 10 seconds between config uüpdates to not flood the remote API
-            if (datetime.now() - self._last_config_update).total_seconds() < 10:
-                return
-        self._config = await self.get_config()
-        self._last_config_update = datetime.now()
 
     '''
     Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
