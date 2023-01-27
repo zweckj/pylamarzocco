@@ -125,7 +125,15 @@ class LMCloud:
         except OAuthError as err:
             raise AuthFail("Authorization failure") from err
 
+    '''
+    update OAuth Token in client
+    '''
+    async def update_token(self):
+        if self.client.token.is_expired():
+            await self.client.refresh_token(TOKEN_URL)
+
     async def _get_machine_info(self):
+        self.client.update_token()
         response = await self.client.get(CUSTOMER_URL)
         if response.status_code == 200:
             machine_info = {}
@@ -149,6 +157,7 @@ class LMCloud:
         else:
             data = {"status": power_status}
             url = f"{self._gw_url_with_serial}/status"
+            self.client.update_token()
             response = await self.client.post(url, json=data)
             return response
 
@@ -163,6 +172,7 @@ class LMCloud:
         else:
             data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
             url = f"{self._gw_url_with_serial}/enable-boiler"
+            self.client.update_token()
             response = await self.client.post(url, json=data)
             return response
 
@@ -181,6 +191,7 @@ class LMCloud:
         else:
             data = { "identifier": STEAM_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
+            self.client.update_token()
             response = await self.client.post(url, json=data)
             return response
 
@@ -197,6 +208,7 @@ class LMCloud:
             temperature = round(temperature, 1)
             data = { "identifier": COFFEE_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
+            self.client.update_token()
             response = await self.client.post(url, json=data)
             return response
 
@@ -205,6 +217,7 @@ class LMCloud:
     '''
     async def get_config(self):
         url = f"{self._gw_url_with_serial}/configuration"
+        self.client.update_token()
         response = await self.client.get(url)
         if response.status_code == 200:
             return response.json()["data"]
@@ -235,6 +248,7 @@ class LMCloud:
         else:
             url = f"{self._gw_url_with_serial}/enable-preinfusion"
             data = {"mode": mode}
+            self.client.update_token()
             response = await self.client.post(url, json=data)
             return response
 
@@ -270,7 +284,7 @@ class LMCloud:
                 "holdTimeMs": prebrewOffTime,
                 "wetTimeMs": prebrewOnTime
             }
-
+            self.client.update_token()
             response = await self.client.post(url, json=data)
             return response
 
@@ -285,6 +299,7 @@ class LMCloud:
         else:
             data = {"enable": enable}
             url = f"{self._gw_url_with_serial}/enable-plumbin"
+            self.client.update_token()
             response = await self.client.post(url, json=data)
             return response
 
@@ -339,5 +354,6 @@ class LMCloud:
     async def configure_schedule(self, enable: bool, schedule: list):
         url = f"{self._gw_url_with_serial}/scheduling"
         data = {"enable": enable, "days": schedule}
+        self.client.update_token()
         response = await self.client.post(url, json=data)
         return response
