@@ -16,6 +16,9 @@ class LMLocalAPI:
         return self._local_ip
 
     # current power status / machine mode (on/standby)
+    def get_machine_mode(self):
+        return self.local_get_config()[MACHINE_MODE]
+
     def get_coffee_boiler_enabled(self):
         boilers = self.local_get_config()["boilers"]
         coffee_boiler = next(item for item in boilers if item["id"] == COFFEE_BOILER_NAME)
@@ -34,6 +37,9 @@ class LMLocalAPI:
 
     def get_plumbin_enabled(self):
         return self.local_get_config()[PLUMBED_IN]
+
+    def get_preinfusion_settings(self):
+        return self.local_get_config()[PRE_INFUSION_SETTINGS]
 
     def get_schedule(self):
         return convert_schedule(self.local_get_config()[WEEKLY_SCHEDULING_CONFIG])

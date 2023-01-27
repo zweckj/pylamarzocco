@@ -24,6 +24,19 @@ class LMCloud:
     def machine_info(self):
         return self._machine_info
 
+
+    '''
+    Getters for current machine configuration
+    '''
+
+    # will return current machine mode (Brewing/StandBy)
+    async def get_machine_mode(self):
+        if self._lm_local_api:
+            return self._lm_local_api.get_machine_mode()
+        else:
+            await self._update_config_obj()
+            return self._config[str.upper(MACHINE_MODE)]
+
     async def get_coffee_boiler_enabled(self):
         if self._lm_local_api:
             return self._lm_local_api.get_coffee_boiler_enabled()
@@ -61,6 +74,13 @@ class LMCloud:
             await self._update_config_obj()
             return self._config[str.upper(PLUMBED_IN)]
 
+    async def get_preinfusion_settings(self):
+        if self._lm_local_api:
+            return self._lm_local_api.get_preinfusion_settings(self)
+        else:
+            await self._update_config_obj()
+            return self._config[str.upper(PRE_INFUSION_SETTINGS)]
+
     async def get_schedule(self):
         if self._lm_local_api:
             return self._lm_local_api.get_schedule()
@@ -68,7 +88,11 @@ class LMCloud:
             await self._update_config_obj()
             return convert_schedule(self._config[str.upper(WEEKLY_SCHEDULING_CONFIG)])
 
- 
+    
+
+    '''
+    Functions
+    '''
 
     def __init__(self):
         _logger.setLevel(logging.DEBUG)
