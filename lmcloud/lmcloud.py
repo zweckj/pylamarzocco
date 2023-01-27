@@ -114,7 +114,7 @@ class LMCloud:
     Also initialize a local API client
     '''
     @classmethod
-    async def create_with_local_api(cls, credentials: Credentials, ip, port):
+    async def create_with_local_api(cls, credentials: Credentials, ip, port=8081):
         self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()

@@ -44,7 +44,7 @@ class LMLocalAPI:
     def get_schedule(self):
         return convert_schedule(self.local_get_config()[WEEKLY_SCHEDULING_CONFIG])
 
-    def __init__(self, local_ip, local_port, local_bearer):
+    def __init__(self, local_ip, local_bearer, local_port=8081):
         self._local_ip = local_ip
         self._local_port = local_port
         self._local_bearer = local_bearer
