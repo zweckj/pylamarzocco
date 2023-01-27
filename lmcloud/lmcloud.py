@@ -175,7 +175,7 @@ class LMCloud:
     '''
     async def _update_config_obj(self):
         if self._config:
-            # wait at least 10 seconds between config uüpdates to not flood the remote API
+            # wait at least 10 seconds between config updates to not flood the remote API
             if (datetime.now() - self._last_config_update).total_seconds() < 10:
                 return
         self._config = await self.get_config()
@@ -337,7 +337,9 @@ class LMCloud:
 
     '''
     Set auto-on/off schedule
-    days object:
+
+
+    schedule object:
     [
         {
             "day": "MONDAY",
