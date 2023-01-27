@@ -30,9 +30,9 @@ class LMCloud:
         else:
             self._sync_config_obj_task()
             if self._config["MACHINE_MODE"] == "BrewingMode":
-                return "on"
+                return "On"
             else:
-                return "off"
+                return "StandBy"
 
     def __init__(self):
         pass
