@@ -1,5 +1,6 @@
 import requests
 from .const import *
+from .helpers import *
 
 '''
 This class is for interaction with the new local API currently only the Micra exposes

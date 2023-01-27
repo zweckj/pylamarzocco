@@ -2,6 +2,7 @@ from .const import *
 from .credentials import Credentials
 from .exceptions import *
 from .lmlocalapi import LMLocalAPI
+from .helpers import *
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from datetime import datetime
