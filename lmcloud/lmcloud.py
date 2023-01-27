@@ -4,8 +4,10 @@ from .exceptions import *
 from .lmlocalapi import LMLocalAPI
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-import asyncio
+from datetime import datetime
+import asyncio, logging
 
+_logger = logging.getLogger(__name__)
 
 class LMCloud:  
 
@@ -35,7 +37,7 @@ class LMCloud:
                 return "StandBy"
 
     def __init__(self):
-        pass
+        _logger.setLevel(logging.DEBUG)
 
     '''
     Initialize a cloud only client
@@ -105,12 +107,12 @@ class LMCloud:
     async def set_power(self, power_status):
         power_status = str.upper(power_status)
         if not power_status in ["ON", "STANDBY"]:
-            print("Power status can only be on or standby")
+            msg = "Power status can only be on or standby"
+            self._logger.debug()
             exit(1)
         else:
             data = {"status": power_status}
             url = f"{self._gw_url_with_serial}/status"
-            print(url)
             response = await self.client.post(url, json=data)
             return response
 
@@ -119,8 +121,9 @@ class LMCloud:
     '''
     async def set_steam(self, steam_state:bool):
         if not type(steam_state) == bool:
-            print("Steam state must be boolean")
-            exit(1)
+            msg = "Steam state must be boolean"
+            _logger.debug(msg)
+            raise ValueError(msg)
         else:
             data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
             url = f"{self._gw_url_with_serial}/enable-boiler"
@@ -132,11 +135,13 @@ class LMCloud:
     '''
     async def set_steam_temp(self, temperature:int):
         if not type(temperature) == int:
-            print("Steam temp must be integer")  
-            exit(1)
+            msg = "Steam temp must be integer"
+            _logger.debug(msg)
+            raise ValueError(msg)
         elif not temperature == 131 and not temperature == 128 and not temperature == 126:
-            print("Steam temp must be one of 126, 128, 131 (°C)")
-            exit(1)
+            msg = "Steam temp must be one of 126, 128, 131 (°C)"
+            _logger.debug(msg)
+            raise ValueError(msg)
         else:
             data = { "identifier": STEAM_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
@@ -149,8 +154,9 @@ class LMCloud:
     async def set_coffee_temp(self, temperature:int):
 
         if temperature > 104 or temperature < 85:
-            print("Coffee temp must be between 85 and 104 (°C)")
-            exit(1)
+            msg = "Coffee temp must be between 85 and 104 (°C)"
+            _logger.debug(msg)
+            raise ValueError(msg)
         else:
             temperature = round(temperature, 1)
             data = { "identifier": COFFEE_BOILER_NAME, "value": temperature}
@@ -171,7 +177,12 @@ class LMCloud:
     Load the config into a variable in this class
     '''
     async def _sync_config_obj(self):
+        if self._config:
+            # wait at least 10 seconds between config uüpdates to not flood the remote API
+            if (datetime.now() - self._last_config_update).total_seconds() < 10:
+                return
         self._config = await self.get_config()
+        self._last_config_update = datetime.now()
 
     '''
     Call above function in a separate task
@@ -185,8 +196,9 @@ class LMCloud:
     '''
     async def _set_pre_brew_infusion(self, mode):
         if mode != "Disabled" and mode != "TypeB" and mode != "Enabled":
-            print("Pre-Infusion/Pre-Brew can only be TypeB (PreInfusion), Enabled (Pre-Brew) or Disabled")
-            exit(1)
+            msg = "Pre-Infusion/Pre-Brew can only be TypeB (PreInfusion), Enabled (Pre-Brew) or Disabled"
+            _logger.debug(msg)
+            raise ValueError(msg)
         else:
             url = f"{self._gw_url_with_serial}/enable-preinfusion"
             data = {"mode": mode}
@@ -210,12 +222,14 @@ class LMCloud:
     '''
     async def configure_prebrew(self, prebrewOnTime=5000, prebrewOffTime=5000):
         if type(prebrewOnTime) != int or type(prebrewOffTime) != int:
-            print("Prebrew times must be in ms (integer)")
-            exit(1)
+            msg = "Prebrew times must be in ms (integer)"
+            _logger.debug(msg)
+            raise ValueError(msg)
         else:
             if prebrewOnTime % 100 != 0 or prebrewOffTime % 100 != 0:
-                print("Prebrew times must be multiple of 100")
-                exit (1)
+                msg = "Prebrew times must be multiple of 100"
+                _logger.debug(msg)
+                raise ValueError(msg)
             url = f"{self._gw_url_with_serial}/setting-preinfusion"
             data = {
                 "button": "Continuous",
@@ -232,8 +246,9 @@ class LMCloud:
     '''
     async def enable_plumbin(self, enable:bool):
         if not type(enable) == bool:
-            print("Enable param must be boolean")
-            exit(1)
+            msg = "Enable param must be boolean"
+            _logger.debug(msg)
+            raise ValueError(msg)
         else:
             data = {"enable": enable}
             url = f"{self._gw_url_with_serial}/enable-plumbin"
