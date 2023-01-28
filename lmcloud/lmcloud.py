@@ -152,20 +152,14 @@ class LMCloud:
     
         except OAuthError as err:
             raise AuthFail("Authorization failure") from err
-
-    '''
-    update OAuth Token in client
-    '''
-    async def update_token(self):
-        if self.client.token.is_expired():
-            await self.client.refresh_token(TOKEN_URL)
+        
 
     '''
     Get configuration from cloud
     '''
     async def get_config(self):
         url = f"{self._gw_url_with_serial}/configuration"
-        return await self.rest_api_call(url=url, verb="GET")
+        return await self._rest_api_call(url=url, verb="GET")
 
     '''
     Load the config into a variable in this class
@@ -181,9 +175,10 @@ class LMCloud:
     '''
     Wrapper for the API call
     '''
-    async def rest_api_call(self, url, verb="GET", data=None):
+    async def _rest_api_call(self, url, verb="GET", data=None):
         # make sure oauth token is still valid
-        self.update_token()
+        if self.client.token.is_expired():
+            await self.client.refresh_token(TOKEN_URL)
 
         # make API call
         if verb == "GET":
@@ -206,7 +201,7 @@ class LMCloud:
     Get Basic machine info from the customer endpoint
     '''
     async def _get_machine_info(self):
-        data = await self.rest_api_call(url=CUSTOMER_URL, verb="GET")
+        data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
 
         machine_info = {}
         fleet = data["fleet"][0]
@@ -229,7 +224,7 @@ class LMCloud:
         else:
             data = {"status": power_status}
             url = f"{self._gw_url_with_serial}/status"
-            return await self.rest_api_call(url=url, verb="POST", data=data)
+            return await self._rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Turn Steamboiler on or off
@@ -242,7 +237,7 @@ class LMCloud:
         else:
             data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
             url = f"{self._gw_url_with_serial}/enable-boiler"
-            return await self.rest_api_call(url=url, verb="POST", data=data)
+            return await self._rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Set steamboiler temperature (in Celsius)
@@ -259,7 +254,7 @@ class LMCloud:
         else:
             data = { "identifier": STEAM_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            return await self.rest_api_call(url=url, verb="POST", data=data)
+            return await self._rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Set coffee boiler temperature (in Celsius)
@@ -274,7 +269,7 @@ class LMCloud:
             temperature = round(temperature, 1)
             data = { "identifier": COFFEE_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            return await self.rest_api_call(url=url, verb="POST", data=data)
+            return await self._rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
@@ -291,7 +286,7 @@ class LMCloud:
         else:
             url = f"{self._gw_url_with_serial}/enable-preinfusion"
             data = {"mode": mode}
-            return await self.rest_api_call(url=url, verb="POST", data=data)
+            return await self._rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Enable/Disable Pre-brew (Mode = Enabled)
@@ -325,7 +320,7 @@ class LMCloud:
                 "holdTimeMs": prebrewOffTime,
                 "wetTimeMs": prebrewOnTime
             }
-            return await self.rest_api_call(url=url, verb="POST", data=data)
+            return await self._rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Enable or disable plumbin mode
@@ -338,7 +333,7 @@ class LMCloud:
         else:
             data = {"enable": enable}
             url = f"{self._gw_url_with_serial}/enable-plumbin"
-            return await self.rest_api_call(url=url, verb="POST", data=data)
+            return await self._rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Set auto-on/off schedule
@@ -393,4 +388,4 @@ class LMCloud:
     async def configure_schedule(self, enable: bool, schedule: list):
         url = f"{self._gw_url_with_serial}/scheduling"
         data = {"enable": enable, "days": schedule}
-        return await self.rest_api_call(url=url, verb="POST", data=data)
+        return await self._rest_api_call(url=url, verb="POST", data=data)
