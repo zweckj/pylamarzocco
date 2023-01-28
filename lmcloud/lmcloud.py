@@ -165,9 +165,7 @@ class LMCloud:
     '''
     async def get_config(self):
         url = f"{self._gw_url_with_serial}/configuration"
-        self.update_token()
-        response = await self.client.get(url)
-        return self.ensure_success_response(response)
+        return await self.rest_api_call(url=url, verb="GET")
 
     '''
     Load the config into a variable in this class
@@ -181,30 +179,42 @@ class LMCloud:
         self._last_config_update = datetime.now()
 
     '''
-    Ensure the HTTP response code is 200
+    Wrapper for the API call
     '''
-    def ensure_success_response(self, response):
+    async def rest_api_call(self, url, verb="GET", data=None):
+        # make sure oauth token is still valid
+        self.update_token()
+
+        # make API call
+        if verb == "GET":
+            response = await self.client.get(url)
+        elif verb == "POST":
+            response = await self.client.post(url, json=data)
+        else:
+            raise NotImplemented(f"Wrapper function for Verb {verb} not implemented yet!")
+        
+        # ensure status code indicates success
         if response.is_success:
             return response.json()["data"]
         else:
             msg = f"Request to endpoint {response.url} failed with status code {response.status_code}"
             _logger.info(f"{msg}. Details: {response.text}")
             raise RequestNotSuccessful(msg)
+        
 
     '''
     Get Basic machine info from the customer endpoint
     '''
     async def _get_machine_info(self):
-        self.update_token()
-        response = await self.client.get(CUSTOMER_URL)
-        if response.status_code == 200:
-            machine_info = {}
-            fleet = response.json()["data"]["fleet"][0]
-            machine_info[KEY] = fleet["communicationKey"]
-            machine_info[SERIAL_NUMBER] = fleet["machine"]["serialNumber"]
-            machine_info[MACHINE_NAME] = fleet["name"]
-            machine_info[MODEL_NAME] = fleet["machine"]["model"]["name"]
-            return machine_info
+        data = await self.rest_api_call(url=CUSTOMER_URL, verb="GET")
+
+        machine_info = {}
+        fleet = data["fleet"][0]
+        machine_info[KEY] = fleet["communicationKey"]
+        machine_info[SERIAL_NUMBER] = fleet["machine"]["serialNumber"]
+        machine_info[MACHINE_NAME] = fleet["name"]
+        machine_info[MODEL_NAME] = fleet["machine"]["model"]["name"]
+        return machine_info
 
 
     '''
@@ -219,9 +229,7 @@ class LMCloud:
         else:
             data = {"status": power_status}
             url = f"{self._gw_url_with_serial}/status"
-            self.update_token()
-            response = await self.client.post(url, json=data)
-            return self.ensure_success_response(response)
+            return await self.rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Turn Steamboiler on or off
@@ -234,9 +242,7 @@ class LMCloud:
         else:
             data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
             url = f"{self._gw_url_with_serial}/enable-boiler"
-            self.update_token()
-            response = await self.client.post(url, json=data)
-            return self.ensure_success_response(response)
+            return await self.rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Set steamboiler temperature (in Celsius)
@@ -253,9 +259,7 @@ class LMCloud:
         else:
             data = { "identifier": STEAM_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            self.update_token()
-            response = await self.client.post(url, json=data)
-            return self.ensure_success_response(response)
+            return await self.rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Set coffee boiler temperature (in Celsius)
@@ -270,9 +274,7 @@ class LMCloud:
             temperature = round(temperature, 1)
             data = { "identifier": COFFEE_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            self.update_token()
-            response = await self.client.post(url, json=data)
-            return self.ensure_success_response(response)
+            return await self.rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
@@ -289,9 +291,7 @@ class LMCloud:
         else:
             url = f"{self._gw_url_with_serial}/enable-preinfusion"
             data = {"mode": mode}
-            self.update_token()
-            response = await self.client.post(url, json=data)
-            return self.ensure_success_response(response)
+            return await self.rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Enable/Disable Pre-brew (Mode = Enabled)
@@ -325,9 +325,7 @@ class LMCloud:
                 "holdTimeMs": prebrewOffTime,
                 "wetTimeMs": prebrewOnTime
             }
-            self.update_token()
-            response = await self.client.post(url, json=data)
-            return self.ensure_success_response(response)
+            return await self.rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Enable or disable plumbin mode
@@ -340,9 +338,7 @@ class LMCloud:
         else:
             data = {"enable": enable}
             url = f"{self._gw_url_with_serial}/enable-plumbin"
-            self.update_token()
-            response = await self.client.post(url, json=data)
-            return self.ensure_success_response(response)
+            return await self.rest_api_call(url=url, verb="POST", data=data)
 
     '''
     Set auto-on/off schedule
@@ -397,6 +393,4 @@ class LMCloud:
     async def configure_schedule(self, enable: bool, schedule: list):
         url = f"{self._gw_url_with_serial}/scheduling"
         data = {"enable": enable, "days": schedule}
-        self.update_token()
-        response = await self.client.post(url, json=data)
-        return self.ensure_success_response(response)
+        return await self.rest_api_call(url=url, verb="POST", data=data)
