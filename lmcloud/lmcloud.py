@@ -167,7 +167,7 @@ class LMCloud:
     async def _update_config_obj(self):
         if self._config:
             # wait at least 10 seconds between config updates to not flood the remote API
-            if (datetime.now() - self._last_config_update).total_seconds() < 10:
+            if (datetime.now() - self._last_config_update).total_seconds() < POLLING_DELAY_S:
                 return
         self._config = await self.get_config()
         self._last_config_update = datetime.now()

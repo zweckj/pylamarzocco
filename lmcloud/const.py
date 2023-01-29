@@ -3,6 +3,8 @@ TOKEN_URL = "https://cms.lamarzocco.io/oauth/v2/token"
 CUSTOMER_URL = "https://cms.lamarzocco.io/api/customer"
 GW_MACHINE_BASE_URL = "https://gw.lamarzocco.io/v1/home/machines"
 
+POLLING_DELAY_S = 10
+
 
 # Key Names for Dictionaries
 KEY = "key"
@@ -20,4 +22,3 @@ PLUMBED_IN = "isPlumbedIn"
 PRE_INFUSION_SETTINGS = "preinfusionSettings"
 WEEKLY_SCHEDULING_CONFIG = "weeklySchedulingConfig"
 
-        
