@@ -24,6 +24,10 @@ class LMCloud:
     def machine_info(self):
         return self._machine_info
 
+    @property
+    def model_name(self):
+        return self._machine_info[MODEL_NAME]
+
 
     '''
     *******************************************
