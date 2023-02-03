@@ -393,3 +393,11 @@ class LMCloud:
         url = f"{self._gw_url_with_serial}/scheduling"
         data = {"enable": enable, "days": schedule}
         return await self._rest_api_call(url=url, verb="POST", data=data)
+
+    '''
+    Send command to start backflushing
+    '''
+    async def start_backflush(self):
+        url = f"{self._gw_url_with_serial}/enable-backflush"
+        data = {"enable": True}
+        return await self._rest_api_call(url=url, verb="POST", data=data)
