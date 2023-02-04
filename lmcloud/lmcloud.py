@@ -96,7 +96,7 @@ class LMCloud:
     # update config object
     async def get_status(self):
         if self._lm_local_api:
-            return self._lm_local_api.local_get_config()
+            self._lm_local_api.local_get_config()
         else:
             await self._update_config_obj()
     
