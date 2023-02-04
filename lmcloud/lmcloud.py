@@ -1,5 +1,4 @@
 from .const import *
-from .credentials import Credentials
 from .exceptions import *
 from .lmlocalapi import LMLocalAPI
 from .helpers import *
@@ -111,7 +110,7 @@ class LMCloud:
     Initialize a cloud only client
     '''
     @classmethod
-    async def create(cls, credentials: Credentials):
+    async def create(cls, credentials):
         self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
@@ -122,7 +121,7 @@ class LMCloud:
     Also initialize a local API client
     '''
     @classmethod
-    async def create_with_local_api(cls, credentials: Credentials, ip, port=8081):
+    async def create_with_local_api(cls, credentials, ip, port=8081):
         self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
@@ -133,23 +132,23 @@ class LMCloud:
     '''
     Establish connection by building the OAuth client and requesting the token
     '''
-    async def _connect(self, credentials: Credentials):
+    async def _connect(self, credentials):
         client = AsyncOAuth2Client(
-            client_id=credentials.client_id,
-            client_secret=credentials.client_secret,
+            client_id=credentials["client_id"],
+            client_secret=credentials["client_secret"],
             token_endpoint=TOKEN_URL
         )
 
         headers = {
-            "client_id": credentials.client_id,
-            "client_secret": credentials.client_secret,
+            "client_id": credentials["client_id"],
+            "client_secret": credentials["client_secret"],
         }
 
         try:
             await client.fetch_token(
                 url=TOKEN_URL,
-                username=credentials.username,
-                password=credentials.password,
+                username=credentials["username"],
+                password=credentials["password"],
                 headers=headers,
             )
             return client

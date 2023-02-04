@@ -7,12 +7,12 @@ async def main():
     with open("config.json") as f:
         data = json.load(f)
 
-    creds = Credentials(
-        client_id=data["client_id"],
-        client_secret=data["client_secret"],
-        username=data["username"],
-        password=data["password"]
-    )
+    creds = {
+        "client_id": data["client_id"],
+        "client_secret": data["client_secret"],
+        "username": data["username"],
+        "password": data["password"]
+    }
 
     lmcloud = await LMCloud.create(creds)
     # lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
