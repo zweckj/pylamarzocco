@@ -12,7 +12,7 @@ Because of that reason the config object `self._config` in the lmcloud instance 
 # Setup
 
 ## lmcloud
-To run `lmcloud` you will first need to create a `Credentials` object, containing `clientId`, `clientSecret`, `username` and `password`.
+To run `lmcloud` you will first need to create a dict, containing `clientId`, `clientSecret`, `username` and `password`.
 
 `username` and `password` are easy to get because those are the credentials you're using to sign into the La Marzocco Home app.
 
@@ -29,18 +29,18 @@ You then need to create a file called `config.json` looking like this:
 }
 ```
 
-Which then needs to be passed into a `Credentials` object:
+Which then needs to be passed into a dictionary:
 
 ```python
 with open("config.json") as f:
     data = json.load(f)
 
-creds = Credentials(
-    client_id=data["client_id"],
-    client_secret=data["client_secret"],
-    username=data["username"],
-    password=data["password"]
-)
+creds = {
+    "client_id": data["client_id"],
+    "client_secret": data["client_secret"],
+    "username": data["username"],
+    "password": data["password"]
+}
 
 ```
 
