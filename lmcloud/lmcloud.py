@@ -93,6 +93,12 @@ class LMCloud:
             await self._update_config_obj()
             return convert_schedule(self._config[str.upper(WEEKLY_SCHEDULING_CONFIG)])
 
+    # update config object
+    async def get_status(self):
+        if self._lm_local_api:
+            return self._lm_local_api.local_get_config()
+        else:
+            await self._update_config_obj()
     
 
     '''
