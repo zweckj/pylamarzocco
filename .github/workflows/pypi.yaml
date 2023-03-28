@@ -14,16 +14,19 @@ jobs:
     # permissions:
     #  id-token: write 
     steps:
-    - uses: actions/checkout@v3
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.8"
+        python-version: "3.x"
     
     - name: Build source and wheel distributions
       run: |
-        python -m pip install -U pip setuptools
         python -m pip install --upgrade build twine
         python -m build
         twine check --strict dist/*
@@ -32,3 +35,4 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
+      
