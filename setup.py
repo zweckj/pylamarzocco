@@ -23,7 +23,7 @@ setuptools.setup(
         "Programming Language :: Python :: Implementation :: CPython",
     ],
     packages=setuptools.find_packages(),
-    install_requires=["httpx>=0.16.1", "authlib>=0.15.5,<1.*", "requests>=2.25.1,<3.*"],
+    install_requires=["httpx>=0.16.1", "authlib>=0.15.5,<1.0", "requests>=2.25.1,<3.0"],
     package_data={
         "license": ["LICENSE"],
     },
