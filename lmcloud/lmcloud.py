@@ -400,11 +400,11 @@ class LMCloud:
         return await self._rest_api_call(url=url, verb="POST", data=data)
 
     async def set_auto_on_off(self,
-            day_of_week=day_of_week,
-            hour_on=hour_on,
-            minute_on=minute_on,
-            hour_off=hour_off,
-            minute_off=minute_off):
+            day_of_week,
+            hour_on,
+            minute_on,
+            hour_off,
+            minute_off):
 
         schedule = self.get_schedule()
         idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week][0]
