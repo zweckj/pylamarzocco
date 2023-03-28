@@ -41,7 +41,7 @@ jobs:
     
     - name: Update PyPi version
       run: |
-        sed -i '/s/version=*/version="${{ steps.semver.outputs.patch }}"/'  setup.py
+        sed -i 's/version=*/version="${{ steps.semver.outputs.patch }}"/'  setup.py
     
     - name: Build source and wheel distributions
       run: |
