@@ -19,6 +19,13 @@ jobs:
       with:
         python-version: "3.x"
     
+    - name: Update setuptools
+      run: >-
+        python -m 
+        pip install 
+        setuptools
+        -U
+    
     - name: Install pypa/build
       run: >-
         python -m
