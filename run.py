@@ -18,11 +18,13 @@ async def main():
     # await lmcloud.set_power("standby")
     # lmcloud.local_get_config()
     # await lmcloud.set_steam(True)
-    #await lmcloud.set_coffee_temp(93.5)
+    #await lmcloud.set_coffee_temp(93.5) 
     # await lmcloud.set_steam_temp(131)
     # print(await lmcloud.get_coffee_boiler_enabled())
-    v = lmcloud.firmware_version
-    schedule = await lmcloud.get_schedule()
-    print(schedule)
+    # config = await lmcloud.get_config()
+    await lmcloud.get_status()
+    current_status = lmcloud.current_status
+    print(current_status[("global", "auto")])
+    print("Done")
 
 asyncio.run(main())
