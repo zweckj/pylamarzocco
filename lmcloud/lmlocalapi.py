@@ -57,6 +57,6 @@ class LMLocalAPI:
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         response = requests.get(f"http://{self._local_ip}:{self._local_port}/api/v1/config", headers=headers)
         if response.status_code == 200:
-            return response.json()["data"]
+            return response.json()
 
     
