@@ -23,8 +23,7 @@ async def main():
     # print(await lmcloud.get_coffee_boiler_enabled())
     # config = await lmcloud.get_config()
     await lmcloud.get_status()
-    current_status = lmcloud.current_status
-    print(current_status[("global", "auto")])
+    await lmcloud.set_steam(False)
     print("Done")
 
 asyncio.run(main())
