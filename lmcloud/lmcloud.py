@@ -35,6 +35,16 @@ class LMCloud:
     @property
     def config(self):
         return {k.upper():v for k,v in self._config.items()}
+    
+    @property 
+    def current_status(self):
+        return {
+            "power": True if self.config[MACHINE_MODE] == "BrewingMode" else False,
+            "enable_prebrewing": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
+            "enable_preinfusion": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
+            "steam_boiler_enable": next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)["isEnabled"],
+            ("global", "auto"): self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"]
+        }
 
 
     '''
