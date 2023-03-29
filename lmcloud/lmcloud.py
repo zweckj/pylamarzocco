@@ -30,7 +30,7 @@ class LMCloud:
     
     @property
     def config(self):
-        return {k.lower():v for k,v in self._config.items()}
+        return {k.upper():v for k,v in self._config.items()}
 
 
     '''
@@ -42,37 +42,37 @@ class LMCloud:
     # will return current machine mode (Brewing/StandBy)
     async def get_machine_mode(self):
         await self.get_status()
-        return self._config[MACHINE_MODE]
+        return self.config[MACHINE_MODE]
 
     async def get_coffee_boiler_enabled(self):
         await self.get_status()
-        coffee_boiler = next(item for item in self._config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
+        coffee_boiler = next(item for item in self.config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
         return coffee_boiler["isEnabled"]
 
     async def get_steam_boiler_enabled(self):
         await self.get_status()
-        coffee_boiler = next(item for item in self._config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
+        coffee_boiler = next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
         return coffee_boiler["isEnabled"]
 
     async def get_coffee_temp(self):
         await self.get_status()
-        return self._config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
+        return self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
 
     async def get_steam_temp(self):
         await self.get_status()
-        return self._config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
+        return self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
 
     async def get_plumbin_enabled(self):
         await self.get_status()
-        return self._config[PLUMBED_IN]
+        return self.config[PLUMBED_IN]
 
     async def get_preinfusion_settings(self):
         await self.get_status()
-        return self._config[PRE_INFUSION_SETTINGS]
+        return self.config[PRE_INFUSION_SETTINGS]
 
     async def get_schedule(self):
         await self.get_status()
-        return convert_schedule(self._config[WEEKLY_SCHEDULING_CONFIG])
+        return convert_schedule(self.config[WEEKLY_SCHEDULING_CONFIG])
 
     # update config object
     async def get_status(self):
