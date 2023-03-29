@@ -4,6 +4,7 @@ from .lmlocalapi import LMLocalAPI
 from .helpers import *
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
+from requests.exceptions import RequestException
 from datetime import datetime
 import logging
 
@@ -76,7 +77,11 @@ class LMCloud:
     # update config object
     async def get_status(self):
         if self._lm_local_api:
-            self._config = self._lm_local_api.local_get_config()
+            try:
+                self._config = self._lm_local_api.local_get_config()
+            except RequestException as e:
+                _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
+                await self._update_config_obj()
         else:
             await self._update_config_obj()
     
