@@ -41,38 +41,38 @@ class LMCloud:
 
     # will return current machine mode (Brewing/StandBy)
     async def get_machine_mode(self):
-            await self.get_status()
-            return self._config[MACHINE_MODE]
+        await self.get_status()
+        return self._config[MACHINE_MODE]
 
     async def get_coffee_boiler_enabled(self):
-            await self.get_status()
-            coffee_boiler = next(item for item in self._config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
-            return coffee_boiler["isEnabled"]
+        await self.get_status()
+        coffee_boiler = next(item for item in self._config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
+        return coffee_boiler["isEnabled"]
 
     async def get_steam_boiler_enabled(self):
-            await self.get_status()
-            coffee_boiler = next(item for item in self._config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
-            return coffee_boiler["isEnabled"]
+        await self.get_status()
+        coffee_boiler = next(item for item in self._config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
+        return coffee_boiler["isEnabled"]
 
     async def get_coffee_temp(self):
-            await self.get_status()
-            return self._config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
+        await self.get_status()
+        return self._config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
 
     async def get_steam_temp(self):
-            await self.get_status()
-            return self._config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
+        await self.get_status()
+        return self._config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
 
     async def get_plumbin_enabled(self):
-            await self.get_status()
-            return self._config[PLUMBED_IN]
+        await self.get_status()
+        return self._config[PLUMBED_IN]
 
     async def get_preinfusion_settings(self):
-            await self.get_status()
-            return self._config[PRE_INFUSION_SETTINGS]
+        await self.get_status()
+        return self._config[PRE_INFUSION_SETTINGS]
 
     async def get_schedule(self):
-            await self.get_status()
-            return convert_schedule(self._config[WEEKLY_SCHEDULING_CONFIG])
+        await self.get_status()
+        return convert_schedule(self._config[WEEKLY_SCHEDULING_CONFIG])
 
     # update config object
     async def get_status(self):
@@ -106,6 +106,7 @@ class LMCloud:
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
+        await self.get_status()
         return self
 
     '''
@@ -118,6 +119,7 @@ class LMCloud:
         self._machine_info = await self._get_machine_info()
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
+        await self.get_status()
         return self
         
     '''

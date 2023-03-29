@@ -1,5 +1,4 @@
 from lmcloud.lmcloud import LMCloud
-from lmcloud.credentials import Credentials
 import json
 import asyncio
 
@@ -14,14 +13,15 @@ async def main():
         "password": data["password"]
     }
 
-    lmcloud = await LMCloud.create(creds)
-    # lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
+    # lmcloud = await LMCloud.create(creds)
+    lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
     # await lmcloud.set_power("standby")
     # lmcloud.local_get_config()
     # await lmcloud.set_steam(True)
     #await lmcloud.set_coffee_temp(93.5)
     # await lmcloud.set_steam_temp(131)
     # print(await lmcloud.get_coffee_boiler_enabled())
+    mode = await lmcloud.get_machine_mode()
     schedule = await lmcloud.get_schedule()
     print(schedule)
 
