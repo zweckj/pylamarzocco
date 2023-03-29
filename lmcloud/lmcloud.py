@@ -173,10 +173,10 @@ class LMCloud:
     '''
     Load the config into a variable in this class
     '''
-    async def _update_config_obj(self):
+    async def _update_config_obj(self, force_update=False):
         if self._config:
             # wait at least 10 seconds between config updates to not flood the remote API
-            if (datetime.now() - self._last_config_update).total_seconds() < POLLING_DELAY_S:
+            if (datetime.now() - self._last_config_update).total_seconds() < POLLING_DELAY_S or force_update:
                 return
         self._config = await self.get_config()
         self._last_config_update = datetime.now()
@@ -406,6 +406,7 @@ class LMCloud:
             hour_off,
             minute_off):
 
+        self._update_config_obj(force_update=True)
         schedule = self.get_schedule()
         idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week][0]
         schedule[idx]["enable"] = True

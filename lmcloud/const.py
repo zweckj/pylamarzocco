@@ -5,7 +5,7 @@ GW_MACHINE_BASE_URL = "https://gw.lamarzocco.io/v1/home/machines"
 
 POLLING_DELAY_S = 10
 
-MODEL_LMU = "Linea Micra"
+MODEL_LMU = "Micra"
 
 # Key Names for Dictionaries
 KEY = "key"
