@@ -28,6 +28,10 @@ class LMCloud:
     def model_name(self):
         return self._machine_info[MODEL_NAME]
     
+    @property 
+    def firmware_version(self):
+        return self._firmware["machine_firmware"]["version"]
+
     @property
     def config(self):
         return {k.upper():v for k,v in self._config.items()}
@@ -106,6 +110,7 @@ class LMCloud:
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
+        self._firmware = await self.get_firmware()
         return self
 
     '''
@@ -118,6 +123,7 @@ class LMCloud:
         self._machine_info = await self._get_machine_info()
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
+        self._firmware = await self.get_firmware()
         return self
         
     '''
@@ -209,7 +215,7 @@ class LMCloud:
     Get Firmware details
     '''
     async def get_firmware(self):
-        url = f"{self._gw_url_with_serial}/firmwarev2"
+        url = f"{self._gw_url_with_serial}/firmwarev2/"
         return await self._rest_api_call(url=url, verb="GET")
 
 

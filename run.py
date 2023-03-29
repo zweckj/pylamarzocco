@@ -21,7 +21,7 @@ async def main():
     #await lmcloud.set_coffee_temp(93.5)
     # await lmcloud.set_steam_temp(131)
     # print(await lmcloud.get_coffee_boiler_enabled())
-    mode = await lmcloud.get_machine_mode()
+    v = lmcloud.firmware_version
     schedule = await lmcloud.get_schedule()
     print(schedule)
 
