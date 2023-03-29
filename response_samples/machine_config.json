@@ -1,0 +1,148 @@
+{
+    "received": "2023-03-29T05:27:27.866Z",
+    "VERSION": "v1",
+    "PREINFUSIONMODESAVAILABLE": [
+        "ByDoseType"
+    ],
+    "MACHINECAPABILITIES": [
+        {
+            "family": "MICRA",
+            "groupsNumber": 1,
+            "coffeeBoilersNumber": 1,
+            "hasCupWarmer": "False",
+            "hasWhaterProbe": "False",
+            "steamBoilersNumber": 1,
+            "teaDosesNumber": 1,
+            "machineModes": [
+                "BrewingMode",
+                "StandBy"
+            ],
+            "schedulingType": "weeklyScheduling"
+        }
+    ],
+    "MACHINE_SN": "SnXXXXXXXXXX",
+    "ISPLUMBEDIN": "False",
+    "ISBACKFLUSHENABLED": "False",
+    "STANDBYTIME": 30,
+    "TANKSTATUS": "True",
+    "GROUPCAPABILITIES": [
+        {
+            "capabilities": {
+                "groupType": "EP_Group",
+                "groupNumber": "Group1",
+                "boilerId": "CoffeeBoiler1",
+                "hasScale": "False",
+                "hasFlowmeter": "False",
+                "numberOfDoses": 0
+            },
+            "doses": [],
+            "doseMode": {
+                "groupNumber": "Group1",
+                "brewingType": "Time"
+            }
+        }
+    ],
+    "MACHINEMODE": "BrewingMode",
+    "TEADOSES": {
+        "DoseA": {
+            "doseIndex": "DoseA",
+            "stopTarget": 0
+        }
+    },
+    "BOILERS": [
+        {
+            "id": "SteamBoiler",
+            "isEnabled": "True",
+            "target": 131
+        },
+        {
+            "id": "CoffeeBoiler1",
+            "isEnabled": "True",
+            "target": 94.5
+        }
+    ],
+    "BOILERTARGETTEMPERATURE": {
+        "SteamBoiler": 131,
+        "CoffeeBoiler1": 94.5
+    },
+    "PREINFUSIONMODE": {
+        "Group1": {
+            "groupNumber": "Group1",
+            "preinfusionStyle": "PreinfusionByDoseType"
+        }
+    },
+    "PREINFUSIONSETTINGS": {
+        "mode": "Disabled",
+        "Group1": [
+            {
+                "groupNumber": "Group1",
+                "doseType": "Continuous",
+                "preWetTime": 4,
+                "preWetHoldTime": 5
+            }
+        ]
+    },
+    "WEEKLYSCHEDULINGCONFIG": {
+        "enabled": "False",
+        "monday": {
+            "enabled": "False",
+            "h_on": 24,
+            "h_off": 24,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "tuesday": {
+            "enabled": "False",
+            "h_on": 24,
+            "h_off": 24,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "wednesday": {
+            "enabled": "False",
+            "h_on": 24,
+            "h_off": 24,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "thursday": {
+            "enabled": "False",
+            "h_on": 24,
+            "h_off": 24,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "friday": {
+            "enabled": "False",
+            "h_on": 24,
+            "h_off": 24,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "saturday": {
+            "enabled": "False",
+            "h_on": 24,
+            "h_off": 24,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "sunday": {
+            "enabled": "False",
+            "h_on": 24,
+            "h_off": 24,
+            "m_on": 0,
+            "m_off": 0
+        }
+    },
+    "CLOCK": "2023-04-01T06:28:04",
+    "FIRMWAREVERSIONS": [
+        {
+            "name": "machine_firmware",
+            "fw_version": "1.11"
+        },
+        {
+            "name": "gateway_firmware",
+            "fw_version": "v2.2-rc0"
+        }
+    ]
+}
