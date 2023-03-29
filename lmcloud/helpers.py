@@ -3,7 +3,7 @@ helper functions
 '''
 
 # convert schedule return format to API expected input format
-def convert_schedule(schedule):
+def schedule_out_to_in(schedule):
     days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     schedule_conv = []
     for day in days: 
@@ -22,3 +22,16 @@ def convert_schedule(schedule):
             "off": hh_mm_off
         })
     return schedule_conv
+
+def schedule_in_to_out(enable, schedule):
+    out = {"enabled": enable}
+    for day in schedule:
+        out[day["day"].lower] = {
+            "enabled": day["enable"],
+            "h_on": "24" if day["on"].split(':')[0] == "00" else day["on"].split(':')[0].lstrip(),
+            "h_off": "24" if day["off"].split(':')[0] == "00" else day["off"].split(':')[0].lstrip(),
+            "m_on": day["on"].split(':')[1].lstrip(),
+            "m_off": day["off"].split(':')[1].lstrip()
+        }
+
+    pass

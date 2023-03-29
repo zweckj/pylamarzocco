@@ -34,10 +34,12 @@ class LMCloud:
 
     @property
     def config(self):
+        """ Return the config with capitalized keys to be consistent across local/remote APIs """
         return {k.upper():v for k,v in self._config.items()}
     
     @property 
     def current_status(self):
+        """ Build object which holds status for lamarzocco Home Assistant Integration"""
         return {
             "power": True if self.config[MACHINE_MODE] == "BrewingMode" else False,
             "enable_prebrewing": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
@@ -86,13 +88,14 @@ class LMCloud:
 
     async def get_schedule(self):
         await self.get_status()
-        return convert_schedule(self.config[WEEKLY_SCHEDULING_CONFIG])
+        return schedule_out_to_in(self.config[WEEKLY_SCHEDULING_CONFIG])
 
     # update config object
     async def get_status(self):
         if self._lm_local_api:
             try:
-                self._config = self._lm_local_api.local_get_config()
+                conf = self._lm_local_api.local_get_config()
+                self._config = {k.upper():v for k,v in conf.items()}
             except RequestException as e:
                 _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
                 await self._update_config_obj()
@@ -241,7 +244,9 @@ class LMCloud:
         else:
             data = {"status": power_status}
             url = f"{self._gw_url_with_serial}/status"
-            return await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            self._config[MACHINE_MODE] = "BrewingMode" if power_status == "ON" else "StandBy"
+            return response
 
     '''
     Turn Steamboiler on or off
@@ -254,7 +259,10 @@ class LMCloud:
         else:
             data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
             url = f"{self._gw_url_with_serial}/enable-boiler"
-            return await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            idx = [STEAM_BOILER_NAME in i['id'] for i in self.config[BOILERS]].index(True)
+            self._config[BOILERS][idx]["isEnabled"] = steam_state
+            return response
 
     '''
     Set steamboiler temperature (in Celsius)
@@ -271,7 +279,9 @@ class LMCloud:
         else:
             data = { "identifier": STEAM_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            return await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            self._config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME] = temperature
+            return response
 
     '''
     Set coffee boiler temperature (in Celsius)
@@ -286,7 +296,9 @@ class LMCloud:
             temperature = round(temperature, 1)
             data = { "identifier": COFFEE_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            return await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            self._config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME] = temperature
+            return response
 
     '''
     Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
@@ -303,7 +315,9 @@ class LMCloud:
         else:
             url = f"{self._gw_url_with_serial}/enable-preinfusion"
             data = {"mode": mode}
-            return await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            self._config[PRE_INFUSION_SETTINGS]["mode"] = mode
+            return response
 
     '''
     Enable/Disable Pre-brew (Mode = Enabled)
@@ -337,7 +351,11 @@ class LMCloud:
                 "holdTimeMs": prebrewOffTime,
                 "wetTimeMs": prebrewOnTime
             }
-            return await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            # TODO check this
+            self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetTime"] = prebrewOnTime % 1000
+            self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetHoldTime"] = prebrewOffTime % 1000
+            return response
 
     '''
     Enable or disable plumbin mode
@@ -350,7 +368,9 @@ class LMCloud:
         else:
             data = {"enable": enable}
             url = f"{self._gw_url_with_serial}/enable-plumbin"
-            return await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            self._config[PLUMBED_IN] = enable
+            return response
 
     '''
     Set auto-on/off schedule
@@ -405,16 +425,11 @@ class LMCloud:
     async def configure_schedule(self, enable: bool, schedule: list):
         url = f"{self._gw_url_with_serial}/scheduling"
         data = {"enable": enable, "days": schedule}
-        return await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        self._config[WEEKLY_SCHEDULING_CONFIG] = schedule_in_to_out(enable, schedule)
+        return response
 
-    async def set_auto_on_off(self,
-            day_of_week,
-            hour_on,
-            minute_on,
-            hour_off,
-            minute_off):
-
-        self._update_config_obj(force_update=True)
+    async def set_auto_on_off(self, day_of_week, hour_on, minute_on, hour_off, minute_off):
         schedule = self.get_schedule()
         idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week][0]
         schedule[idx]["enable"] = True
@@ -429,4 +444,6 @@ class LMCloud:
     async def start_backflush(self):
         url = f"{self._gw_url_with_serial}/enable-backflush"
         data = {"enable": True}
-        return await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        self._config[BACKFLUSH_ENABLED] = True
+        return response
