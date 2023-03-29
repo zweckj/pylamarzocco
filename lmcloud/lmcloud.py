@@ -106,7 +106,6 @@ class LMCloud:
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
-        await self.get_status()
         return self
 
     '''
@@ -119,7 +118,6 @@ class LMCloud:
         self._machine_info = await self._get_machine_info()
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
-        await self.get_status()
         return self
         
     '''
