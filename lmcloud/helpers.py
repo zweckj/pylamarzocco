@@ -26,12 +26,11 @@ def schedule_out_to_in(schedule):
 def schedule_in_to_out(enable, schedule):
     out = {"enabled": enable}
     for day in schedule:
-        out[day["day"].lower] = {
+        out[day["day"].lower()] = {
             "enabled": day["enable"],
-            "h_on": "24" if day["on"].split(':')[0] == "00" else day["on"].split(':')[0].lstrip(),
-            "h_off": "24" if day["off"].split(':')[0] == "00" else day["off"].split(':')[0].lstrip(),
-            "m_on": day["on"].split(':')[1].lstrip(),
-            "m_off": day["off"].split(':')[1].lstrip()
+            "h_on": 24 if day["on"].split(':')[0] == "00" else int(day["on"].split(':')[0]),
+            "h_off": 24 if day["off"].split(':')[0] == "00" else int(day["off"].split(':')[0]),
+            "m_on": int(day["on"].split(':')[1]),
+            "m_off": int(day["off"].split(':')[1])
         }
-
-    pass
+    return out
