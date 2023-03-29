@@ -14,12 +14,12 @@ MACHINE_NAME = "machine_name"
 MODEL_NAME = "model_name"
 
 # Dict keys are camel case for local API, all upper for remote API
-MACHINE_MODE="machineMode"
+MACHINE_MODE="machinemode"
 STEAM_BOILER_NAME = "SteamBoiler"
 COFFEE_BOILER_NAME = "CoffeeBoiler1"
-BOILER_TARGET_TEMP = "boilerTargetTemperature"
+BOILER_TARGET_TEMP = "boilertargettemperature"
 BOILERS = "boilers"
-PLUMBED_IN = "isPlumbedIn"
-PRE_INFUSION_SETTINGS = "preinfusionSettings"
-WEEKLY_SCHEDULING_CONFIG = "weeklySchedulingConfig"
+PLUMBED_IN = "isplumbedin"
+PRE_INFUSION_SETTINGS = "preinfusionsettings"
+WEEKLY_SCHEDULING_CONFIG = "weeklyschedulingconfig"
 
