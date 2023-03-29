@@ -26,6 +26,10 @@ class LMCloud:
     @property
     def model_name(self):
         return self._machine_info[MODEL_NAME]
+    
+    @property
+    def config(self):
+        return {k.lower():v for k,v in self._config.items()}
 
 
     '''
@@ -36,67 +40,43 @@ class LMCloud:
 
     # will return current machine mode (Brewing/StandBy)
     async def get_machine_mode(self):
-        if self._lm_local_api:
-            return self._lm_local_api.get_machine_mode()
-        else:
-            await self._update_config_obj()
-            return self._config[str.upper(MACHINE_MODE)]
+            await self.get_status()
+            return self._config[MACHINE_MODE]
 
     async def get_coffee_boiler_enabled(self):
-        if self._lm_local_api:
-            return self._lm_local_api.get_coffee_boiler_enabled()
-        else:
-            await self._update_config_obj()
-            coffee_boiler = next(item for item in self._config[str.upper(BOILERS)] if item["id"] == COFFEE_BOILER_NAME)
+            await self.get_status()
+            coffee_boiler = next(item for item in self._config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
             return coffee_boiler["isEnabled"]
 
     async def get_steam_boiler_enabled(self):
-        if self._lm_local_api:
-            return self._lm_local_api.get_coffee_steam_enabled()
-        else:
-            await self._update_config_obj()
-            coffee_boiler = next(item for item in self._config[str.upper(BOILERS)] if item["id"] == STEAM_BOILER_NAME)
+            await self.get_status()
+            coffee_boiler = next(item for item in self._config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
             return coffee_boiler["isEnabled"]
 
     async def get_coffee_temp(self):
-        if self._lm_local_api:
-            return self._lm_local_api.get_coffee_temp()
-        else:
-            await self._update_config_obj()
-            return self._config[str.upper(BOILER_TARGET_TEMP)][COFFEE_BOILER_NAME]
+            await self.get_status()
+            return self._config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
 
     async def get_steam_temp(self):
-        if self._lm_local_api:
-            return self._lm_local_api.get_steam_temp()
-        else:
-            await self._update_config_obj()
-            return self._config[str.upper(BOILER_TARGET_TEMP)][STEAM_BOILER_NAME]
+            await self.get_status()
+            return self._config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
 
     async def get_plumbin_enabled(self):
-        if self._lm_local_api:
-            return self._lm_local_api.get_plumbin_enabled()
-        else:
-            await self._update_config_obj()
-            return self._config[str.upper(PLUMBED_IN)]
+            await self.get_status()
+            return self._config[PLUMBED_IN]
 
     async def get_preinfusion_settings(self):
-        if self._lm_local_api:
-            return self._lm_local_api.get_preinfusion_settings(self)
-        else:
-            await self._update_config_obj()
-            return self._config[str.upper(PRE_INFUSION_SETTINGS)]
+            await self.get_status()
+            return self._config[PRE_INFUSION_SETTINGS]
 
     async def get_schedule(self):
-        if self._lm_local_api:
-            return self._lm_local_api.get_schedule()
-        else:
-            await self._update_config_obj()
-            return convert_schedule(self._config[str.upper(WEEKLY_SCHEDULING_CONFIG)])
+            await self.get_status()
+            return convert_schedule(self._config[WEEKLY_SCHEDULING_CONFIG])
 
     # update config object
     async def get_status(self):
         if self._lm_local_api:
-            self._lm_local_api.local_get_config()
+            self._config = self._lm_local_api.local_get_config()
         else:
             await self._update_config_obj()
     
@@ -219,6 +199,13 @@ class LMCloud:
         machine_info[MACHINE_NAME] = fleet["name"]
         machine_info[MODEL_NAME] = fleet["machine"]["model"]["name"]
         return machine_info
+    
+    '''
+    Get Firmware details
+    '''
+    async def get_firmware(self):
+        url = f"{self._gw_url_with_serial}/firmwarev2"
+        return await self._rest_api_call(url=url, verb="GET")
 
 
     '''
