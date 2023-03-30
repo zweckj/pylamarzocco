@@ -23,7 +23,9 @@ async def main():
     # print(await lmcloud.get_coffee_boiler_enabled())
     # config = await lmcloud.get_config()
     await lmcloud.get_status()
-    await lmcloud.set_steam(False)
+    # await lmcloud.set_steam(False)
+    # await lmcloud.set_auto_on_off("Monday", 13, 15, 16, 15)
+    await lmcloud.set_auto_on_off_enable("Monday", False)
     print("Done")
 
 asyncio.run(main())
