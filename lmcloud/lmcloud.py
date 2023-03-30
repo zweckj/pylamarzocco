@@ -172,7 +172,13 @@ class LMCloud:
     '''
     async def get_config(self):
         url = f"{self._gw_url_with_serial}/configuration"
-        return await self._rest_api_call(url=url, verb="GET")
+        try:
+            config = await self._rest_api_call(url=url, verb="GET")
+            return config
+        except Exception as e:
+            _logger.error(f"Could not get config from cloud. Full error: {e}")
+            return self._config
+
 
     '''
     Load the config into a variable in this class
@@ -206,7 +212,7 @@ class LMCloud:
             return response.json()["data"]
         else:
             msg = f"Request to endpoint {response.url} failed with status code {response.status_code}"
-            _logger.info(f"{msg}. Details: {response.text}")
+            _logger.warn(f"{msg}. Details: {response.text}")
             raise RequestNotSuccessful(msg)
         
 
@@ -233,9 +239,16 @@ class LMCloud:
 
 
     '''
+    Machine power wrapper with bool input
+    '''
+    async def set_power(self, enabled: bool):
+        power_status = "ON" if enabled else "STANDBY"
+        return await self._set_power(power_status)
+
+    '''
     Turn power of machine on or off
     '''
-    async def set_power(self, power_status):
+    async def _set_power(self, power_status: str):
         power_status = str.upper(power_status)
         if not power_status in ["ON", "STANDBY"]:
             msg = "Power status can only be on or standby"
@@ -286,7 +299,7 @@ class LMCloud:
     '''
     Set coffee boiler temperature (in Celsius)
     '''
-    async def set_coffee_temp(self, temperature:int):
+    async def set_coffee_temp(self, temperature):
 
         if temperature > 104 or temperature < 85:
             msg = "Coffee temp must be between 85 and 104 (°C)"
@@ -322,13 +335,15 @@ class LMCloud:
     '''
     Enable/Disable Pre-brew (Mode = Enabled)
     '''
-    async def set_prebrew(self, mode):
+    async def set_prebrew(self, enabled: bool):
+        mode = "Enabled" if enabled else "Disabled"
         return await self._set_pre_brew_infusion(mode)
 
     '''
     Enable/Disable Pre-Infusion (Mode = TypeB)
     '''
-    async def set_preinfusion(self, mode):
+    async def set_preinfusion(self, enabled: bool):
+        mode = "TypeB" if enabled else "Disabled"
         return await self._set_pre_brew_infusion(mode)
 
     '''
@@ -430,12 +445,18 @@ class LMCloud:
         return response
 
     async def set_auto_on_off(self, day_of_week, hour_on, minute_on, hour_off, minute_off):
-        schedule = self.get_schedule()
-        idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week][0]
+        schedule = await self.get_schedule()
+        idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
         schedule[idx]["enable"] = True
         schedule[idx]["on"] = f"{hour_on:02d}:{minute_on:02d}"
         schedule[idx]["off"] = f"{hour_off:02d}:{minute_off:02d}"
-        return await self.configure_schedule(True, schedule)
+        return await self.configure_schedule(self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule)
+    
+    async def set_auto_on_off_enable(self, day_of_week, enable):
+        schedule = await self.get_schedule()
+        idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
+        schedule[idx]["enable"] = enable
+        return await self.configure_schedule(self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule)
 
 
     '''
