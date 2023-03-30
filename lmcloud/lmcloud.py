@@ -45,7 +45,11 @@ class LMCloud:
             "enable_prebrewing": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
             "enable_preinfusion": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
             "steam_boiler_enable": next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)["isEnabled"],
-            ("global", "auto"): self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"]
+            "global_auto": self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"],
+            "coffee_temp": self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME],
+            "coffee_set_temp": self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME],
+            "steam_temp": self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME],
+            "steam_set_temp": self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
         }
 
 
