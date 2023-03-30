@@ -4,6 +4,7 @@ CUSTOMER_URL = "https://cms.lamarzocco.io/api/customer"
 GW_MACHINE_BASE_URL = "https://gw.lamarzocco.io/v1/home/machines"
 
 POLLING_DELAY_S = 20
+POLLING_DELAY_STATISTICS_S = 60
 
 MODEL_LMU = "Micra"
 

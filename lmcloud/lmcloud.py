@@ -41,6 +41,10 @@ class LMCloud:
     def status(self):
         return self._status
     
+    @property
+    def statistics(self):
+        return self._statistics
+    
     @property 
     def current_status(self):
         """ Build object which holds status for lamarzocco Home Assistant Integration"""
@@ -55,7 +59,13 @@ class LMCloud:
             "steam_temp": self.status[STEAM_TEMP],
             "steam_set_temp": self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME],
             "water_reservoir_contact": self.status[TANK_LEVEL],
-            "plumbin_enable": self.config[PLUMBED_IN]
+            "plumbin_enable": self.config[PLUMBED_IN],
+            "drinks_k1":        self.statistics[0]["count"],
+            "drinks_k2":        self.statistics[1]["count"],
+            "drinks_k3":        self.statistics[2]["count"],
+            "drinks_k4":        self.statistics[3]["count"],
+            "continuous":       self.statistics[4]["count"],
+            "total_flushing":   self.statistics[5]["count"],
         }
 
 
@@ -112,6 +122,7 @@ class LMCloud:
         self._lm_local_api      = None
         self. _config           = {}
         self. _status           = {}
+        self. _statistics       = {}
 
     '''
     Initialize a cloud only client
@@ -226,6 +237,28 @@ class LMCloud:
             await self._update_config_obj()
         
         await self._update_status_obj()
+        await self._update_statistics_obj()
+
+    '''
+    Get statistics
+    '''
+    async def get_statistics(self):
+        url = f"{self._gw_url_with_serial}/statistics/counters"
+        try:
+            statistics = await self._rest_api_call(url=url, verb="GET")
+            return statistics
+        except Exception as e:
+            _logger.error(f"Could not get config from cloud. Full error: {e}")
+            return self._statistics   
+
+
+    async def _update_statistics_obj(self, force_update=False):
+        if self._statistics:
+            # wait at least 10 seconds between config updates to not flood the remote API
+            if (datetime.now() - self._last_statistics_update).total_seconds() < POLLING_DELAY_STATISTICS_S or force_update:
+                return
+        self._statistics = await self.get_statistics()
+        self._last_statistics_update = datetime.now() 
 
 
     '''
