@@ -94,7 +94,7 @@ class LMCloud:
     async def get_status(self):
         if self._lm_local_api:
             try:
-                conf = self._lm_local_api.local_get_config()
+                conf = await self._lm_local_api.local_get_config()
                 self._config = {k.upper():v for k,v in conf.items()}
             except RequestException as e:
                 _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
@@ -112,7 +112,7 @@ class LMCloud:
     def __init__(self):
         _logger.setLevel(logging.DEBUG)
         self._lm_local_api   = None
-        self. _config        = None
+        self. _config        = {}
 
     '''
     Initialize a cloud only client
