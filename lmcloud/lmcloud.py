@@ -54,7 +54,7 @@ class LMCloud:
             "coffee_set_temp": self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME],
             "steam_temp": self.status[STEAM_TEMP],
             "steam_set_temp": self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME],
-            "got_water": self.status[TANK_LEVEL],
+            "water_reservoir_contact": self.status[TANK_LEVEL],
             "plumbin_enable": self.config[PLUMBED_IN]
         }
 
