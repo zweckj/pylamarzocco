@@ -27,7 +27,7 @@ def schedule_in_to_out(enable, schedule):
     out = {"enabled": enable}
     for day in schedule:
         out[day["day"].lower()] = {
-            "enabled": day["enable"],
+            "enabled": day["enabled"],
             "h_on": 24 if day["on"].split(':')[0] == "00" else int(day["on"].split(':')[0]),
             "h_off": 24 if day["off"].split(':')[0] == "00" else int(day["off"].split(':')[0]),
             "m_on": int(day["on"].split(':')[1]),
