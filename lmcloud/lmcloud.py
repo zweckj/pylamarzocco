@@ -37,6 +37,10 @@ class LMCloud:
         """ Return the config with capitalized keys to be consistent across local/remote APIs """
         return {k.upper():v for k,v in self._config.items()}
     
+    @property
+    def status(self):
+        return self._status
+    
     @property 
     def current_status(self):
         """ Build object which holds status for lamarzocco Home Assistant Integration"""
@@ -46,10 +50,12 @@ class LMCloud:
             "enable_preinfusion": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
             "steam_boiler_enable": next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)["isEnabled"],
             "global_auto": self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"],
-            "coffee_temp": self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME],
+            "coffee_temp": self.status[COFFEE_TEMP],
             "coffee_set_temp": self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME],
-            "steam_temp": self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME],
-            "steam_set_temp": self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
+            "steam_temp": self.status[STEAM_TEMP],
+            "steam_set_temp": self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME],
+            "got_water": self.status[TANK_LEVEL],
+            "plumbin_enable": self.config[PLUMBED_IN]
         }
 
 
@@ -61,50 +67,38 @@ class LMCloud:
 
     # will return current machine mode (Brewing/StandBy)
     async def get_machine_mode(self):
-        await self.get_status()
+        await self.update_local_machine_status()
         return self.config[MACHINE_MODE]
 
     async def get_coffee_boiler_enabled(self):
-        await self.get_status()
+        await self.update_local_machine_status()
         coffee_boiler = next(item for item in self.config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
         return coffee_boiler["isEnabled"]
 
     async def get_steam_boiler_enabled(self):
-        await self.get_status()
+        await self.update_local_machine_status()
         coffee_boiler = next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
         return coffee_boiler["isEnabled"]
 
     async def get_coffee_temp(self):
-        await self.get_status()
+        await self.update_local_machine_status()
         return self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
 
     async def get_steam_temp(self):
-        await self.get_status()
+        await self.update_local_machine_status()
         return self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
 
     async def get_plumbin_enabled(self):
-        await self.get_status()
+        await self.update_local_machine_status()
         return self.config[PLUMBED_IN]
 
     async def get_preinfusion_settings(self):
-        await self.get_status()
+        await self.update_local_machine_status()
         return self.config[PRE_INFUSION_SETTINGS]
 
     async def get_schedule(self):
-        await self.get_status()
+        await self.update_local_machine_status()
         return schedule_out_to_in(self.config[WEEKLY_SCHEDULING_CONFIG])
-
-    # update config object
-    async def get_status(self):
-        if self._lm_local_api:
-            try:
-                conf = await self._lm_local_api.local_get_config()
-                self._config = {k.upper():v for k,v in conf.items()}
-            except RequestException as e:
-                _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
-                await self._update_config_obj()
-        else:
-            await self._update_config_obj()
     
 
     '''
@@ -115,8 +109,9 @@ class LMCloud:
 
     def __init__(self):
         _logger.setLevel(logging.DEBUG)
-        self._lm_local_api   = None
-        self. _config        = {}
+        self._lm_local_api      = None
+        self. _config           = {}
+        self. _status           = {}
 
     '''
     Initialize a cloud only client
@@ -128,7 +123,7 @@ class LMCloud:
         self._machine_info = await self._get_machine_info()
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
         self._firmware = await self.get_firmware()
-        await self.get_status()
+        await self.update_local_machine_status()
         return self
 
     '''
@@ -142,7 +137,7 @@ class LMCloud:
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
         self._firmware = await self.get_firmware()
-        await self.get_status()
+        await self.update_local_machine_status()
         return self
         
     '''
@@ -184,10 +179,9 @@ class LMCloud:
         except Exception as e:
             _logger.error(f"Could not get config from cloud. Full error: {e}")
             return self._config
-
-
+        
     '''
-    Load the config into a variable in this class
+    Load the config into variables in this class
     '''
     async def _update_config_obj(self, force_update=False):
         if self._config:
@@ -196,6 +190,43 @@ class LMCloud:
                 return
         self._config = await self.get_config()
         self._last_config_update = datetime.now()
+
+    '''
+    Get status from cloud
+    '''
+    async def get_status(self):
+        url = f"{self._gw_url_with_serial}/status"
+        try:
+            status = await self._rest_api_call(url=url, verb="GET")
+            return status
+        except Exception as e:
+            _logger.error(f"Could not get config from cloud. Full error: {e}")
+            return self._status
+        
+    async def _update_status_obj(self, force_update=False):
+        if self._status:
+            # wait at least 10 seconds between config updates to not flood the remote API
+            if (datetime.now() - self._last_status_update).total_seconds() < POLLING_DELAY_S or force_update:
+                return
+        self._status = await self.get_status()
+        self._last_status_update = datetime.now() 
+
+    '''
+    update config object
+    '''
+    async def update_local_machine_status(self):
+        if self._lm_local_api:
+            try:
+                conf = await self._lm_local_api.local_get_config()
+                self._config = {k.upper():v for k,v in conf.items()}
+            except RequestException as e:
+                _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
+                await self._update_config_obj()
+        else:
+            await self._update_config_obj()
+        
+        await self._update_status_obj()
+
 
     '''
     Wrapper for the API call
