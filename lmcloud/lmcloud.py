@@ -418,6 +418,7 @@ class LMCloud:
 
     '''
     Set Pre-Brew details
+    Also used for preinfusion (prebrewOnTime=0, prebrewOnTime=ms)
     '''
     async def configure_prebrew(self, prebrewOnTime=5000, prebrewOffTime=5000):
         if type(prebrewOnTime) != int or type(prebrewOffTime) != int:
@@ -437,7 +438,7 @@ class LMCloud:
                 "wetTimeMs": prebrewOnTime
             }
             response = await self._rest_api_call(url=url, verb="POST", data=data)
-            # TODO check this
+
             self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetTime"] = prebrewOnTime % 1000
             self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetHoldTime"] = prebrewOffTime % 1000
             return response

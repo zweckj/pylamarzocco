@@ -29,7 +29,9 @@ async def main():
     # await lmcloud.set_auto_on_off_enable("Monday", False)
     # current_status = await lmcloud._get_status()
     # await lmcloud.set_steam(True)
-    current_status = lmcloud.current_status
+    # current_status = lmcloud.current_status
+    await lmcloud.set_prebrew(False)
+    config = await lmcloud.get_config()
     print("Done")
 
 asyncio.run(main())
