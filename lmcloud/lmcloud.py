@@ -235,10 +235,19 @@ class LMCloud:
             except RequestException as e:
                 _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
                 await self._update_config_obj()
+                
+            # Get local status from WebSockets
+            self.status[COFFEE_TEMP] = self._lm_local_api.coffee_temp
+            self.status[STEAM_TEMP] = self._lm_local_api.steam_temp
+            self.status[TANK_LEVEL] = self._lm_local_api.water_reservoir_contact
+
+            if self.status[COFFEE_TEMP] == 0 and self.status[STEAM_TEMP] == 0:
+                _logger.warn("Could not get local machine status. Falling back to cloud status.")
+                await self._update_status_obj()
         else:
-            await self._update_config_obj()
-        
-        await self._update_status_obj()
+            await self._update_config_obj()     
+            await self._update_status_obj()
+
         await self._update_statistics_obj()
 
     '''

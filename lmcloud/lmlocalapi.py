@@ -18,11 +18,38 @@ class LMLocalAPI:
     @property
     def local_ip(self):
         return self._local_ip
+    
+    @property
+    def coffee_temp(self):
+        return self._coffee_temp
+    
+    @property
+    def steam_temp(self):
+        return self._steam_temp
+    
+    @property
+    def water_reservoir_contact(self):
+        return self._full_config["tankStatus"]
+    
+    @property
+    def active_brew(self):
+        return self._active_brew
+    
+    @property
+    def active_brew_duration(self):
+        return self._active_brew_duration
 
     def __init__(self, local_ip, local_bearer, local_port=8081):
         self._local_ip = local_ip
         self._local_port = local_port
         self._local_bearer = local_bearer
+
+        # init local variables
+        self._full_config = None
+        self._coffee_temp = 0
+        self._steam_temp = 0
+        self._active_brew = False
+        self._active_brew_duration = 0
 
 
     '''
@@ -57,17 +84,19 @@ class LMLocalAPI:
             print(message)
             if type(message) is dict:
                 if message["name"] == "SteamBoilerUpdateTemperature":
-                    pass
+                    self._steam_temp = message["value"]
                 elif message["name"] == "CoffeeBoiler1UpdateTemperature":
-                    pass
+                    self._coffee_temp = message["value"]
+                elif message["name"] == "MachineConfiguration":
+                    self._full_config = message["value"]
             elif type(message) is list:
                 if message[0]["name"] == "BrewingUpdateGroup1Time":
-                    pass
+                    self._active_brew_duration = message[0]["value"]
                 elif message[0]["name"] in ["BrewingStartedGroup1StopType", "BrewingStartedGroup1DoseIndex"]:
                     # started active brew
-                    pass
+                    self._active_brew = True
                 elif message[0]["name"] in ["BrewingSnapshotGroup1", "FlushStoppedGroup1DoseIndex", "FlushStoppedGroup1Time"]:
                     # stopped active brew
-                    pass
+                    self._active_brew = False
         except Exception as e:
             print(f"Error during handling of websocket message: {e}")
