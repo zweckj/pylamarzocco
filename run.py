@@ -30,8 +30,9 @@ async def main():
     # current_status = await lmcloud._get_status()
     # await lmcloud.set_steam(True)
     # current_status = lmcloud.current_status
-    await lmcloud.set_prebrew(False)
-    config = await lmcloud.get_config()
+    #await lmcloud.set_prebrew(False)
+    # config = await lmcloud.get_config()
+    await asyncio.sleep(20)
     print("Done")
 
 asyncio.run(main())

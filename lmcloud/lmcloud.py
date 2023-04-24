@@ -7,6 +7,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 from requests.exceptions import RequestException
 from datetime import datetime
 import logging
+import asyncio
 
 _logger = logging.getLogger(__name__)
 
@@ -149,6 +150,7 @@ class LMCloud:
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
         self._firmware = await self.get_firmware()
         await self.update_local_machine_status()
+        asyncio.create_task(self._lm_local_api.websocket_connect())
         return self
         
     '''
