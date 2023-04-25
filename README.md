@@ -4,7 +4,7 @@ This is a library to interface with La Marzocco's Home machine REST APIs.
 It's in experimentals stages and meant mainly to connect to the Micra, as for the other IoT enabled machines you can use the [lmdirect](https://github.com/rccoleman/lmdirect) library.
 
 # Libraries in this project
-- `lmlocalapi` calls the new local API the Micra exposes, using the Bearer token from the customer cloud endpoint. However, this API currently only supports getting the config and not setting anything (to my knowledge). If La Marzocco updates the firmware or more endpoints are found this library will be updated to reflect those additional endpoints.
+- `lmlocalapi` calls the new local API the Micra exposes, using the Bearer token from the customer cloud endpoint. However, this API currently only supports getting the config, and some status objects (like shottimer) over websockets, but does not support setting anything (to my knowledge). Local settings appear to only happen through Bluetooth connections. If La Marzocco updates the firmware or more endpoints are found this library will be updated to reflect those additional endpoints.
 - `lmcloud` interacts with `gw.lamarzocco.com` to send commands. lmcloud can be initialized to only issue remote commands, or to initialize an instance of `lmlocalapi` for getting the current machine settings. This helps to avoid flooding the cloud API and is faster overall.
 
 Because of that reason the config object `self._config` in the lmcloud instance without utilizing the local API will always at least be 10 seconds old. This is to avoid automatic property checks (e.g. from HomeAssistant) to spam the cloud API. If you really require a most recent config you can call the method `get_config()`.
@@ -17,6 +17,7 @@ To run `lmcloud` you will first need to create a dict, containing `clientId`, `c
 `username` and `password` are easy to get because those are the credentials you're using to sign into the La Marzocco Home app.
 
 `clientId` and `clientSecret` are harder to get. The "easiest" way is to configure `mitmproxy` on a PC, configure your WiFi settings on your phone to use that proxy. Then log out of your La Marzocco App, sign in again and watch for a call to `https://cms.lamarzocco.io/oauth/v2/token`. The  credentials you're looking for will be in that call.
+More of the calls are documented in [remote_rest](docs/remote_rest.md).
 
 You then need to create a file called `config.json` looking like this:
 ```json
@@ -60,3 +61,10 @@ Then you can init the class with
 ```python
 lm_local_api = LMLocalAPI(ip, bearer)
 ```
+
+### Websockets
+The local API initiates a websocket connection to
+```
+http://{IP}:8081/api/v1/streaming
+```
+The packets which are received on that WebSocket are documented in [websockets](docs/websockets.md)

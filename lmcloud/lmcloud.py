@@ -7,6 +7,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 from requests.exceptions import RequestException
 from datetime import datetime
 import logging
+import asyncio
 
 _logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ class LMCloud:
             "drinks_k4":        self.statistics[3]["count"],
             "continuous":       self.statistics[4]["count"],
             "total_flushing":   self.statistics[5]["count"],
+            "active_brew": self.status[ACTIVE_BREW] if self._lm_local_api else False
         }
 
 
@@ -148,7 +150,8 @@ class LMCloud:
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
         self._firmware = await self.get_firmware()
-        await self.update_local_machine_status()
+        asyncio.create_task(self._lm_local_api.websocket_connect())
+        await self.update_local_machine_status(in_init=True)
         return self
         
     '''
@@ -225,7 +228,7 @@ class LMCloud:
     '''
     update config object
     '''
-    async def update_local_machine_status(self):
+    async def update_local_machine_status(self, in_init=False):
         if self._lm_local_api:
             try:
                 conf = await self._lm_local_api.local_get_config()
@@ -233,10 +236,20 @@ class LMCloud:
             except RequestException as e:
                 _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
                 await self._update_config_obj()
+
+            if self._lm_local_api._timestamp_last_websocket_msg == None or (datetime.now() - self._lm_local_api._timestamp_last_websocket_msg).total_seconds() > 30: 
+                if not in_init: # during init we don't want to log this warning
+                    _logger.warn("Could not get local machine status. Falling back to cloud status.")
+                await self._update_status_obj()
+                self._status[ACTIVE_BREW] = False
+            else:
+                # Get local status from WebSockets
+                print("Using local status")
+                self._status = self._lm_local_api._status # reference to the same object tp get websocket updates
         else:
-            await self._update_config_obj()
-        
-        await self._update_status_obj()
+            await self._update_config_obj()     
+            await self._update_status_obj()
+
         await self._update_statistics_obj()
 
     '''
