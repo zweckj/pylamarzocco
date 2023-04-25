@@ -21,23 +21,23 @@ class LMLocalAPI:
     
     @property
     def coffee_temp(self):
-        return self._coffee_temp
+        return self.status[COFFEE_TEMP]
     
     @property
     def steam_temp(self):
-        return self._steam_temp
+        return self.status[STEAM_TEMP]
     
     @property
     def water_reservoir_contact(self):
-        return self._full_config["tankStatus"]
+        return self.status[TANK_LEVEL]
     
     @property
     def active_brew(self):
-        return self._active_brew
+        return self.status[ACTIVE_BREW]
     
     @property
     def active_brew_duration(self):
-        return self._active_brew_duration
+        return self.status[ACTIVE_BREW_DURATION]
 
     def __init__(self, local_ip, local_bearer, local_port=8081):
         self._local_ip = local_ip
@@ -45,11 +45,8 @@ class LMLocalAPI:
         self._local_bearer = local_bearer
 
         # init local variables
+        self.status = {}
         self._full_config = None
-        self._coffee_temp = 0
-        self._steam_temp = 0
-        self._active_brew = False
-        self._active_brew_duration = 0
 
 
     '''
@@ -76,6 +73,7 @@ class LMLocalAPI:
                 async for message in websocket:
                     await self.handle_websocket_message(message)
             except websockets.ConnectionClosed:
+                asyncio.sleep(20) # wait 20 seconds before trying to reconnect
                 continue
 
     async def handle_websocket_message(self, message):
@@ -84,19 +82,20 @@ class LMLocalAPI:
             print(message)
             if type(message) is dict:
                 if message["name"] == "SteamBoilerUpdateTemperature":
-                    self._steam_temp = message["value"]
+                    self.status[STEAM_TEMP] = message["value"]
                 elif message["name"] == "CoffeeBoiler1UpdateTemperature":
-                    self._coffee_temp = message["value"]
+                    self.status[COFFEE_TEMP] = message["value"]
                 elif message["name"] == "MachineConfiguration":
                     self._full_config = message["value"]
+                    self.status[TANK_LEVEL] = message["value"]
             elif type(message) is list:
                 if message[0]["name"] == "BrewingUpdateGroup1Time":
-                    self._active_brew_duration = message[0]["value"]
+                    self.status[ACTIVE_BREW_DURATION] = message[0]["value"]
                 elif message[0]["name"] in ["BrewingStartedGroup1StopType", "BrewingStartedGroup1DoseIndex"]:
                     # started active brew
-                    self._active_brew = True
+                    self.status[ACTIVE_BREW] = True
                 elif message[0]["name"] in ["BrewingSnapshotGroup1", "FlushStoppedGroup1DoseIndex", "FlushStoppedGroup1Time"]:
                     # stopped active brew
-                    self._active_brew = False
+                    self.status[ACTIVE_BREW] = False
         except Exception as e:
             print(f"Error during handling of websocket message: {e}")
