@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="lmcloud",
-    version="0.1.3",
+    version="0.2.0",
     description="A Python implementation of the new La Marzocco API",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -23,7 +23,7 @@ setuptools.setup(
         "Programming Language :: Python :: Implementation :: CPython",
     ],
     packages=setuptools.find_packages(),
-    install_requires=["httpx>=0.16.1", "authlib>=0.15.5,<1.0", "aiohttp>=3.8.4"],
+    install_requires=["httpx>=0.16.1", "authlib>=0.15.5,<1.0", "aiohttp>=3.8.4", "websockets>=11.0.2"],
     package_data={
         "license": ["LICENSE"],
     },
