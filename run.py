@@ -32,7 +32,15 @@ async def main():
     # current_status = lmcloud.current_status
     #await lmcloud.set_prebrew(False)
     # config = await lmcloud.get_config()
-    await asyncio.sleep(20)
+    await asyncio.sleep(10)
+    await lmcloud.update_local_machine_status()
+    print("Entering loop...")
+    while True:
+        # print(lmcloud._lm_local_api._timestamp_last_websocket_msg)
+        if lmcloud.current_status["active_brew"]:
+            print("Brewing")
+        await asyncio.sleep(1)
+
     print("Done")
 
 asyncio.run(main())

@@ -3,8 +3,12 @@ import websockets
 import asyncio
 import signal
 import json
+from datetime import datetime
 from .const import *
 from .helpers import *
+import logging
+
+_logger = logging.getLogger(__name__)
 
 '''
 This class is for interaction with the new local API currently only the Micra exposes
@@ -45,8 +49,15 @@ class LMLocalAPI:
         self._local_bearer = local_bearer
 
         # init local variables
-        self._status = {}
         self._full_config = None
+        self._timestamp_last_websocket_msg = None
+
+        self._status = {}
+        self._status[COFFEE_TEMP] = 0
+        self._status[STEAM_TEMP] = 0
+        self._status[TANK_LEVEL] = True
+        self._status[ACTIVE_BREW] = False
+        self._status[ACTIVE_BREW_DURATION] = 0
 
 
     '''
@@ -63,7 +74,6 @@ class LMLocalAPI:
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async for websocket in websockets.connect(f"ws://{self._local_ip}:{self._local_port}/api/v1/streaming", extra_headers=headers):
             try:
-                print("Was here")
                 # Close the connection when receiving SIGTERM.
                 loop = asyncio.get_running_loop()
                 loop.add_signal_handler(
@@ -75,11 +85,15 @@ class LMLocalAPI:
             except websockets.ConnectionClosed:
                 asyncio.sleep(20) # wait 20 seconds before trying to reconnect
                 continue
+            except Exception as e:
+                _logger.error(f"Error during websocket connection: {e}")
+                asyncio.sleep(20)
+                continue
 
     async def handle_websocket_message(self, message):
         try:
+            self._timestamp_last_websocket_msg = datetime.now()
             message = json.loads(message)
-            print(message)
             if type(message) is dict:
                 if message["name"] == "SteamBoilerUpdateTemperature":
                     self._status[STEAM_TEMP] = message["value"]
