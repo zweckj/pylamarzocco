@@ -17,6 +17,7 @@ To run `lmcloud` you will first need to create a dict, containing `clientId`, `c
 `username` and `password` are easy to get because those are the credentials you're using to sign into the La Marzocco Home app.
 
 `clientId` and `clientSecret` are harder to get. The "easiest" way is to configure `mitmproxy` on a PC, configure your WiFi settings on your phone to use that proxy. Then log out of your La Marzocco App, sign in again and watch for a call to `https://cms.lamarzocco.io/oauth/v2/token`. The  credentials you're looking for will be in that call.
+More of the calls are documented in [remote_rest](docs/remote_rest.md)
 
 You then need to create a file called `config.json` looking like this:
 ```json
@@ -60,3 +61,10 @@ Then you can init the class with
 ```python
 lm_local_api = LMLocalAPI(ip, bearer)
 ```
+
+### Websockets
+The local API initiates a websocket connection to
+```
+http://{IP}:8081/api/v1/streaming
+```
+The packets which are received on that WebSocket are documented in [websockets](docs/websockets.md)
