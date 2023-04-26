@@ -241,7 +241,7 @@ class LMCloud:
                 await self._update_config_obj()
 
             if self._lm_local_api._timestamp_last_websocket_msg == None or (datetime.now() - self._lm_local_api._timestamp_last_websocket_msg).total_seconds() > 30: 
-                if not in_init: # during init we don't want to log this warning
+                if self._use_websocket and not in_init: # during init we don't want to log this warning
                     _logger.warn("Could not get local machine status. Falling back to cloud status.")
                 await self._update_status_obj()
                 self._status[ACTIVE_BREW] = False
