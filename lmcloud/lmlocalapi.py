@@ -83,11 +83,11 @@ class LMLocalAPI:
                 async for message in websocket:
                     await self.handle_websocket_message(message)
             except websockets.ConnectionClosed:
-                asyncio.sleep(20) # wait 20 seconds before trying to reconnect
+                await asyncio.sleep(20) # wait 20 seconds before trying to reconnect
                 continue
             except Exception as e:
                 _logger.error(f"Error during websocket connection: {e}")
-                asyncio.sleep(20)
+                await asyncio.sleep(20)
                 continue
 
     async def handle_websocket_message(self, message):
