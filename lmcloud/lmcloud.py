@@ -67,7 +67,7 @@ class LMCloud:
             "drinks_k4":        self.statistics[3]["count"],
             "continuous":       self.statistics[4]["count"],
             "total_flushing":   self.statistics[5]["count"],
-            "active_brew": self.status[ACTIVE_BREW] if self._lm_local_api else False
+            "active_brew": self.status[ACTIVE_BREW] if self._use_websocket else False
         }
 
 
@@ -125,6 +125,7 @@ class LMCloud:
         self. _config           = {}
         self. _status           = {}
         self. _statistics       = {}
+        self._use_websocket     = False
 
     '''
     Initialize a cloud only client
@@ -143,14 +144,16 @@ class LMCloud:
     Also initialize a local API client
     '''
     @classmethod
-    async def create_with_local_api(cls, credentials, ip, port=8081):
+    async def create_with_local_api(cls, credentials, ip, port=8081, use_websocket=True):
         self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
         self._firmware = await self.get_firmware()
-        asyncio.create_task(self._lm_local_api.websocket_connect())
+        if use_websocket:
+            self._use_websocket = True
+            asyncio.create_task(self._lm_local_api.websocket_connect())
         await self.update_local_machine_status(in_init=True)
         return self
         
