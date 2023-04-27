@@ -144,7 +144,7 @@ class LMCloud:
     Also initialize a local API client
     '''
     @classmethod
-    async def create_with_local_api(cls, credentials, ip, port=8081, use_websocket=True):
+    async def create_with_local_api(cls, credentials, ip, port=8081, use_websocket=False):
         self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
@@ -247,7 +247,7 @@ class LMCloud:
                 self._status[ACTIVE_BREW] = False
             else:
                 # Get local status from WebSockets
-                print("Using local status")
+                _logger.info("Using local status")
                 self._status = self._lm_local_api._status # reference to the same object tp get websocket updates
         else:
             await self._update_config_obj()     

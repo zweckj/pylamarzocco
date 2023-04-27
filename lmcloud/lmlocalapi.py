@@ -112,4 +112,4 @@ class LMLocalAPI:
                     # stopped active brew
                     self._status[ACTIVE_BREW] = False
         except Exception as e:
-            print(f"Error during handling of websocket message: {e}")
+            _logger.error(f"Error during handling of websocket message: {e}")
