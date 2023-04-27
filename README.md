@@ -68,3 +68,14 @@ The local API initiates a websocket connection to
 http://{IP}:8081/api/v1/streaming
 ```
 The packets which are received on that WebSocket are documented in [websockets](docs/websockets.md)
+
+If WebSockets are enabled the shot timer becomes available to use, however as long as the library is running in WebSocket mode, the App will no longer be able to connect.
+
+To use WebSockets start the integration with
+```python
+lm = await LMCloud.create_with_local_api(creds, <IP>, port=8081, use_websockets=True)
+
+while True:
+    print(lm._lm_local_api.active_brew) # is a brew running at the moment
+    print(lm._lm_local_api.active_brew_duration) # the current shot timer returned by the machine
+```
