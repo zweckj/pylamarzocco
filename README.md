@@ -79,3 +79,7 @@ while True:
     print(lm._lm_local_api.active_brew) # is a brew running at the moment
     print(lm._lm_local_api.active_brew_duration) # the current shot timer returned by the machine
 ```
+
+## Bluetooth
+Some commands, like turning the machine on and off are always sent through bluetooth whenever possible. The available bluetooth characteristics are described in [bluetooth_characteristics](docs/bluetooth_characteristics.md).
+The class `LMBluetooth` discovers any bluetooth devices with `Micra` in the name and connects to it. Then we can send local bluetooth commands.
