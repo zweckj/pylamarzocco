@@ -1,11 +1,12 @@
 from .const import *
 from .exceptions import *
 from .lmlocalapi import LMLocalAPI
+from .lmbluetooth import LMBluetooth
 from .helpers import *
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from requests.exceptions import RequestException
 from datetime import datetime
+from bleak import BleakError
 import logging
 import asyncio
 
@@ -35,7 +36,10 @@ class LMCloud:
 
     @property
     def config(self):
-        """ Return the config with capitalized keys to be consistent across local/remote APIs """
+        """ 
+        Return the config with capitalized keys to be consistent across local/remote APIs 
+        """
+
         return {k.upper():v for k,v in self._config.items()}
     
     @property
@@ -48,7 +52,10 @@ class LMCloud:
     
     @property 
     def current_status(self):
-        """ Build object which holds status for lamarzocco Home Assistant Integration"""
+        """ 
+        Build object which holds status for lamarzocco Home Assistant Integration
+        """
+
         return {
             "power": True if self.config[MACHINE_MODE] == "BrewingMode" else False,
             "enable_prebrewing": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
@@ -122,16 +129,19 @@ class LMCloud:
     def __init__(self):
         _logger.setLevel(logging.DEBUG)
         self._lm_local_api      = None
+        self._lm_bluetooth      = None
         self. _config           = {}
         self. _status           = {}
         self. _statistics       = {}
         self._use_websocket     = False
 
-    '''
-    Initialize a cloud only client
-    '''
+
     @classmethod
     async def create(cls, credentials):
+        '''
+        Initialize a cloud only client
+        '''
+
         self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
@@ -140,27 +150,48 @@ class LMCloud:
         await self.update_local_machine_status()
         return self
 
-    '''
-    Also initialize a local API client
-    '''
+
     @classmethod
-    async def create_with_local_api(cls, credentials, ip, port=8081, use_websocket=False):
+    async def create_with_local_api(cls, credentials, ip, port=8081, use_websocket=False, use_bluetooth=False):
+        '''
+        Also initialize a local API client
+        '''
+
         self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
         self._firmware = await self.get_firmware()
+
+        # init websockets if set
         if use_websocket:
             self._use_websocket = True
             asyncio.create_task(self._lm_local_api.websocket_connect())
+
+        # init bluetooth if set
+        if use_bluetooth:
+            try:
+                self._lm_bluetooth = await LMBluetooth.create(username=credentials["username"], 
+                                                        serial_number=self.machine_info[SERIAL_NUMBER],
+                                                        token=self.machine_info[KEY])
+            except BluetoothDeviceNotFound as e:
+                _logger.warn(f"Could not find bluetooth device. Bluetooth commands will not be available and commands will all be sent through cloud.")
+                _logger.debug(f"Full error: {e}")
+            except BleakError as e:
+                _logger.warn(f"Bleak encountered an error while trying to connect to bluetooth device. \
+                             Maybe no bluetooth adapter is available? Bluetooth commands will not be available and commands will all be sent through cloud.")
+                _logger.debug(f"Full error: {e}")
+
         await self.update_local_machine_status(in_init=True)
         return self
         
-    '''
-    Establish connection by building the OAuth client and requesting the token
-    '''
+
     async def _connect(self, credentials):
+        '''
+        Establish connection by building the OAuth client and requesting the token
+        '''
+
         client = AsyncOAuth2Client(
             client_id=credentials["client_id"],
             client_secret=credentials["client_secret"],
@@ -185,10 +216,11 @@ class LMCloud:
             raise AuthFail("Authorization failure") from err
         
 
-    '''
-    Get configuration from cloud
-    '''
     async def get_config(self):
+        '''
+        Get configuration from cloud
+        '''
+        
         url = f"{self._gw_url_with_serial}/configuration"
         try:
             config = await self._rest_api_call(url=url, verb="GET")
@@ -197,10 +229,12 @@ class LMCloud:
             _logger.error(f"Could not get config from cloud. Full error: {e}")
             return self._config
         
-    '''
-    Load the config into variables in this class
-    '''
+
     async def _update_config_obj(self, force_update=False):
+        '''
+        Load the config into variables in this class
+        '''
+
         if self._config:
             # wait at least 10 seconds between config updates to not flood the remote API
             if (datetime.now() - self._last_config_update).total_seconds() < POLLING_DELAY_S or force_update:
@@ -208,10 +242,12 @@ class LMCloud:
         self._config = await self.get_config()
         self._last_config_update = datetime.now()
 
-    '''
-    Get status from cloud
-    '''
+
     async def get_status(self):
+        '''
+        Get status from cloud
+        '''
+
         url = f"{self._gw_url_with_serial}/status"
         try:
             status = await self._rest_api_call(url=url, verb="GET")
@@ -228,15 +264,17 @@ class LMCloud:
         self._status = await self.get_status()
         self._last_status_update = datetime.now() 
 
-    '''
-    update config object
-    '''
+
     async def update_local_machine_status(self, in_init=False):
+        '''
+        update config object
+        '''
+
         if self._lm_local_api:
             try:
                 conf = await self._lm_local_api.local_get_config()
                 self._config = {k.upper():v for k,v in conf.items()}
-            except RequestException as e:
+            except Exception as e:
                 _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
                 await self._update_config_obj()
 
@@ -255,10 +293,12 @@ class LMCloud:
 
         await self._update_statistics_obj()
 
-    '''
-    Get statistics
-    '''
+
     async def get_statistics(self):
+        '''
+        Get statistics
+        '''
+
         url = f"{self._gw_url_with_serial}/statistics/counters"
         try:
             statistics = await self._rest_api_call(url=url, verb="GET")
@@ -277,10 +317,12 @@ class LMCloud:
         self._last_statistics_update = datetime.now() 
 
 
-    '''
-    Wrapper for the API call
-    '''
+
     async def _rest_api_call(self, url, verb="GET", data=None):
+        '''
+        Wrapper for the API call
+        '''
+
         # make sure oauth token is still valid
         if self.client.token.is_expired():
             await self.client.refresh_token(TOKEN_URL)
@@ -302,10 +344,24 @@ class LMCloud:
             raise RequestNotSuccessful(msg)
         
 
-    '''
-    Get Basic machine info from the customer endpoint
-    '''
+    async def _send_bluetooth_command(self, func, param):
+        '''
+        Wrapper for bluetooth commands
+        '''
+        try:
+            await func(param)
+            return True
+        except BleakError as e:
+            _logger.warn("Could not send command to bluetooth device, even though initalized. Falling back to cloud...")
+            _logger.debug(f"Full error: {e}")
+            return False
+        
+
     async def _get_machine_info(self):
+        '''
+        Get Basic machine info from the customer endpoint
+        '''
+
         data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
 
         machine_info = {}
@@ -316,93 +372,118 @@ class LMCloud:
         machine_info[MODEL_NAME] = fleet["machine"]["model"]["name"]
         return machine_info
     
-    '''
-    Get Firmware details
-    '''
+
     async def get_firmware(self):
+        '''
+        Get Firmware details
+        '''
+
         url = f"{self._gw_url_with_serial}/firmwarev2/"
         return await self._rest_api_call(url=url, verb="GET")
 
-
-    '''
-    Machine power wrapper with bool input
-    '''
+   
     async def set_power(self, enabled: bool):
-        power_status = "ON" if enabled else "STANDBY"
-        return await self._set_power(power_status)
+        '''
+        Turn power of machine on or off
+        '''
 
-    '''
-    Turn power of machine on or off
-    '''
-    async def _set_power(self, power_status: str):
-        power_status = str.upper(power_status)
-        if not power_status in ["ON", "STANDBY"]:
-            msg = "Power status can only be on or standby"
-            self._logger.debug(msg)
-            raise ValueError(msg)
-        else:
+        if self._lm_bluetooth:
+            bt_ok = await self._send_bluetooth_command(self._lm_bluetooth.set_power, enabled)
+            response = "Ok"
+
+        if not self._lm_bluetooth or not bt_ok:
+            power_status = "ON" if enabled else "STANDBY"
             data = {"status": power_status}
             url = f"{self._gw_url_with_serial}/status"
             response = await self._rest_api_call(url=url, verb="POST", data=data)
-            self._config[MACHINE_MODE] = "BrewingMode" if power_status == "ON" else "StandBy"
-            return response
 
-    '''
-    Turn Steamboiler on or off
-    '''
+        self._config[MACHINE_MODE] = "BrewingMode" if enabled else "StandBy"
+        return response
+
+
     async def set_steam(self, steam_state:bool):
+        '''
+        Turn Steamboiler on or off
+        '''
+
         if not type(steam_state) == bool:
             msg = "Steam state must be boolean"
             _logger.debug(msg)
             raise TypeError(msg)
         else:
-            data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
-            url = f"{self._gw_url_with_serial}/enable-boiler"
-            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            if self._lm_bluetooth:
+                bt_ok = await self._send_bluetooth_command(self._lm_bluetooth.set_steam, steam_state)
+                response = "Ok"
+
+            if not self._lm_bluetooth or not bt_ok:
+                data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
+                url = f"{self._gw_url_with_serial}/enable-boiler"
+                response = await self._rest_api_call(url=url, verb="POST", data=data)
+            
             idx = [STEAM_BOILER_NAME in i['id'] for i in self.config[BOILERS]].index(True)
             self._config[BOILERS][idx]["isEnabled"] = steam_state
             return response
 
-    '''
-    Set steamboiler temperature (in Celsius)
-    '''
+
     async def set_steam_temp(self, temperature:int):
+        '''
+        Set steamboiler temperature (in Celsius)
+        '''
+
         if not type(temperature) == int:
             msg = "Steam temp must be integer"
             _logger.debug(msg)
             raise TypeError(msg)
+        
         elif not temperature == 131 and not temperature == 128 and not temperature == 126:
             msg = "Steam temp must be one of 126, 128, 131 (°C)"
             _logger.debug(msg)
             raise ValueError(msg)
+        
         else:
-            data = { "identifier": STEAM_BOILER_NAME, "value": temperature}
-            url = f"{self._gw_url_with_serial}/target-boiler"
-            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            if self._lm_bluetooth:
+                bt_ok = await self._send_bluetooth_command(self._lm_bluetooth.set_steam_temp, temperature)
+                response = "Ok"
+                    
+            if not self._lm_bluetooth or not bt_ok:
+                data = { "identifier": STEAM_BOILER_NAME, "value": temperature}
+                url = f"{self._gw_url_with_serial}/target-boiler"
+                response = await self._rest_api_call(url=url, verb="POST", data=data)
+
             self._config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME] = temperature
             return response
 
-    '''
-    Set coffee boiler temperature (in Celsius)
-    '''
+
     async def set_coffee_temp(self, temperature):
+        '''
+        Set coffee boiler temperature (in Celsius)
+        '''
 
         if temperature > 104 or temperature < 85:
             msg = "Coffee temp must be between 85 and 104 (°C)"
             _logger.debug(msg)
             raise ValueError(msg)
-        else:
+        else: 
             temperature = round(temperature, 1)
-            data = { "identifier": COFFEE_BOILER_NAME, "value": temperature}
-            url = f"{self._gw_url_with_serial}/target-boiler"
-            response = await self._rest_api_call(url=url, verb="POST", data=data)
+
+            if self._lm_bluetooth:
+                bt_ok = await self._send_bluetooth_command(self._lm_bluetooth.set_coffee_temp, temperature)
+                response = "Ok"
+            
+            if not self._lm_bluetooth or not bt_ok:
+                data = { "identifier": COFFEE_BOILER_NAME, "value": temperature}
+                url = f"{self._gw_url_with_serial}/target-boiler"
+                response = await self._rest_api_call(url=url, verb="POST", data=data)
+
             self._config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME] = temperature
             return response
 
-    '''
-    Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
-    '''
+
     async def _set_pre_brew_infusion(self, mode):
+        '''
+        Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)
+        '''
+
         if mode != "Disabled" and mode != "TypeB" and mode != "Enabled":
             msg = "Pre-Infusion/Pre-Brew can only be TypeB (PreInfusion), Enabled (Pre-Brew) or Disabled"
             _logger.debug(msg)
@@ -418,25 +499,30 @@ class LMCloud:
             self._config[PRE_INFUSION_SETTINGS]["mode"] = mode
             return response
 
-    '''
-    Enable/Disable Pre-brew (Mode = Enabled)
-    '''
     async def set_prebrew(self, enabled: bool):
+        '''
+        Enable/Disable Pre-brew (Mode = Enabled)
+        '''
+
         mode = "Enabled" if enabled else "Disabled"
         return await self._set_pre_brew_infusion(mode)
 
-    '''
-    Enable/Disable Pre-Infusion (Mode = TypeB)
-    '''
+
     async def set_preinfusion(self, enabled: bool):
+        '''
+        Enable/Disable Pre-Infusion (Mode = TypeB)
+        '''
+
         mode = "TypeB" if enabled else "Disabled"
         return await self._set_pre_brew_infusion(mode)
 
-    '''
-    Set Pre-Brew details
-    Also used for preinfusion (prebrewOnTime=0, prebrewOnTime=ms)
-    '''
+
     async def configure_prebrew(self, prebrewOnTime=5000, prebrewOffTime=5000):
+        '''
+        Set Pre-Brew details
+        Also used for preinfusion (prebrewOnTime=0, prebrewOnTime=ms)
+        '''
+
         if type(prebrewOnTime) != int or type(prebrewOffTime) != int:
             msg = "Prebrew times must be in ms (integer)"
             _logger.debug(msg)
@@ -459,10 +545,12 @@ class LMCloud:
             self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetHoldTime"] = prebrewOffTime % 1000
             return response
 
-    '''
-    Enable or disable plumbin mode
-    '''
+
     async def enable_plumbin(self, enable:bool):
+        '''
+        Enable or disable plumbin mode
+        '''
+
         if not type(enable) == bool:
             msg = "Enable param must be boolean"
             _logger.debug(msg)
@@ -474,57 +562,59 @@ class LMCloud:
             self._config[PLUMBED_IN] = enable
             return response
 
-    '''
-    Set auto-on/off schedule
 
-
-    schedule object:
-    [
-        {
-            "day": "MONDAY",
-            "enable": false,
-            "off": "00:00",
-            "on": "00:00"
-        },
-        {
-            "day": "TUESDAY",
-            "enable": false,
-            "off": "00:00",
-            "on": "00:00"
-        },
-        {
-            "day": "WEDNESDAY",
-            "enable": false,
-            "off": "00:00",
-            "on": "00:00"
-        },
-        {
-            "day": "THURSDAY",
-            "enable": false,
-            "off": "00:00",
-            "on": "00:00"
-        },
-        {
-            "day": "FRIDAY",
-            "enable": false,
-            "off": "00:00",
-            "on": "00:00"
-        },
-        {
-            "day": "SATURDAY",
-            "enable": false,
-            "off": "00:00",
-            "on": "00:00"
-        },
-        {
-            "day": "SUNDAY",
-            "enable": false,
-            "off": "00:00",
-            "on": "00:00"
-        }
-    ]
-    '''
     async def configure_schedule(self, enable: bool, schedule: list):
+        '''
+        Set auto-on/off schedule
+
+
+        schedule object:
+        [
+            {
+                "day": "MONDAY",
+                "enable": false,
+                "off": "00:00",
+                "on": "00:00"
+            },
+            {
+                "day": "TUESDAY",
+                "enable": false,
+                "off": "00:00",
+                "on": "00:00"
+            },
+            {
+                "day": "WEDNESDAY",
+                "enable": false,
+                "off": "00:00",
+                "on": "00:00"
+            },
+            {
+                "day": "THURSDAY",
+                "enable": false,
+                "off": "00:00",
+                "on": "00:00"
+            },
+            {
+                "day": "FRIDAY",
+                "enable": false,
+                "off": "00:00",
+                "on": "00:00"
+            },
+            {
+                "day": "SATURDAY",
+                "enable": false,
+                "off": "00:00",
+                "on": "00:00"
+            },
+            {
+                "day": "SUNDAY",
+                "enable": false,
+                "off": "00:00",
+                "on": "00:00"
+            }
+        ]
+        '''
+
         url = f"{self._gw_url_with_serial}/scheduling"
         data = {"enable": enable, "days": schedule}
         response = await self._rest_api_call(url=url, verb="POST", data=data)
@@ -546,10 +636,12 @@ class LMCloud:
         return await self.configure_schedule(self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule)
 
 
-    '''
-    Send command to start backflushing
-    '''
+
     async def start_backflush(self):
+        '''
+        Send command to start backflushing
+        '''
+
         url = f"{self._gw_url_with_serial}/enable-backflush"
         data = {"enable": True}
         response = await self._rest_api_call(url=url, verb="POST", data=data)

@@ -130,3 +130,8 @@ dmypy.json
 
 #local config
 config.json
+bleak_device_info.py
+bleak_discover.py
+.gitignore
+bleaktest.py
+bleak_info.py
