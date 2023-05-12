@@ -14,7 +14,7 @@ async def main():
     }
 
     # lmcloud = await LMCloud.create(creds)
-    lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
+    # lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
     # await lmcloud.set_power("standby")
     # lmcloud.local_get_config()
     # await lmcloud.set_steam(True)
@@ -32,14 +32,21 @@ async def main():
     # current_status = lmcloud.current_status
     #await lmcloud.set_prebrew(False)
     # config = await lmcloud.get_config()
-    await asyncio.sleep(10)
-    await lmcloud.update_local_machine_status()
-    print("Entering loop...")
-    while True:
-        # print(lmcloud._lm_local_api._timestamp_last_websocket_msg)
-        if lmcloud.current_status["active_brew"]:
-            print("Brewing")
-        await asyncio.sleep(1)
+    # await asyncio.sleep(10)
+    # await lmcloud.update_local_machine_status()
+    # print("Entering loop...")
+    # while True:
+    #     # print(lmcloud._lm_local_api._timestamp_last_websocket_msg)
+    #     if lmcloud.current_status["active_brew"]:
+    #         print("Brewing")
+    #     await asyncio.sleep(1)
+
+    lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"], use_bluetooth=True)
+    print(lmcloud._lm_bluetooth._address)
+    await lmcloud.set_power(True)
+    await lmcloud.set_steam(False)
+    await lmcloud.set_coffee_temp(93.5)
+    await lmcloud.set_steam_temp(128)
 
     print("Done")
 
