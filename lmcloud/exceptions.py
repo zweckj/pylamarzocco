@@ -10,3 +10,9 @@ class RequestNotSuccessful(Exception):
 
     def __init__(self, msg):
         super().__init__(msg)
+
+class BluetoothDeviceNotFound(Exception):
+    """Error to indicate we couldn't successfully connect through bluetooth"""
+    
+    def __init__(self, msg):
+        super().__init__(msg)
