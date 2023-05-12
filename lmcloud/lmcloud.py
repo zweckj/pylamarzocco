@@ -175,7 +175,7 @@ class LMCloud:
                 self._lm_bluetooth = await LMBluetooth.create(username=credentials["username"], 
                                                         serial_number=self.machine_info[SERIAL_NUMBER],
                                                         token=self.machine_info[KEY],
-                                                        bluetooth_scanner=bluetooth_scanner)
+                                                        bleak_scanner=bluetooth_scanner)
             except BluetoothDeviceNotFound as e:
                 _logger.warn(f"Could not find bluetooth device. Bluetooth commands will not be available and commands will all be sent through cloud.")
                 _logger.debug(f"Full error: {e}")
