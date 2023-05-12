@@ -152,7 +152,7 @@ class LMCloud:
 
 
     @classmethod
-    async def create_with_local_api(cls, credentials, ip, port=8081, use_websocket=False, use_bluetooth=False):
+    async def create_with_local_api(cls, credentials, ip, port=8081, use_websocket=False, use_bluetooth=False, bluetooth_scanner=None):
         '''
         Also initialize a local API client
         '''
@@ -174,7 +174,8 @@ class LMCloud:
             try:
                 self._lm_bluetooth = await LMBluetooth.create(username=credentials["username"], 
                                                         serial_number=self.machine_info[SERIAL_NUMBER],
-                                                        token=self.machine_info[KEY])
+                                                        token=self.machine_info[KEY],
+                                                        bluetooth_scanner=bluetooth_scanner)
             except BluetoothDeviceNotFound as e:
                 _logger.warn(f"Could not find bluetooth device. Bluetooth commands will not be available and commands will all be sent through cloud.")
                 _logger.debug(f"Full error: {e}")
