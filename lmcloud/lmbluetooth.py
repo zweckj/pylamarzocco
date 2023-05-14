@@ -1,11 +1,12 @@
 import asyncio
 import base64
 import logging
-from bleak import BleakScanner, BleakClient
+from bleak import BleakScanner, BleakClient, BLEDevice, BleakError
 from .exceptions import BluetoothDeviceNotFound
 from .const import SETTINGS_CHARACTERISTIC, AUTH_CHARACTERISTIC, MODEL_LMU
 
 _logger = logging.getLogger(__name__)
+
 
 class LMBluetooth:
     """
@@ -13,13 +14,12 @@ class LMBluetooth:
     """
 
     def __init__(self, username, serial_number, token):
-      self._username = username
-      self._serial_number = serial_number
-      self._token = token
-      self._address = None
-      self._name = None
-      self._client = None
-
+        self._username = username
+        self._serial_number = serial_number
+        self._token = token
+        self._address = None
+        self._name = None
+        self._client = None
 
     @classmethod
     async def create(cls, username, serial_number, token, bleak_scanner=None):
@@ -54,7 +54,6 @@ class LMBluetooth:
                     self._address = d.address
                     self._name = d.name
 
-    
     async def write_bluetooth_message(self, message, characteristic: str):
         """
         connect to machine and write a message
@@ -71,8 +70,8 @@ class LMBluetooth:
         if not isinstance(message, bytes):
             message = bytes(message, 'utf-8')
 
+        _logger.debug(f"Sending bluetooth message: {message} to {characteristic}")
         await self._client.write_gatt_char(characteristic, message)
-
 
     async def authenticate(self):
         """
@@ -83,6 +82,17 @@ class LMBluetooth:
         token = bytes(self._token, 'utf-8')
         auth_string = base64.b64encode(user) + b'@' + base64.b64encode(token)
         await self.write_bluetooth_message(auth_string, AUTH_CHARACTERISTIC)
+
+    async def new_bleak_client_from_ble_device(self, ble_device: BLEDevice):
+        """
+        initalize a new bleak client from a BLEDevice (for Home Assistant)
+        """
+        self._client = BleakClient(ble_device)
+        try:
+            await self._client.connect()
+            await self.authenticate()
+        except BleakError as e:
+            _logger.error(f"Failed to connect to machine with Bluetooth: {e}")
 
     async def set_power(self, state: bool):
         """
@@ -99,7 +109,7 @@ class LMBluetooth:
         msg = "{\"name\":\"SettingBoilerEnable\",\"parameter\":{\"identifier\":\"SteamBoiler\",\"state\":" + str(state).lower() + "}}"
         await self.write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
 
-    async def set_steam_temp(self, temperature:int):
+    async def set_steam_temp(self, temperature: int):
         '''
         Set steamboiler temperature (in Celsius)
         '''
@@ -107,12 +117,12 @@ class LMBluetooth:
             msg = "Steam temp must be one of 126, 128, 131 (°C)"
             raise ValueError(msg)
         else:
-            msg = "{\"name\":\"SettingBoilerTarget\",\"parameter\":{\"identifier\":\"SteamBoiler\",\"value\":" +  str(temperature) + "}}"
+            msg = "{\"name\":\"SettingBoilerTarget\",\"parameter\":{\"identifier\":\"SteamBoiler\",\"value\":" + str(temperature) + "}}"
             await self.write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
 
     async def set_coffee_temp(self, temperature:int):
         '''
         Set Cofeeboiler temperature (in Celsius)
         '''
-        msg = "{\"name\":\"SettingBoilerTarget\",\"parameter\":{\"identifier\":\"CoffeeBoiler1\",\"value\":" +  str(temperature) + "}}"
+        msg = "{\"name\":\"SettingBoilerTarget\",\"parameter\":{\"identifier\":\"CoffeeBoiler1\",\"value\":" + str(temperature) + "}}"
         await self.write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
