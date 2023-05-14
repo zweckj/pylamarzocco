@@ -32,14 +32,10 @@ class LMBluetooth:
                 await self.discover_device(scanner)
         else:
             await self.discover_device(bleak_scanner)
+            
         if not self._address:
             # couldn't connect
             raise BluetoothDeviceNotFound("Couldn't find a machine")
-        
-        # connect to machine and authenticate
-        self._client = BleakClient(self._address)
-        await self._client.connect()
-        await self.authenticate()
 
         return self
 
@@ -58,6 +54,9 @@ class LMBluetooth:
         """
         connect to machine and write a message
         """
+        if not self._client:
+            self._client = BleakClient(self._address)
+
         if not self._client.is_connected:
             await self._client.connect()
             await self.authenticate()
