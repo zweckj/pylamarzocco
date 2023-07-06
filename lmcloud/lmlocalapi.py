@@ -24,18 +24,6 @@ class LMLocalAPI:
         return self._local_ip
     
     @property
-    def coffee_temp(self):
-        return self._status[COFFEE_TEMP]
-    
-    @property
-    def steam_temp(self):
-        return self._status[STEAM_TEMP]
-    
-    @property
-    def water_reservoir_contact(self):
-        return self._status[TANK_LEVEL]
-    
-    @property
     def active_brew(self):
         return self._status[ACTIVE_BREW]
     
@@ -53,9 +41,7 @@ class LMLocalAPI:
         self._timestamp_last_websocket_msg = None
 
         self._status = {}
-        self._status[COFFEE_TEMP] = 0
-        self._status[STEAM_TEMP] = 0
-        self._status[TANK_LEVEL] = True
+
         self._status[ACTIVE_BREW] = False
         self._status[ACTIVE_BREW_DURATION] = 0
 
@@ -94,15 +80,15 @@ class LMLocalAPI:
         try:
             self._timestamp_last_websocket_msg = datetime.now()
             message = json.loads(message)
-            if type(message) is dict:
-                if message["name"] == "SteamBoilerUpdateTemperature":
-                    self._status[STEAM_TEMP] = message["value"]
-                elif message["name"] == "CoffeeBoiler1UpdateTemperature":
-                    self._status[COFFEE_TEMP] = message["value"]
-                elif message["name"] == "MachineConfiguration":
-                    self._full_config = message["value"]
-                    self._status[TANK_LEVEL] = message["value"]
-            elif type(message) is list:
+            # if type(message) is dict:
+            #     if message["name"] == "SteamBoilerUpdateTemperature":
+            #         self._status[STEAM_TEMP] = message["value"]
+            #     elif message["name"] == "CoffeeBoiler1UpdateTemperature":
+            #         self._status[COFFEE_TEMP] = message["value"]
+            #     elif message["name"] == "MachineConfiguration":
+            #         self._full_config = message["value"]
+            #         self._status[TANK_LEVEL] = message["value"]
+            if type(message) is list:
                 if message[0]["name"] == "BrewingUpdateGroup1Time":
                     self._status[ACTIVE_BREW_DURATION] = message[0]["value"]
                 elif message[0]["name"] in ["BrewingStartedGroup1StopType", "BrewingStartedGroup1DoseIndex"]:

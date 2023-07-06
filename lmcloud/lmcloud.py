@@ -40,7 +40,7 @@ class LMCloud:
         Return the config with capitalized keys to be consistent across local/remote APIs 
         """
 
-        return {k.upper():v for k,v in self._config.items()}
+        return self._config
     
     @property
     def status(self):
@@ -60,21 +60,16 @@ class LMCloud:
             "power": True if self.config[MACHINE_MODE] == "BrewingMode" else False,
             "enable_prebrewing": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
             "enable_preinfusion": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
-            "steam_boiler_enable": next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)["isEnabled"],
+            "steam_boiler_enable": self._config_steamboiler["isEnabled"],
             "global_auto": self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"],
-            "coffee_temp": self.status[COFFEE_TEMP],
-            "coffee_set_temp": self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME],
-            "steam_temp": self.status[STEAM_TEMP],
-            "steam_set_temp": self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME],
-            "water_reservoir_contact": self.status[TANK_LEVEL],
+            "coffee_temp": self._config_coffeeboiler[CURRENT],
+            "coffee_set_temp": self._config_coffeeboiler[TARGET],
+            "steam_temp": self._config_steamboiler[CURRENT],
+            "steam_set_temp": self._config_steamboiler[TARGET],
+            "water_reservoir_contact": self.config[TANK_STATUS],
             "plumbin_enable": self.config[PLUMBED_IN],
             "drinks_k1":        self.statistics[0]["count"],
-            "drinks_k2":        self.statistics[1]["count"],
-            "drinks_k3":        self.statistics[2]["count"],
-            "drinks_k4":        self.statistics[3]["count"],
-            "continuous":       self.statistics[4]["count"],
-            "total_flushing":   self.statistics[5]["count"],
-            "active_brew": self.status[ACTIVE_BREW] if self._use_websocket else False
+            "total_flushing":   self.statistics[1]["count"]
         }
 
 
@@ -91,13 +86,11 @@ class LMCloud:
 
     async def get_coffee_boiler_enabled(self):
         await self.update_local_machine_status()
-        coffee_boiler = next(item for item in self.config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
-        return coffee_boiler["isEnabled"]
+        return self._config_coffeeboiler["isEnabled"]
 
     async def get_steam_boiler_enabled(self):
         await self.update_local_machine_status()
-        coffee_boiler = next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
-        return coffee_boiler["isEnabled"]
+        return self._config_steamboiler["isEnabled"]
 
     async def get_coffee_temp(self):
         await self.update_local_machine_status()
@@ -132,6 +125,8 @@ class LMCloud:
         self._lm_bluetooth      = None
         self. _config           = {}
         self. _status           = {}
+        self. _config_steamboiler  = {}
+        self. _config_coffeeboiler = {}
         self. _statistics       = {}
         self._use_websocket     = False
 
@@ -244,28 +239,6 @@ class LMCloud:
         self._last_config_update = datetime.now()
 
 
-    async def get_status(self):
-        '''
-        Get status from cloud
-        '''
-
-        url = f"{self._gw_url_with_serial}/status"
-        try:
-            status = await self._rest_api_call(url=url, verb="GET")
-            return status
-        except Exception as e:
-            _logger.error(f"Could not get config from cloud. Full error: {e}")
-            return self._status
-        
-    async def _update_status_obj(self, force_update=False):
-        if self._status:
-            # wait at least 10 seconds between config updates to not flood the remote API
-            if (datetime.now() - self._last_status_update).total_seconds() < POLLING_DELAY_S or force_update:
-                return
-        self._status = await self.get_status()
-        self._last_status_update = datetime.now() 
-
-
     async def update_local_machine_status(self, in_init=False):
         '''
         update config object
@@ -273,8 +246,7 @@ class LMCloud:
 
         if self._lm_local_api:
             try:
-                conf = await self._lm_local_api.local_get_config()
-                self._config = {k.upper():v for k,v in conf.items()}
+                self._config = await self._lm_local_api.local_get_config()
             except Exception as e:
                 _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
                 await self._update_config_obj()
@@ -282,7 +254,7 @@ class LMCloud:
             if self._lm_local_api._timestamp_last_websocket_msg == None or (datetime.now() - self._lm_local_api._timestamp_last_websocket_msg).total_seconds() > 30: 
                 if self._use_websocket and not in_init: # during init we don't want to log this warning
                     _logger.warn("Could not get local machine status. Falling back to cloud status.")
-                await self._update_status_obj()
+
                 self._status[ACTIVE_BREW] = False
             else:
                 # Get local status from WebSockets
@@ -290,7 +262,10 @@ class LMCloud:
                 self._status = self._lm_local_api._status # reference to the same object tp get websocket updates
         else:
             await self._update_config_obj()     
-            await self._update_status_obj()
+
+        self._config_coffeeboiler = next(item for item in self.config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
+        self._config_steamboiler  = next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
+
 
         await self._update_statistics_obj()
 
@@ -379,7 +354,7 @@ class LMCloud:
         Get Firmware details
         '''
 
-        url = f"{self._gw_url_with_serial}/firmwarev2/"
+        url = f"{self._gw_url_with_serial}/firmware/"
         return await self._rest_api_call(url=url, verb="GET")
 
    
@@ -392,13 +367,14 @@ class LMCloud:
             bt_ok = await self._send_bluetooth_command(self._lm_bluetooth.set_power, enabled)
             response = "Ok"
 
+        mode = "BrewingMode" if enabled else "StandBy"
+
         if not self._lm_bluetooth or not bt_ok:
-            power_status = "ON" if enabled else "STANDBY"
-            data = {"status": power_status}
+            data = {"status": mode}
             url = f"{self._gw_url_with_serial}/status"
             response = await self._rest_api_call(url=url, verb="POST", data=data)
 
-        self._config[MACHINE_MODE] = "BrewingMode" if enabled else "StandBy"
+        self._config[MACHINE_MODE] = mode
         return response
 
 
@@ -535,7 +511,7 @@ class LMCloud:
                 raise ValueError(msg)
             url = f"{self._gw_url_with_serial}/setting-preinfusion"
             data = {
-                "button": "Continuous",
+                "button": "DoseA",
                 "group": "Group1",
                 "holdTimeMs": prebrewOffTime,
                 "wetTimeMs": prebrewOnTime

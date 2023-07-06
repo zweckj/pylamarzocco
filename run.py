@@ -41,14 +41,15 @@ async def main():
     #         print("Brewing")
     #     await asyncio.sleep(1)
 
-    lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"], use_bluetooth=True)
-    print(lmcloud._lm_bluetooth._address)
-    await lmcloud.set_power(True)
+    lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"], use_bluetooth=False)
+    # print(lmcloud._lm_bluetooth._address)
+    # await lmcloud.set_power(True)
     # await lmcloud.set_steam(False)
     # await lmcloud.set_coffee_temp(93.5)
     # await lmcloud.set_steam_temp(128)
-    await lmcloud.set_power(False)
+    # await lmcloud.set_power(False)
 
-    print("Done")
+    print(lmcloud.current_status)
+    print("Done.")
 
 asyncio.run(main())
