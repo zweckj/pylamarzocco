@@ -80,14 +80,14 @@ class LMLocalAPI:
         try:
             self._timestamp_last_websocket_msg = datetime.now()
             message = json.loads(message)
-            # if type(message) is dict:
-            #     if message["name"] == "SteamBoilerUpdateTemperature":
-            #         self._status[STEAM_TEMP] = message["value"]
-            #     elif message["name"] == "CoffeeBoiler1UpdateTemperature":
-            #         self._status[COFFEE_TEMP] = message["value"]
-            #     elif message["name"] == "MachineConfiguration":
-            #         self._full_config = message["value"]
-            #         self._status[TANK_LEVEL] = message["value"]
+            if type(message) is dict:
+                if message["name"] == "SteamBoilerUpdateTemperature":
+                    self._status["SteamTemperature"] = message["value"]
+                elif message["name"] == "CoffeeBoiler1UpdateTemperature":
+                    self._status["CoffeeTemperature"] = message["value"]
+                elif message["name"] == "MachineConfiguration":
+                    self._full_config = message["value"]
+                    self._status["TankLevel"] = message["value"]
             if type(message) is list:
                 if message[0]["name"] == "BrewingUpdateGroup1Time":
                     self._status[ACTIVE_BREW_DURATION] = message[0]["value"]
