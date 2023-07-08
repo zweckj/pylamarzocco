@@ -136,7 +136,6 @@ class LMCloud:
         '''
         Initialize a cloud only client
         '''
-
         self = cls()
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
@@ -151,8 +150,15 @@ class LMCloud:
         '''
         Also initialize a local API client
         '''
-
         self = cls()
+        self.init_with_local_api(credentials, ip, port, use_websocket, use_bluetooth, bluetooth_scanner)
+
+        await self.update_local_machine_status(in_init=True)
+        return self
+    
+
+    async def init_with_local_api(self, credentials, ip, port=8081, use_websocket=False, use_bluetooth=False, bluetooth_scanner=None):
+        ''' init where data is loaded '''
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
@@ -178,9 +184,6 @@ class LMCloud:
                 _logger.warn(f"Bleak encountered an error while trying to connect to bluetooth device. \
                              Maybe no bluetooth adapter is available? Bluetooth commands will not be available and commands will all be sent through cloud.")
                 _logger.debug(f"Full error: {e}")
-
-        await self.update_local_machine_status(in_init=True)
-        return self
         
 
     async def _connect(self, credentials):
