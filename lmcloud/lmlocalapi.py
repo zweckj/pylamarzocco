@@ -56,7 +56,7 @@ class LMLocalAPI:
                 if response.status == 200:
                     return await response.json()
                 
-    async def websocket_connect(self):
+    async def websocket_connect(self, callback = None):
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async for websocket in websockets.connect(f"ws://{self._local_ip}:{self._local_port}/api/v1/streaming", extra_headers=headers):
             try:
@@ -68,6 +68,8 @@ class LMLocalAPI:
                 # Process messages received on the connection.
                 async for message in websocket:
                     await self.handle_websocket_message(message)
+                    if callback:
+                        callback(self._status)
             except websockets.ConnectionClosed:
                 await asyncio.sleep(20) # wait 20 seconds before trying to reconnect
                 continue
