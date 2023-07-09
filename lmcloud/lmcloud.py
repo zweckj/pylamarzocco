@@ -85,36 +85,8 @@ class LMCloud:
         return schedule_out_to_in(self.config[WEEKLY_SCHEDULING_CONFIG])
     
     @property 
-    def current_status(self):
-        """ 
-        Build object which holds status for lamarzocco Home Assistant Integration
-        """
-
-        state = {
-            "power":                        self.power,
-            "enable_prebrewing":            True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
-            "enable_preinfusion":           True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
-            "steam_boiler_enable":          self.steam_boiler_enabled,
-            "global_auto":                  self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"],
-            "coffee_temp":                  self._config_coffeeboiler[CURRENT],
-            "coffee_set_temp":              self._config_coffeeboiler[TARGET],
-            "steam_temp":                   self._config_steamboiler[CURRENT],
-            "steam_set_temp":               self._config_steamboiler[TARGET],
-            "water_reservoir_contact":      self.config[TANK_STATUS],
-            "plumbin_enable":               self.config[PLUMBED_IN],
-            "drinks_k1":                    self.statistics[0]["count"],
-            "total_flushing":               self.statistics[1]["count"],
-            "date_received:":               self.date_received,
-            "machine_name":                 self.machine_info[MACHINE_NAME],
-            "model_name":                   self.machine_info[MODEL_NAME],
-            "update_available":             self.firmware_version != self.latest_firmware_version,
-            "heating_state":                self.heating_state,
-        }
-
-        doses = parse_doses(self.config)
-        preinfusion_settings = parse_preinfusion_settings(self.config)
-        schedule = schedule_out_to_hass(self.config)
-        return state | doses | preinfusion_settings | schedule
+    def current_status(self) -> dict:
+        return self._current_status
     
 
     '''
@@ -125,14 +97,15 @@ class LMCloud:
 
     def __init__(self):
         _logger.setLevel(logging.DEBUG)
-        self._lm_local_api      = None
-        self._lm_bluetooth      = None
-        self. _config           = {}
-        self. _status           = {}
+        self._lm_local_api         = None
+        self._lm_bluetooth         = None
+        self. _config              = {}
+        self. _status              = {}
+        self._current_status       = {}
         self. _config_steamboiler  = {}
         self. _config_coffeeboiler = {}
-        self. _statistics       = {}
-        self._use_websocket     = False
+        self. _statistics          = {}
+        self._use_websocket        = False
 
 
     @classmethod
@@ -277,6 +250,7 @@ class LMCloud:
 
         await self._update_statistics_obj()
         self._date_received = datetime.now()
+        self._current_status = self._build_current_status()
 
 
     async def get_statistics(self):
@@ -607,6 +581,7 @@ class LMCloud:
         self._config[WEEKLY_SCHEDULING_CONFIG] = schedule_in_to_out(enable, schedule)
         return response
 
+
     async def set_auto_on_off(self, day_of_week, hour_on, minute_on, hour_off, minute_off):
         schedule = self.schedule
         idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
@@ -615,6 +590,7 @@ class LMCloud:
         schedule[idx]["off"] = f"{hour_off:02d}:{minute_off:02d}"
         return await self.configure_schedule(self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule)
     
+
     async def set_auto_on_off_enable(self, day_of_week, enable):
         schedule = self.schedule
         idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
@@ -633,3 +609,34 @@ class LMCloud:
         response = await self._rest_api_call(url=url, verb="POST", data=data)
         self._config[BACKFLUSH_ENABLED] = True
         return response
+
+    def _build_current_status(self):
+        """ 
+        Build object which holds status for lamarzocco Home Assistant Integration
+        """
+
+        state = {
+            "power":                        self.power,
+            "enable_prebrewing":            True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
+            "enable_preinfusion":           True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
+            "steam_boiler_enable":          self.steam_boiler_enabled,
+            "global_auto":                  self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"],
+            "coffee_temp":                  self._config_coffeeboiler[CURRENT],
+            "coffee_set_temp":              self._config_coffeeboiler[TARGET],
+            "steam_temp":                   self._config_steamboiler[CURRENT],
+            "steam_set_temp":               self._config_steamboiler[TARGET],
+            "water_reservoir_contact":      self.config[TANK_STATUS],
+            "plumbin_enable":               self.config[PLUMBED_IN],
+            "drinks_k1":                    self.statistics[0]["count"],
+            "total_flushing":               self.statistics[1]["count"],
+            "date_received:":               self.date_received,
+            "machine_name":                 self.machine_info[MACHINE_NAME],
+            "model_name":                   self.machine_info[MODEL_NAME],
+            "update_available":             self.firmware_version != self.latest_firmware_version,
+            "heating_state":                self.heating_state,
+        }
+
+        doses = parse_doses(self.config)
+        preinfusion_settings = parse_preinfusion_settings(self.config)
+        schedule = schedule_out_to_hass(self.config)
+        return state | doses | preinfusion_settings | schedule
