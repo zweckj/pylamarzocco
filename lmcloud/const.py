@@ -33,8 +33,8 @@ BACKFLUSH_ENABLED = "isBackFlushEnabled"
 CURRENT = "current"
 TARGET = "target"
 TANK_STATUS = "tankStatus"
-ACTIVE_BREW = "ACTIVE_BREW"
-ACTIVE_BREW_DURATION = "ACTIVE_BREW_DURATION"
+BREW_ACTIVE = "brew_active"
+BREW_ACTIVE_DURATION = "brew_active_duration"
 
 
 # bluetooth

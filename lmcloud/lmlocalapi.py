@@ -24,12 +24,12 @@ class LMLocalAPI:
         return self._local_ip
     
     @property
-    def active_brew(self):
-        return self._status[ACTIVE_BREW]
+    def brew_active(self):
+        return self._status[BREW_ACTIVE]
     
     @property
-    def active_brew_duration(self):
-        return self._status[ACTIVE_BREW_DURATION]
+    def brew_active_duration(self):
+        return self._status[BREW_ACTIVE_DURATION]
 
     def __init__(self, local_ip, local_bearer, local_port=8081):
         self._local_ip = local_ip
@@ -42,8 +42,8 @@ class LMLocalAPI:
 
         self._status = {}
 
-        self._status[ACTIVE_BREW] = False
-        self._status[ACTIVE_BREW_DURATION] = 0
+        self._status[BREW_ACTIVE] = False
+        self._status[BREW_ACTIVE_DURATION] = 0
 
 
     '''
@@ -92,12 +92,12 @@ class LMLocalAPI:
                     self._status["TankLevel"] = message["value"]
             if type(message) is list:
                 if message[0]["name"] == "BrewingUpdateGroup1Time":
-                    self._status[ACTIVE_BREW_DURATION] = message[0]["value"]
+                    self._status[BREW_ACTIVE_DURATION] = message[0]["value"]
                 elif message[0]["name"] in ["BrewingStartedGroup1StopType", "BrewingStartedGroup1DoseIndex"]:
                     # started active brew
-                    self._status[ACTIVE_BREW] = True
+                    self._status[BREW_ACTIVE] = True
                 elif message[0]["name"] in ["BrewingSnapshotGroup1", "FlushStoppedGroup1DoseIndex", "FlushStoppedGroup1Time"]:
                     # stopped active brew
-                    self._status[ACTIVE_BREW] = False
+                    self._status[BREW_ACTIVE] = False
         except Exception as e:
             _logger.error(f"Error during handling of websocket message: {e}")

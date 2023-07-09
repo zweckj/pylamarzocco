@@ -64,6 +64,10 @@ class LMCloud:
         steam_heating = float(self._config_steamboiler["current"]) < float(self._config_steamboiler["target"]) \
             and self.power and self.steam_boiler_enabled
         return coffee_heating or steam_heating
+
+    @property
+    def brew_active(self) -> str:
+        return self._brew_active
     
     @property 
     def heating_state(self) -> list:
@@ -86,6 +90,8 @@ class LMCloud:
     
     @property 
     def current_status(self) -> dict:
+        # extend the current status from super with active brew property
+        self._current_status[BREW_ACTIVE] = self.brew_active
         return self._current_status
     
 
@@ -106,6 +112,7 @@ class LMCloud:
         self. _config_coffeeboiler = {}
         self. _statistics          = {}
         self._use_websocket        = False
+        self._brew_active          = False
 
 
     @classmethod
@@ -235,8 +242,6 @@ class LMCloud:
             if self._lm_local_api._timestamp_last_websocket_msg == None or (datetime.now() - self._lm_local_api._timestamp_last_websocket_msg).total_seconds() > 30: 
                 if self._use_websocket and not in_init: # during init we don't want to log this warning
                     _logger.warn("Could not get local machine status. Falling back to cloud status.")
-
-                self._status[ACTIVE_BREW] = False
             else:
                 # Get local status from WebSockets
                 _logger.info("Using local status")
@@ -627,8 +632,6 @@ class LMCloud:
             "steam_set_temp":               self._config_steamboiler[TARGET],
             "water_reservoir_contact":      self.config[TANK_STATUS],
             "plumbin_enable":               self.config[PLUMBED_IN],
-            "drinks_k1":                    self.statistics[0]["count"],
-            "total_flushing":               self.statistics[1]["count"],
             "date_received:":               self.date_received,
             "machine_name":                 self.machine_info[MACHINE_NAME],
             "model_name":                   self.machine_info[MODEL_NAME],
@@ -639,4 +642,5 @@ class LMCloud:
         doses = parse_doses(self.config)
         preinfusion_settings = parse_preinfusion_settings(self.config)
         schedule = schedule_out_to_hass(self.config)
-        return state | doses | preinfusion_settings | schedule
+        statistics = parse_statistics(self.statistics)
+        return state | doses | preinfusion_settings | schedule | statistics

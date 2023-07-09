@@ -79,3 +79,22 @@ def parse_doses(config):
     parsed["dose_hot_water"] = config["teaDoses"]["DoseA"]["stopTarget"]
     return parsed
 
+def parse_statistics(statistics):
+    parsed = {}
+    parsed["total_flushing"] = statistics[-1]["count"]
+    i = 1
+    coffee_sum = 0
+    for stat in statistics:
+        coffeeType = stat["coffeeType"]
+        count = stat["count"]
+        if coffeeType >= 0 and coffeeType < 4:
+            parsed[f"drinks_k{coffeeType + 1}"] = count
+            coffee_sum += count
+        elif coffeeType == 4:
+            parsed["continuous"] = count
+            coffee_sum += count
+        elif coffeeType == -1:
+            parsed["total_flushing"] = count
+    parsed["total_coffee"] = coffee_sum
+    return parsed
+
