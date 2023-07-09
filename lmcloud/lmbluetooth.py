@@ -3,7 +3,7 @@ import base64
 import logging
 from bleak import BleakScanner, BleakClient, BLEDevice, BleakError
 from .exceptions import BluetoothDeviceNotFound
-from .const import SETTINGS_CHARACTERISTIC, AUTH_CHARACTERISTIC, MODEL_LMU
+from .const import SETTINGS_CHARACTERISTIC, AUTH_CHARACTERISTIC, BT_MODEL_NAMES
 
 _logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class LMBluetooth:
         devices = await scanner.discover()
         for d in devices:
             if d.name:
-                if MODEL_LMU.upper() in d.name:
+                if d.name.startswith(tuple(BT_MODEL_NAMES)):
                     self._address = d.address
                     self._name = d.name
 
