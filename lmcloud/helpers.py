@@ -65,7 +65,7 @@ def parse_preinfusion_settings(config) -> dict:
     for group in preinfusion_settings["Group1"]:
         parsed[f"prebrewing_ton_k{i}"] = group["preWetTime"]
         parsed[f"prebrewing_toff_k{i}"] = group["preWetHoldTime"]
-        parsed[f"preinfusion_ton_k{i}"] = group["preWetTime"]
+        parsed[f"preinfusion_k{i}"] = group["preWetTime"]
         i += 1
     return parsed
 
