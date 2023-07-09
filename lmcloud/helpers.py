@@ -2,8 +2,8 @@
 helper functions
 '''
 
-# convert schedule return format to API expected input format
 def schedule_out_to_in(schedule):
+    """ convert schedule return format to API expected input format """
     days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     schedule_conv = []
     for day in days: 
@@ -24,6 +24,7 @@ def schedule_out_to_in(schedule):
     return schedule_conv
 
 def schedule_in_to_out(enable, schedule):
+    """ convert API input format to API output format"""
     out = {"enabled": enable}
     for day in schedule:
         out[day["day"].lower()] = {
@@ -34,3 +35,47 @@ def schedule_in_to_out(enable, schedule):
             "m_off": int(day["off"].split(':')[1])
         }
     return out
+
+def schedule_out_to_hass(config) -> dict:
+    """ API output schedule (config obj) to hass config """
+    parsed = {}
+    weeklySchedulingConfig = config["weeklySchedulingConfig"]
+    for key in weeklySchedulingConfig.keys():
+        if key == "enabled":
+            parsed["global_auto"] = "Enabled" if weeklySchedulingConfig[key] else "Disabled"
+        else:
+            day_short = key[0:3]
+            h_on      = weeklySchedulingConfig[key]["h_on"]
+            h_off     = weeklySchedulingConfig[key]["h_off"]
+            m_on      = weeklySchedulingConfig[key]["m_on"] 
+            m_off     = weeklySchedulingConfig[key]["m_off"]
+            parsed[f"{day_short}_on_min"] =     m_on
+            parsed[f"{day_short}_off_min"] =    m_off
+            parsed[f"{day_short}_on_hour"] =    h_on
+            parsed[f"{day_short}_on_hour"] =    h_off
+            parsed[f"{day_short}_on_time"] =    str(h_on) + ":" + str(m_on).zfill(2)
+            parsed[f"{day_short}_off_time"] =   str(h_off) + ":" + str(m_off).zfill(2)
+
+    return parsed
+
+def parse_preinfusion_settings(config) -> dict:
+    parsed = {}
+    i = 1
+    preinfusion_settings = config["preinfusionSettings"]
+    for group in preinfusion_settings["Group1"]:
+        parsed[f"prebrewing_ton_k{i}"] = group["preWetTime"]
+        parsed[f"prebrewing_toff_k{i}"] = group["preWetHoldTime"]
+        parsed[f"preinfusion_ton_k{i}"] = group["preWetTime"]
+        i += 1
+    return parsed
+
+def parse_doses(config):
+    parsed = {}
+    i = 1
+    groupCapabilities = config["groupCapabilities"]
+    for dose in groupCapabilities[0]["doses"]:
+        parsed[f"dose_k{i}"] = dose["stopTarget"]
+        i += 1
+    parsed["dose_hot_water"] = config["teaDoses"]["DoseA"]["stopTarget"]
+    return parsed
+

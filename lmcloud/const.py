@@ -8,6 +8,12 @@ POLLING_DELAY_STATISTICS_S = 60
 
 MODEL_LMU = "Micra"
 
+BT_MODEL_NAMES = [
+    "MICRA",
+    "MINI",
+    "GS3"
+]
+
 # Key Names for Dictionaries
 KEY = "key"
 SERIAL_NUMBER = "serial_number"

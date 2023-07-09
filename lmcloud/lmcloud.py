@@ -27,21 +27,51 @@ class LMCloud:
         return self._machine_info
 
     @property
-    def model_name(self):
+    def model_name(self) -> str:
         return self._machine_info[MODEL_NAME]
     
     @property 
-    def firmware_version(self):
+    def firmware_version(self) -> str:
         return self._firmware["machine_firmware"]["version"]
+    
+    @property
+    def latest_firmware_version(self) -> str:
+        return self._firmware["machine_firmware"]["targetVersion"]
+    
+    @property
+    def date_received(self):
+        return self._date_received
 
     @property
     def config(self):
         """ 
         Return the config with capitalized keys to be consistent across local/remote APIs 
         """
-
         return self._config
     
+    @property
+    def power(self) -> bool:
+        return True if self.config[MACHINE_MODE] == "BrewingMode" else False
+    
+    @property 
+    def steam_boiler_enabled(self) -> bool:
+        return self._config_steamboiler["isEnabled"]
+    
+    @property
+    def is_heating(self) -> bool:
+        coffee_heating = (float(self._config_coffeeboiler["current"]) < float(self._config_coffeeboiler["target"])) \
+            and self.power 
+        steam_heating = float(self._config_steamboiler["current"]) < float(self._config_steamboiler["target"]) \
+            and self.power and self.steam_boiler_enabled
+        return coffee_heating or steam_heating
+    
+    @property 
+    def heating_state(self) -> list:
+        return [
+            "heating_on" if self.power else "heating_off",
+            "steam_heater_on" if self.steam_boiler_enabled else "steam_heater_off"
+        ]
+
     @property
     def status(self):
         return self._status
@@ -49,6 +79,10 @@ class LMCloud:
     @property
     def statistics(self):
         return self._statistics
+
+    @property
+    def schedule(self):
+        return schedule_out_to_in(self.config[WEEKLY_SCHEDULING_CONFIG])
     
     @property 
     def current_status(self):
@@ -56,61 +90,31 @@ class LMCloud:
         Build object which holds status for lamarzocco Home Assistant Integration
         """
 
-        return {
-            "power": True if self.config[MACHINE_MODE] == "BrewingMode" else False,
-            "enable_prebrewing": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
-            "enable_preinfusion": True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
-            "steam_boiler_enable": self._config_steamboiler["isEnabled"],
-            "global_auto": self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"],
-            "coffee_temp": self._config_coffeeboiler[CURRENT],
-            "coffee_set_temp": self._config_coffeeboiler[TARGET],
-            "steam_temp": self._config_steamboiler[CURRENT],
-            "steam_set_temp": self._config_steamboiler[TARGET],
-            "water_reservoir_contact": self.config[TANK_STATUS],
-            "plumbin_enable": self.config[PLUMBED_IN],
-            "drinks_k1":        self.statistics[0]["count"],
-            "total_flushing":   self.statistics[1]["count"]
+        state = {
+            "power":                        self.power,
+            "enable_prebrewing":            True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
+            "enable_preinfusion":           True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
+            "steam_boiler_enable":          self.steam_boiler_enabled,
+            "global_auto":                  self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"],
+            "coffee_temp":                  self._config_coffeeboiler[CURRENT],
+            "coffee_set_temp":              self._config_coffeeboiler[TARGET],
+            "steam_temp":                   self._config_steamboiler[CURRENT],
+            "steam_set_temp":               self._config_steamboiler[TARGET],
+            "water_reservoir_contact":      self.config[TANK_STATUS],
+            "plumbin_enable":               self.config[PLUMBED_IN],
+            "drinks_k1":                    self.statistics[0]["count"],
+            "total_flushing":               self.statistics[1]["count"],
+            "date_received:":               self.date_received,
+            "machine_name":                 self.machine_info[MACHINE_NAME],
+            "model_name":                   self.machine_info[MODEL_NAME],
+            "update_available":             self.firmware_version != self.latest_firmware_version,
+            "heating_state":                self.heating_state,
         }
 
-
-    '''
-    *******************************************
-    ***  Getters for current machine state ****
-    *******************************************
-    '''
-
-    # will return current machine mode (Brewing/StandBy)
-    async def get_machine_mode(self):
-        await self.update_local_machine_status()
-        return self.config[MACHINE_MODE]
-
-    async def get_coffee_boiler_enabled(self):
-        await self.update_local_machine_status()
-        return self._config_coffeeboiler["isEnabled"]
-
-    async def get_steam_boiler_enabled(self):
-        await self.update_local_machine_status()
-        return self._config_steamboiler["isEnabled"]
-
-    async def get_coffee_temp(self):
-        await self.update_local_machine_status()
-        return self.config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME]
-
-    async def get_steam_temp(self):
-        await self.update_local_machine_status()
-        return self.config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME]
-
-    async def get_plumbin_enabled(self):
-        await self.update_local_machine_status()
-        return self.config[PLUMBED_IN]
-
-    async def get_preinfusion_settings(self):
-        await self.update_local_machine_status()
-        return self.config[PRE_INFUSION_SETTINGS]
-
-    async def get_schedule(self):
-        await self.update_local_machine_status()
-        return schedule_out_to_in(self.config[WEEKLY_SCHEDULING_CONFIG])
+        doses = parse_doses(self.config)
+        preinfusion_settings = parse_preinfusion_settings(self.config)
+        schedule = schedule_out_to_hass(self.config)
+        return state | doses | preinfusion_settings | schedule
     
 
     '''
@@ -151,7 +155,7 @@ class LMCloud:
         Also initialize a local API client
         '''
         self = cls()
-        self.init_with_local_api(credentials, ip, port, use_websocket, use_bluetooth, bluetooth_scanner)
+        await self.init_with_local_api(credentials, ip, port, use_websocket, use_bluetooth, bluetooth_scanner)
 
         await self.update_local_machine_status(in_init=True)
         return self
@@ -164,6 +168,7 @@ class LMCloud:
         self._lm_local_api = LMLocalAPI(local_ip=ip, local_port=port, local_bearer=self.machine_info[KEY])
         self._gw_url_with_serial = GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
         self._firmware = await self.get_firmware()
+        self._date_received = datetime.now()
 
         # init websockets if set
         if use_websocket:
@@ -271,6 +276,7 @@ class LMCloud:
 
 
         await self._update_statistics_obj()
+        self._date_received = datetime.now()
 
 
     async def get_statistics(self):
@@ -468,7 +474,7 @@ class LMCloud:
             msg = "Pre-Infusion/Pre-Brew can only be TypeB (PreInfusion), Enabled (Pre-Brew) or Disabled"
             _logger.debug(msg)
             raise ValueError(msg)
-        elif mode == "TypedB" and not (await self.get_plumbin_enabled()):
+        elif mode == "TypedB" and not self.config[PLUMBED_IN]:
             msg = "Pre-Infusion can only be enabled when plumbin is enabled"
             _logger.debug(msg)
             raise ValueError(msg)
@@ -602,7 +608,7 @@ class LMCloud:
         return response
 
     async def set_auto_on_off(self, day_of_week, hour_on, minute_on, hour_off, minute_off):
-        schedule = await self.get_schedule()
+        schedule = self.schedule
         idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
         schedule[idx]["enable"] = True
         schedule[idx]["on"] = f"{hour_on:02d}:{minute_on:02d}"
@@ -610,7 +616,7 @@ class LMCloud:
         return await self.configure_schedule(self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule)
     
     async def set_auto_on_off_enable(self, day_of_week, enable):
-        schedule = await self.get_schedule()
+        schedule = self.schedule
         idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
         schedule[idx]["enable"] = enable
         return await self.configure_schedule(self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule)
