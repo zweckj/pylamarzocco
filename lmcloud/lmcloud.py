@@ -240,14 +240,14 @@ class LMCloud:
                 await self._update_config_obj()
 
             if self._lm_local_api._timestamp_last_websocket_msg == None or (datetime.now() - self._lm_local_api._timestamp_last_websocket_msg).total_seconds() > 30: 
-                if self._use_websocket and not in_init: # during init we don't want to log this warning
+                if self._use_websocket and not in_init:  # during init we don't want to log this warning
                     _logger.warn("Could not get local machine status. Falling back to cloud status.")
             else:
                 # Get local status from WebSockets
                 _logger.info("Using local status")
-                self._status = self._lm_local_api._status # reference to the same object tp get websocket updates
+                self._status = self._lm_local_api._status  # reference to the same object tp get websocket updates
         else:
-            await self._update_config_obj()     
+            await self._update_config_obj() 
 
         self._config_coffeeboiler = next(item for item in self.config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
         self._config_steamboiler  = next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)

@@ -56,7 +56,7 @@ class LMLocalAPI:
                 if response.status == 200:
                     return await response.json()
                 
-    async def websocket_connect(self, callback = None):
+    async def websocket_connect(self, callback=None):
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async for websocket in websockets.connect(f"ws://{self._local_ip}:{self._local_port}/api/v1/streaming", extra_headers=headers):
             try:
@@ -71,7 +71,7 @@ class LMLocalAPI:
                     if callback:
                         callback(self._status)
             except websockets.ConnectionClosed:
-                await asyncio.sleep(20) # wait 20 seconds before trying to reconnect
+                await asyncio.sleep(20)  # wait 20 seconds before trying to reconnect
                 continue
             except Exception as e:
                 _logger.error(f"Error during websocket connection: {e}")
@@ -82,22 +82,45 @@ class LMLocalAPI:
         try:
             self._timestamp_last_websocket_msg = datetime.now()
             message = json.loads(message)
+            unmapped_msg = False
+
             if type(message) is dict:
-                if message["name"] == "SteamBoilerUpdateTemperature":
-                    self._status["SteamTemperature"] = message["value"]
-                elif message["name"] == "CoffeeBoiler1UpdateTemperature":
-                    self._status["CoffeeTemperature"] = message["value"]
-                elif message["name"] == "MachineConfiguration":
-                    self._full_config = message["value"]
-                    self._status["TankLevel"] = message["value"]
-            if type(message) is list:
-                if message[0]["name"] == "BrewingUpdateGroup1Time":
-                    self._status[BREW_ACTIVE_DURATION] = message[0]["value"]
-                elif message[0]["name"] in ["BrewingStartedGroup1StopType", "BrewingStartedGroup1DoseIndex"]:
-                    # started active brew
+                if 'MachineConfiguration' in message:
+                    # got machine configuration
+                    self._status["machineConfiguration"] = json.loads(message["MachineConfiguration"])
+                elif "SystemInfo" in message:
+                    self._status["systemInfo"] = json.loads(message["SystemInfo"])
+                else:
+                    unmapped_msg = True
+
+            elif type(message) is list:
+                if "KeepAlive" in message[0]:
+                    return
+                elif "SteamBoilerUpdateTemperature" in message[0]:
+                    self._status["steamTemperature"] = message[0]["SteamBoilerUpdateTemperature"]
+                elif "CoffeeBoiler1UpdateTemperature" in message[0]:
+                    self._status["coffeeTemperature"] = message[0]["CoffeeBoiler1UpdateTemperature"]
+                elif "Sleep" in message[0]:
+                    self._status["powerOn"] = False
+                    self._status["sleepCause"] = message[0]["Sleep"]
+                elif "WakeUp" in message[0]:
+                    self._status["powerOn"] = True
+                    self._status["wakeupCause"] = message[0]["WakeUp"]
+                elif "MachineStatistics" in message[0]:
+                    self._status["statistics"] = json.loads(message[0]["MachineStatistics"])
+                elif "BrewingUpdateGroup1Time" in message[0]:
                     self._status[BREW_ACTIVE] = True
-                elif message[0]["name"] in ["BrewingSnapshotGroup1", "FlushStoppedGroup1DoseIndex", "FlushStoppedGroup1Time"]:
-                    # stopped active brew
+                    self._status[BREW_ACTIVE_DURATION] = message[0]["BrewingUpdateGroup1Time"]
+                elif "BrewingSnapshotGroup1" in message[0]:
                     self._status[BREW_ACTIVE] = False
+                    self._status["brewingSnapshot"] = json.loads(message[0]["BrewingSnapshotGroup1"])
+                else:
+                    unmapped_msg = True
+            else:
+                unmapped_msg = True
+
+            if unmapped_msg:
+                _logger.warn(f"Unmapped message from La Marzocco WebSocket, please report to dev: {message}")
+
         except Exception as e:
             _logger.error(f"Error during handling of websocket message: {e}")
