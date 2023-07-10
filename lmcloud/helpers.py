@@ -45,14 +45,16 @@ def schedule_out_to_hass(config) -> dict:
             parsed["global_auto"] = "Enabled" if weeklySchedulingConfig[key] else "Disabled"
         else:
             day_short = key[0:3]
+            enabled   = "Enabled" if weeklySchedulingConfig[key]["enabled"] else "Disabled"
             h_on      = weeklySchedulingConfig[key]["h_on"]
             h_off     = weeklySchedulingConfig[key]["h_off"]
-            m_on      = weeklySchedulingConfig[key]["m_on"] 
+            m_on      = weeklySchedulingConfig[key]["m_on"]
             m_off     = weeklySchedulingConfig[key]["m_off"]
+            parsed[f"{day_short}_auto"] =       enabled
             parsed[f"{day_short}_on_min"] =     m_on
             parsed[f"{day_short}_off_min"] =    m_off
             parsed[f"{day_short}_on_hour"] =    h_on
-            parsed[f"{day_short}_on_hour"] =    h_off
+            parsed[f"{day_short}_off_hour"] =    h_off
             parsed[f"{day_short}_on_time"] =    str(h_on) + ":" + str(m_on).zfill(2)
             parsed[f"{day_short}_off_time"] =   str(h_off) + ":" + str(m_off).zfill(2)
 
