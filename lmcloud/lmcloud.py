@@ -511,7 +511,7 @@ class LMCloud:
             return response
 
 
-    async def enable_plumbin(self, enable:bool):
+    async def enable_plumbin(self, enable: bool):
         '''
         Enable or disable plumbin mode
         '''
@@ -526,7 +526,39 @@ class LMCloud:
             response = await self._rest_api_call(url=url, verb="POST", data=data)
             self._config[PLUMBED_IN] = enable
             return response
+        
+    async def set_dose(self, key: int, value: int): 
+        """Set the value for a dose"""
 
+        if key < 1 or key > 4:
+            msg = f"Key must be an integer value between 1 and 4, was {key}"
+            _logger.debug(msg)
+            raise ValueError(msg)
+        
+        dose_index = f"Dose{chr(key + 64)}"
+        
+        url = f"{self._gw_url_with_serial}/dose"
+        data = {
+                "doseIndex": dose_index,
+                "doseType": "PulsesType",
+                "groupNumber": "Group1",
+                "stopTarget": value
+            }
+        
+        response = await self._rest_api_call(url=url, verb="POST", data=data)   
+        idx = next(index for index, dose in enumerate(data["groupCapabilities"][0]["doses"]) if dose["doseIndex"] == dose_index)
+        self._config["groupCapabilities"][0]["doses"][idx]["stopTarget"] = value
+        return response
+    
+
+    async def set_dose_hot_water(self, value: int):
+        """Set the value for the hot water dose"""
+        url = f"{self._gw_url_with_serial}/dose-tea"
+        data = {"dose_index": "DoseA", "value": value}
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        self._config["teaDoses"]["DoseA"]["stopTarget"] = value
+        return response
+    
 
     async def configure_schedule(self, enable: bool, schedule: list):
         '''
@@ -601,7 +633,7 @@ class LMCloud:
         idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
         schedule[idx]["enable"] = enable
         return await self.configure_schedule(self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule)
-
+    
 
 
     async def start_backflush(self):
