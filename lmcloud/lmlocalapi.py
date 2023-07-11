@@ -11,7 +11,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 '''
-This class is for interaction with the new local API currently only the Micra exposes
+This class is for interaction with the new local API
 '''
 class LMLocalAPI:
 
@@ -56,27 +56,26 @@ class LMLocalAPI:
                 if response.status == 200:
                     return await response.json()
                 
-    async def websocket_connect(self, callback=None):
+    async def websocket_connect(self, callback=None, use_sigterm_handler=True):
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async for websocket in websockets.connect(f"ws://{self._local_ip}:{self._local_port}/api/v1/streaming", extra_headers=headers):
             try:
-                # Close the connection when receiving SIGTERM.
-                loop = asyncio.get_running_loop()
-                loop.add_signal_handler(
-                    signal.SIGTERM, loop.create_task, websocket.close())
-
+                if use_sigterm_handler:
+                    # Close the connection when receiving SIGTERM.
+                    loop = asyncio.get_running_loop()
+                    loop.add_signal_handler(
+                        signal.SIGTERM, loop.create_task, websocket.close())
                 # Process messages received on the connection.
                 async for message in websocket:
                     await self.handle_websocket_message(message)
                     if callback:
                         callback(self._status)
             except websockets.ConnectionClosed:
-                await asyncio.sleep(20)  # wait 20 seconds before trying to reconnect
+                _logger.debug(f"Websocket disconnected, reconnecting in {WEBSOCKET_RETRY_DELAY}...")
+                await asyncio.sleep(WEBSOCKET_RETRY_DELAY)  # wait 20 seconds before trying to reconnect
                 continue
             except Exception as e:
                 _logger.error(f"Error during websocket connection: {e}")
-                await asyncio.sleep(20)
-                continue
 
     async def handle_websocket_message(self, message):
         try:
@@ -111,6 +110,8 @@ class LMLocalAPI:
                 elif "BrewingUpdateGroup1Time" in message[0]:
                     self._status[BREW_ACTIVE] = True
                     self._status[BREW_ACTIVE_DURATION] = message[0]["BrewingUpdateGroup1Time"]
+                elif "BrewingStartedGroup1StopType" in message[0]:
+                    return
                 elif "BrewingSnapshotGroup1" in message[0]:
                     self._status[BREW_ACTIVE] = False
                     self._status["brewingSnapshot"] = json.loads(message[0]["BrewingSnapshotGroup1"])

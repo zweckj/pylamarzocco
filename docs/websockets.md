@@ -56,6 +56,11 @@ ws://IP:8081/api/v1/streaming -H "Authorization: Bearer <Token>"
 ]
 ```
 
+## Brewing stopped
+```json
+[{'BrewingStartedGroup1StopType': 'Volume'}, {'BrewingStartedGroup1DoseIndex': 'DoseA'}, {'BrewingStartedGroup1VolumeTarget': 0}]
+```
+
 ## Wake up
 ```json
 [

@@ -52,9 +52,10 @@ async def main():
     while True:
         print("waiting...")
         # print(lmcloud._lm_local_api._timestamp_last_websocket_msg)
-        if lmcloud.current_status["brew_active"]:
-            print("Brewing")
-        await asyncio.sleep(1)
+        # if lmcloud.current_status["brew_active"]:
+        #     print("Brewing")#
+       # await lmcloud.update_local_machine_status()
+        await asyncio.sleep(5)
     # print(lmcloud._lm_bluetooth._address)
     # await lmcloud.set_power(True)
     # await lmcloud.set_steam(False)
