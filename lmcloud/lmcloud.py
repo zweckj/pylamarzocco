@@ -244,7 +244,7 @@ class LMCloud:
                     _logger.warn("Could not get local machine status. Falling back to cloud status.")
             else:
                 # Get local status from WebSockets
-                _logger.info("Using local status")
+                _logger.debug("Using local status object")
                 self._status = self._lm_local_api._status  # reference to the same object tp get websocket updates
         else:
             await self._update_config_obj() 
