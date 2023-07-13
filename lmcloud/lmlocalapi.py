@@ -88,7 +88,7 @@ class LMLocalAPI:
                 if 'MachineConfiguration' in message:
                     # got machine configuration
                     value = json.loads(message["MachineConfiguration"])
-                    self._status["machineConfiguration"] 
+                    self._status["machineConfiguration"] = value
                     return "machineConfiguration", value
                 
                 elif "SystemInfo" in message:
