@@ -56,7 +56,7 @@ class LMLocalAPI:
                 if response.status == 200:
                     return await response.json()
                 
-    async def websocket_connect(self, callback=None, use_sigterm_handler=True):
+    async def websocket_connect(self, callback=None, use_sigterm_handler=True) -> None:
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async for websocket in websockets.connect(f"ws://{self._local_ip}:{self._local_port}/api/v1/streaming", extra_headers=headers):
             try:
@@ -67,9 +67,9 @@ class LMLocalAPI:
                         signal.SIGTERM, loop.create_task, websocket.close())
                 # Process messages received on the connection.
                 async for message in websocket:
-                    await self.handle_websocket_message(message)
+                    property_updated, value = await self.handle_websocket_message(message)
                     if callback:
-                        callback(self._status)
+                        callback(property_updated, value, self._status)
             except websockets.ConnectionClosed:
                 _logger.debug(f"Websocket disconnected, reconnecting in {WEBSOCKET_RETRY_DELAY}...")
                 await asyncio.sleep(WEBSOCKET_RETRY_DELAY)  # wait 20 seconds before trying to reconnect
@@ -84,37 +84,62 @@ class LMLocalAPI:
             unmapped_msg = False
 
             if type(message) is dict:
+
                 if 'MachineConfiguration' in message:
                     # got machine configuration
-                    self._status["machineConfiguration"] = json.loads(message["MachineConfiguration"])
+                    value = json.loads(message["MachineConfiguration"])
+                    self._status["machineConfiguration"] 
+                    return "machineConfiguration", value
+                
                 elif "SystemInfo" in message:
-                    self._status["systemInfo"] = json.loads(message["SystemInfo"])
+                    value = json.loads(message["SystemInfo"])
+                    self._status["systemInfo"] = value
+                    return "systemInfo", value
                 else:
                     unmapped_msg = True
 
             elif type(message) is list:
+
                 if "KeepAlive" in message[0]:
-                    return
+                    return None, None
+                
                 elif "SteamBoilerUpdateTemperature" in message[0]:
-                    self._status["steamTemperature"] = message[0]["SteamBoilerUpdateTemperature"]
+                    value = message[0]["SteamBoilerUpdateTemperature"]
+                    self._status["steamTemperature"] = value
+                    return "steam_temp", value
+                
                 elif "CoffeeBoiler1UpdateTemperature" in message[0]:
-                    self._status["coffeeTemperature"] = message[0]["CoffeeBoiler1UpdateTemperature"]
+                    value = message[0]["CoffeeBoiler1UpdateTemperature"]
+                    self._status["coffeeTemperature"] = value
+                    return "coffee_temp", value
+
                 elif "Sleep" in message[0]:
-                    self._status["powerOn"] = False
+                    self._status["power"] = False
                     self._status["sleepCause"] = message[0]["Sleep"]
+                    return "power", False
+                
                 elif "WakeUp" in message[0]:
-                    self._status["powerOn"] = True
+                    self._status["power"] = True
                     self._status["wakeupCause"] = message[0]["WakeUp"]
+                    return "power", True
+                
                 elif "MachineStatistics" in message[0]:
-                    self._status["statistics"] = json.loads(message[0]["MachineStatistics"])
+                    value = json.loads(message[0]["MachineStatistics"])
+                    self._status["statistics"] = value
+                    return "statistics", value
+                
                 elif "BrewingUpdateGroup1Time" in message[0]:
                     self._status[BREW_ACTIVE] = True
                     self._status[BREW_ACTIVE_DURATION] = message[0]["BrewingUpdateGroup1Time"]
+                    return BREW_ACTIVE, True
+                
                 elif "BrewingStartedGroup1StopType" in message[0]:
-                    return
+                    return None, None
+                
                 elif "BrewingSnapshotGroup1" in message[0]:
                     self._status[BREW_ACTIVE] = False
                     self._status["brewingSnapshot"] = json.loads(message[0]["BrewingSnapshotGroup1"])
+                    return BREW_ACTIVE, False
                 else:
                     unmapped_msg = True
             else:
@@ -122,6 +147,8 @@ class LMLocalAPI:
 
             if unmapped_msg:
                 _logger.warn(f"Unmapped message from La Marzocco WebSocket, please report to dev: {message}")
+
+            return None, None
 
         except Exception as e:
             _logger.error(f"Error during handling of websocket message: {e}")
