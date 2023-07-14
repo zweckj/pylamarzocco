@@ -243,8 +243,6 @@ class LMCloud:
                 if self._use_websocket and not in_init:  # during init we don't want to log this warning
                     _logger.warn("Could not get local machine status. Falling back to cloud status.")
             else:
-                # Get local status from WebSockets
-                _logger.debug("Using local status object")
                 self._status = self._lm_local_api._status  # reference to the same object tp get websocket updates
         else:
             await self._update_config_obj() 
