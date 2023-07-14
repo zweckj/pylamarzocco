@@ -136,6 +136,9 @@ class LMLocalAPI:
                 elif "BrewingStartedGroup1StopType" in message[0]:
                     return None, None
                 
+                elif "BrewingStoppedGroup1StopType" in message[0]:
+                    return None, None
+                
                 elif "BrewingSnapshotGroup1" in message[0]:
                     self._status[BREW_ACTIVE] = False
                     self._status["brewingSnapshot"] = json.loads(message[0]["BrewingSnapshotGroup1"])
