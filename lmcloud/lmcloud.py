@@ -32,11 +32,11 @@ class LMCloud:
     
     @property 
     def firmware_version(self) -> str:
-        return self._firmware["machine_firmware"]["version"]
+        return self._firmware.get("machine_firmware", {}).get("version")
     
     @property
     def latest_firmware_version(self) -> str:
-        return self._firmware["machine_firmware"]["targetVersion"]
+        return self._firmware.get("machine_firmware", {}).get("targetVersion")
     
     @property
     def date_received(self):
@@ -55,13 +55,13 @@ class LMCloud:
     
     @property 
     def steam_boiler_enabled(self) -> bool:
-        return self._config_steamboiler["isEnabled"]
+        return self._config_steamboiler.get("isEnabled" , False)
     
     @property
     def is_heating(self) -> bool:
-        coffee_heating = (float(self._config_coffeeboiler["current"]) < float(self._config_coffeeboiler["target"])) \
+        coffee_heating = (float(self._config_coffeeboiler.get("current", 0)) < float(self._config_coffeeboiler.get("target", 0))) \
             and self.power 
-        steam_heating = float(self._config_steamboiler["current"]) < float(self._config_steamboiler["target"]) \
+        steam_heating = float(self._config_steamboiler.get("current", 0)) < float(self._config_steamboiler.get("target", 0)) \
             and self.power and self.steam_boiler_enabled
         return coffee_heating or steam_heating
 
@@ -102,7 +102,6 @@ class LMCloud:
     '''
 
     def __init__(self):
-        _logger.setLevel(logging.DEBUG)
         self._lm_local_api         = None
         self._lm_bluetooth         = None
         self. _config              = {}
@@ -152,6 +151,7 @@ class LMCloud:
 
         # init websockets if set
         if use_websocket:
+            _logger.debug("Initiating lmcloud with WebSockets")
             self._use_websocket = True
             asyncio.create_task(self._lm_local_api.websocket_connect())
 
@@ -234,6 +234,7 @@ class LMCloud:
 
         if self._lm_local_api:
             try:
+                _logger.debug("Getting config from local API.")
                 self._config = await self._lm_local_api.local_get_config()
             except Exception as e:
                 _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
@@ -245,10 +246,11 @@ class LMCloud:
             else:
                 self._status = self._lm_local_api._status  # reference to the same object tp get websocket updates
         else:
+            _logger.debug("Getting config from cloud.")
             await self._update_config_obj() 
 
-        self._config_coffeeboiler = next(item for item in self.config[BOILERS] if item["id"] == COFFEE_BOILER_NAME)
-        self._config_steamboiler  = next(item for item in self.config[BOILERS] if item["id"] == STEAM_BOILER_NAME)
+        self._config_coffeeboiler = next(item for item in self.config.get(BOILERS, []) if item["id"] == COFFEE_BOILER_NAME)
+        self._config_steamboiler  = next(item for item in self.config.get(BOILERS, []) if item["id"] == STEAM_BOILER_NAME)
 
 
         await self._update_statistics_obj()
@@ -260,6 +262,7 @@ class LMCloud:
         '''
         Get statistics
         '''
+        _logger.debug("Getting statistics from cloud.")
 
         url = f"{self._gw_url_with_serial}/statistics/counters"
         try:
@@ -327,11 +330,29 @@ class LMCloud:
         data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
 
         machine_info = {}
-        fleet = data["fleet"][0]
-        machine_info[KEY] = fleet["communicationKey"]
-        machine_info[SERIAL_NUMBER] = fleet["machine"]["serialNumber"]
-        machine_info[MACHINE_NAME] = fleet["name"]
-        machine_info[MODEL_NAME] = fleet["machine"]["model"]["name"]
+        fleet = data.get("fleet", [{}])[0]
+        
+        machine_info[KEY] = fleet.get("communicationKey")
+
+        if machine_info[KEY] is None:
+            raise RequestNotSuccessful("communicationKey not part of response.")
+        
+        machine_info[MACHINE_NAME] = fleet.get("name")
+
+        if machine_info[MACHINE_NAME] is None:
+            raise RequestNotSuccessful("name not part of response.")
+        
+        machine = fleet.get("machine", {})
+        machine_info[SERIAL_NUMBER] = machine.get("serialNumber")
+
+        if machine_info[SERIAL_NUMBER] is None:
+            raise RequestNotSuccessful("serialNumber not part of response.")
+        
+        machine_info[MODEL_NAME] = machine.get("model", {}).get("name")
+
+        if machine_info[MODEL_NAME] is None:
+            raise RequestNotSuccessful("model_name not part of response.")
+        
         return machine_info
     
 
@@ -652,19 +673,19 @@ class LMCloud:
 
         state = {
             "power":                        self.power,
-            "enable_prebrewing":            True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "Enabled" else False,
-            "enable_preinfusion":           True if self.config[PRE_INFUSION_SETTINGS]["mode"] == "TypeB" else False,
+            "enable_prebrewing":            True if self.config.get(PRE_INFUSION_SETTINGS, {}).get("mode") == "Enabled" else False,
+            "enable_preinfusion":           True if self.config.get(PRE_INFUSION_SETTINGS, {}).get("mode") == "TypeB" else False,
             "steam_boiler_enable":          self.steam_boiler_enabled,
-            "global_auto":                  self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"],
-            "coffee_temp":                  self._config_coffeeboiler[CURRENT],
-            "coffee_set_temp":              self._config_coffeeboiler[TARGET],
-            "steam_temp":                   self._config_steamboiler[CURRENT],
-            "steam_set_temp":               self._config_steamboiler[TARGET],
-            "water_reservoir_contact":      self.config[TANK_STATUS],
-            "plumbin_enable":               self.config[PLUMBED_IN],
+            "global_auto":                  self.config.get(WEEKLY_SCHEDULING_CONFIG, {}).get("enabled", False),
+            "coffee_temp":                  self._config_coffeeboiler.get(CURRENT, 0),
+            "coffee_set_temp":              self._config_coffeeboiler.get(TARGET, 0),
+            "steam_temp":                   self._config_steamboiler.get(CURRENT, 0),
+            "steam_set_temp":               self._config_steamboiler.get(TARGET, 0),
+            "water_reservoir_contact":      self.config.get(TANK_STATUS, False),
+            "plumbin_enable":               self.config.get(PLUMBED_IN, False),
             "date_received:":               self.date_received,
-            "machine_name":                 self.machine_info[MACHINE_NAME],
-            "model_name":                   self.machine_info[MODEL_NAME],
+            "machine_name":                 self.machine_info.get(MACHINE_NAME),
+            "model_name":                   self.machine_info.get(MODEL_NAME),
             "update_available":             self.firmware_version != self.latest_firmware_version,
             "heating_state":                self.heating_state,
         }

@@ -39,17 +39,18 @@ def schedule_in_to_out(enable, schedule):
 def schedule_out_to_hass(config) -> dict:
     """ API output schedule (config obj) to hass config """
     parsed = {}
-    weeklySchedulingConfig = config["weeklySchedulingConfig"]
+    weeklySchedulingConfig = config.get("weeklySchedulingConfig", {})
     for key in weeklySchedulingConfig.keys():
         if key == "enabled":
             parsed["global_auto"] = "Enabled" if weeklySchedulingConfig[key] else "Disabled"
         else:
             day_short = key[0:3]
-            enabled   = "Enabled" if weeklySchedulingConfig[key]["enabled"] else "Disabled"
-            h_on      = weeklySchedulingConfig[key]["h_on"]
-            h_off     = weeklySchedulingConfig[key]["h_off"]
-            m_on      = weeklySchedulingConfig[key]["m_on"]
-            m_off     = weeklySchedulingConfig[key]["m_off"]
+            config_day = weeklySchedulingConfig.get(key, {})
+            enabled   = "Enabled" if config_day.get("enabled", False) else "Disabled"
+            h_on      = config_day.get("h_on", 0)
+            h_off     = config_day.get("h_off", 0)
+            m_on      = config_day.get("m_on", 0)
+            m_off     = config_day.get("m_off", 0)
             parsed[f"{day_short}_auto"] =       enabled
             parsed[f"{day_short}_on_min"] =     m_on
             parsed[f"{day_short}_off_min"] =    m_off
@@ -63,27 +64,34 @@ def schedule_out_to_hass(config) -> dict:
 def parse_preinfusion_settings(config) -> dict:
     parsed = {}
     i = 1
-    preinfusion_settings = config["preinfusionSettings"]
-    for group in preinfusion_settings["Group1"]:
-        parsed[f"prebrewing_ton_k{i}"] = group["preWetTime"]
-        parsed[f"prebrewing_toff_k{i}"] = group["preWetHoldTime"]
-        parsed[f"preinfusion_k{i}"] = group["preWetTime"]
+    preinfusion_settings = config.get("preinfusionSettings", {})
+    for group in preinfusion_settings.get("Group1", {}):
+        parsed[f"prebrewing_ton_k{i}"] = group.get("preWetTime", 0)
+        parsed[f"prebrewing_toff_k{i}"] = group.get("preWetHoldTime", 0)
+        parsed[f"preinfusion_k{i}"] = group.get("preWetTime", 0)
         i += 1
     return parsed
 
 def parse_doses(config):
     parsed = {}
     i = 1
-    groupCapabilities = config["groupCapabilities"]
-    for dose in groupCapabilities[0]["doses"]:
-        parsed[f"dose_k{i}"] = dose["stopTarget"]
+    groupCapabilities = config.get("groupCapabilities", [])
+    if len(groupCapabilities) == 0:
+        return parsed
+    
+    for dose in groupCapabilities[0].get("doses", []):
+        parsed[f"dose_k{i}"] = dose.get("stopTarget", 0)
         i += 1
-    parsed["dose_hot_water"] = config["teaDoses"]["DoseA"]["stopTarget"]
+    parsed["dose_hot_water"] = config.get("teaDoses", {}).get("DoseA", {}).get("stopTarget", 0)
     return parsed
 
 def parse_statistics(statistics):
     parsed = {}
-    parsed["total_flushing"] = statistics[-1]["count"]
+
+    if len(statistics) == 0:
+        return parsed
+    
+    parsed["total_flushing"] = statistics[-1].get("count", 0)
     i = 1
     coffee_sum = 0
     for stat in statistics:

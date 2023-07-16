@@ -45,6 +45,8 @@ class LMLocalAPI:
         self._status[BREW_ACTIVE] = False
         self._status[BREW_ACTIVE_DURATION] = 0
 
+        self._terminating = False
+
 
     '''
     Get current config of machine from local API
@@ -67,6 +69,8 @@ class LMLocalAPI:
                         signal.SIGTERM, loop.create_task, websocket.close())
                 # Process messages received on the connection.
                 async for message in websocket:
+                    if self._terminating:
+                        return
                     property_updated, value = await self.handle_websocket_message(message)
                     if callback:
                         callback(property_updated, value)
