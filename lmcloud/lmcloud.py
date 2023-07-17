@@ -51,7 +51,7 @@ class LMCloud:
     
     @property
     def power(self) -> bool:
-        return True if self.config[MACHINE_MODE] == "BrewingMode" else False
+        return True if self.config.get(MACHINE_MODE, False) == "BrewingMode" else False
     
     @property 
     def steam_boiler_enabled(self) -> bool:
@@ -112,6 +112,7 @@ class LMCloud:
         self. _statistics          = {}
         self._use_websocket        = False
         self._brew_active          = False
+        self._last_config_update   = None
 
 
     @classmethod
@@ -221,7 +222,9 @@ class LMCloud:
 
         if self._config:
             # wait at least 10 seconds between config updates to not flood the remote API
-            if (datetime.now() - self._last_config_update).total_seconds() < POLLING_DELAY_S or force_update:
+            if ((self._last_config_update and 
+                (datetime.now() - self._last_config_update).total_seconds() < POLLING_DELAY_S) or
+                    force_update):
                 return
         self._config = await self.get_config()
         self._last_config_update = datetime.now()
