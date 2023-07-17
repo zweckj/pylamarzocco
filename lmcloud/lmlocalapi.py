@@ -75,6 +75,8 @@ class LMLocalAPI:
                     if callback:
                         callback(property_updated, value)
             except websockets.ConnectionClosed:
+                if self._terminating:
+                    return
                 _logger.debug(f"Websocket disconnected, reconnecting in {WEBSOCKET_RETRY_DELAY}...")
                 await asyncio.sleep(WEBSOCKET_RETRY_DELAY)  # wait 20 seconds before trying to reconnect
                 continue
