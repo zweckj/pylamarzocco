@@ -252,8 +252,8 @@ class LMCloud:
             _logger.debug("Getting config from cloud.")
             await self._update_config_obj() 
 
-        self._config_coffeeboiler = next(item for item in self.config.get(BOILERS, []) if item["id"] == COFFEE_BOILER_NAME)
-        self._config_steamboiler  = next(item for item in self.config.get(BOILERS, []) if item["id"] == STEAM_BOILER_NAME)
+        self._config_coffeeboiler = next((item for item in self.config.get(BOILERS, []) if item["id"] == COFFEE_BOILER_NAME), {})
+        self._config_steamboiler  = next((item for item in self.config.get(BOILERS, []) if item["id"] == STEAM_BOILER_NAME), {})
 
 
         await self._update_statistics_obj()
@@ -568,8 +568,11 @@ class LMCloud:
             }
         
         response = await self._rest_api_call(url=url, verb="POST", data=data)   
-        idx = next(index for index, dose in enumerate(data["groupCapabilities"][0]["doses"]) if dose["doseIndex"] == dose_index)
-        self._config["groupCapabilities"][0]["doses"][idx]["stopTarget"] = value
+        if ("groupCapabilities" in self._config and
+                len(self._config["groupCapabilities"]) > 0 and
+                        "doses" in self._config["groupCapabilities"][0]):
+                        idx = next(index for index, dose in enumerate(self._config["groupCapabilities"][0]["doses"]) if dose.get("doseIndex") == dose_index)
+                        self._config["groupCapabilities"][0]["doses"][idx]["stopTarget"] = value
         return response
     
 
