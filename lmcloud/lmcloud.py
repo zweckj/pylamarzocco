@@ -646,7 +646,7 @@ class LMCloud:
 
     async def set_auto_on_off(self, day_of_week, hour_on, minute_on, hour_off, minute_off):
         schedule = self.schedule
-        idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
+        idx = [index for (index, d) in enumerate(schedule) if d["day"][0:3] == day_of_week[0:3].upper()][0]
         schedule[idx]["enable"] = True
         schedule[idx]["on"] = f"{hour_on:02d}:{minute_on:02d}"
         schedule[idx]["off"] = f"{hour_off:02d}:{minute_off:02d}"
@@ -655,7 +655,7 @@ class LMCloud:
 
     async def set_auto_on_off_enable(self, day_of_week, enable):
         schedule = self.schedule
-        idx = [index for (index, d) in enumerate(schedule) if d["day"] == day_of_week.upper()][0]
+        idx = [index for (index, d) in enumerate(schedule) if d["day"][0:3] == day_of_week[0:3].upper()][0]
         schedule[idx]["enable"] = enable
         return await self.configure_schedule(self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule)
     
