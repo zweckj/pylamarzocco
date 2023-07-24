@@ -561,10 +561,10 @@ class LMCloud:
         
         url = f"{self._gw_url_with_serial}/dose"
         data = {
-                "doseIndex": dose_index,
-                "doseType": "PulsesType",
-                "groupNumber": "Group1",
-                "stopTarget": value
+                "dose_index": dose_index,
+                "dose_type": "PulsesType",
+                "group": "Group1",
+                "value": value
             }
         
         response = await self._rest_api_call(url=url, verb="POST", data=data)   
