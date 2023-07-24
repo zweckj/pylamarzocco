@@ -135,3 +135,4 @@ bleak_discover.py
 .gitignore
 bleaktest.py
 bleak_info.py
+testconf.json

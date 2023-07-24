@@ -53,133 +53,197 @@
 `GET https://gw.lamarzocco.io/v1/home/machines/<SN>/configuration`
 
 ```json
-  {
-    "data": {
-        "BOILERS": [
-            {
-                "id": "SteamBoiler",
-                "isEnabled": true,
-                "target": 131
-            },
-            {
-                "id": "CoffeeBoiler1",
-                "isEnabled": true,
-                "target": 94
-            }
-        ],
-        "BOILERTARGETTEMPERATURE": {
-            "CoffeeBoiler1": 94,
-            "SteamBoiler": 131
-        },
-        "CLOCK": "2023-01-23T11:04:05",
-        "FIRMWAREVERSIONS": [
-            {
-                "fw_version": "1.11",
-		"name": "machine_firmware"
-            },
-            {
-                "fw_version": "v2.2-rc0",
-                "name": "gateway_firmware"
-            }
-        ],
-        "GROUPCAPABILITIES": [
-            {
-                "capabilities": {
-                    "boilerId": "CoffeeBoiler1",
-                    "groupNumber": "Group1",
-                    "groupType": "EP_Group",
-                    "hasFlowmeter": false,
-                    "hasScale": false,
-                    "numberOfDoses": 0
-                },
-                "doseMode": {
-                    "brewingType": "Time",
-                    "groupNumber": "Group1"
-                },
-                "doses": []
-            }
-        ],
-        "ISBACKFLUSHENABLED": false,
-        "ISPLUMBEDIN": false,
-        "MACHINECAPABILITIES": [
-            {
-                "coffeeBoilersNumber": 1,
-                "family": "MICRA",
-                "groupsNumber": 1,
-                "hasCupWarmer": false,
-		"hasWhaterProbe": false,
-                "machineModes": [
-                    "BrewingMode",
-                    "StandBy"
-                ],
-                "schedulingType": "weeklyScheduling",
-                "steamBoilersNumber": 1,
-                "teaDosesNumber": 1
-            }
-        ],
-        "MACHINEMODE": "BrewingMode",
-        "MACHINE_SN": "#REDACTED#",
-        "PREINFUSIONMODE": {
-            "Group1": {
+  {{
+    "version": "v1",
+    "preinfusionModesAvailable": [
+        "ByDoseType"
+    ],
+    "machineCapabilities": [
+        {
+            "family": "GS3AV",
+            "groupsNumber": 1,
+            "coffeeBoilersNumber": 1,
+            "hasCupWarmer": false,
+            "steamBoilersNumber": 1,
+            "teaDosesNumber": 1,
+            "machineModes": [
+                "BrewingMode",
+                "StandBy"
+            ],
+            "schedulingType": "weeklyScheduling"
+        }
+    ],
+    "machine_sn": "xxx",
+    "machine_hw": "2",
+    "isPlumbedIn": true,
+    "isBackFlushEnabled": false,
+    "standByTime": 0,
+    "tankStatus": true,
+    "groupCapabilities": [
+        {
+            "capabilities": {
+                "groupType": "AV_Group",
                 "groupNumber": "Group1",
-                "preinfusionStyle": "PreinfusionByDoseType"
-            }
-        },
-        "PREINFUSIONMODESAVAILABLE": [
-            "ByDoseType"
-        ],
-        "PREINFUSIONSETTINGS": {
-            "Group1": [
+                "boilerId": "CoffeeBoiler1",
+                "hasScale": false,
+                "hasFlowmeter": true,
+                "numberOfDoses": 4
+            },
+            "doses": [
                 {
-                    "doseType": "Continuous",
                     "groupNumber": "Group1",
-                    "preWetHoldTime": 5,
-                    "preWetTime": 5
+                    "doseIndex": "DoseA",
+                    "doseType": "PulsesType",
+                    "stopTarget": 135
+                },
+                {
+                    "groupNumber": "Group1",
+                    "doseIndex": "DoseB",
+                    "doseType": "PulsesType",
+                    "stopTarget": 97
+                },
+                {
+                    "groupNumber": "Group1",
+                    "doseIndex": "DoseC",
+                    "doseType": "PulsesType",
+                    "stopTarget": 108
+                },
+                {
+                    "groupNumber": "Group1",
+                    "doseIndex": "DoseD",
+                    "doseType": "PulsesType",
+                    "stopTarget": 121
                 }
             ],
-            "mode": "Disabled"
-	},
-        "STANDBYTIME": 30,
-        "TANKSTATUS": true,
-        "TEADOSES": {
-            "DoseA": {
-                "doseIndex": "DoseA",
-                "stopTarget": 0
+            "doseMode": {
+                "groupNumber": "Group1",
+                "brewingType": "PulsesType"
             }
-        },
-        "VERSION": "v1",
-        "WEEKLYSCHEDULINGCONFIG": {
-		 "enabled": false,
-                "h_off": 24,
-                "h_on": 24,
-                "m_off": 0,
-                "m_on": 0
-            },
-            "thursday": {
-                "enabled": false,
-                "h_off": 24,
-                "h_on": 24,
-                "m_off": 0,
-                "m_on": 0
-            },
-            "tuesday": {
-                "enabled": false,
-                "h_off": 24,
-                "h_on": 24,
-                "m_off": 0,
-                "m_on": 0
-            },
-            "wednesday": {
-                "enabled": false,
-                "h_off": 24,
-                "h_on": 24,
-                "m_off": 0,
-                "m_on": 0
-            }
-        },
-        "received": "2023-01-23T11:04:46.431Z"
+        }
+    ],
+    "machineMode": "BrewingMode",
+    "teaDoses": {
+        "DoseA": {
+            "doseIndex": "DoseA",
+            "stopTarget": 8
+        }
     },
-    "status": true
+    "boilers": [
+        {
+            "id": "SteamBoiler",
+            "isEnabled": true,
+            "target": 123.90000152587891,
+            "current": 123.80000305175781
+        },
+        {
+            "id": "CoffeeBoiler1",
+            "isEnabled": true,
+            "target": 95,
+            "current": 96.5
+        }
+    ],
+    "boilerTargetTemperature": {
+        "SteamBoiler": 123.90000152587891,
+        "CoffeeBoiler1": 95
+    },
+    "preinfusionMode": {
+        "Group1": {
+            "groupNumber": "Group1",
+            "preinfusionStyle": "PreinfusionByDoseType"
+        }
+    },
+    "preinfusionSettings": {
+        "mode": "TypeB",
+        "Group1": [
+            {
+                "groupNumber": "Group1",
+                "doseType": "DoseA",
+                "preWetTime": 0.5,
+                "preWetHoldTime": 1
+            },
+            {
+                "groupNumber": "Group1",
+                "doseType": "DoseB",
+                "preWetTime": 0.5,
+                "preWetHoldTime": 1
+            },
+            {
+                "groupNumber": "Group1",
+                "doseType": "DoseC",
+                "preWetTime": 3.2999999523162842,
+                "preWetHoldTime": 3.2999999523162842
+            },
+            {
+                "groupNumber": "Group1",
+                "doseType": "DoseD",
+                "preWetTime": 2,
+                "preWetHoldTime": 2
+            }
+        ]
+    },
+    "weeklySchedulingConfig": {
+        "enabled": true,
+        "monday": {
+            "enabled": true,
+            "h_on": 6,
+            "h_off": 16,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "tuesday": {
+            "enabled": true,
+            "h_on": 6,
+            "h_off": 16,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "wednesday": {
+            "enabled": true,
+            "h_on": 6,
+            "h_off": 16,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "thursday": {
+            "enabled": true,
+            "h_on": 6,
+            "h_off": 16,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "friday": {
+            "enabled": true,
+            "h_on": 6,
+            "h_off": 16,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "saturday": {
+            "enabled": true,
+            "h_on": 6,
+            "h_off": 16,
+            "m_on": 0,
+            "m_off": 0
+        },
+        "sunday": {
+            "enabled": true,
+            "h_on": 6,
+            "h_off": 16,
+            "m_on": 0,
+            "m_off": 0
+        }
+    },
+    "clock": "1901-07-08T10:29:00",
+    "firmwareVersions": [
+        {
+            "name": "machine_firmware",
+            "fw_version": "1.40"
+        },
+        {
+            "name": "gateway_firmware",
+            "fw_version": "v3.1-rc4"
+        }
+    ]
 }
 ```
 
