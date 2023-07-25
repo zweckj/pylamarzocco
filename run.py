@@ -46,22 +46,24 @@ async def main():
         data["host"], 
         data["port"], 
         use_bluetooth=False,
-        use_websocket=True
+        use_websocket=False
     )
     
-    while True:
-        print("waiting...")
-        # print(lmcloud._lm_local_api._timestamp_last_websocket_msg)
-        # if lmcloud.current_status["brew_active"]:
-        #     print("Brewing")#
-       # await lmcloud.update_local_machine_status()
-        await asyncio.sleep(5)
+    # while True:
+    #     print("waiting...")
+    #     # print(lmcloud._lm_local_api._timestamp_last_websocket_msg)
+    #     # if lmcloud.current_status["brew_active"]:
+    #     #     print("Brewing")#
+    #    # await lmcloud.update_local_machine_status()
+    #     await asyncio.sleep(5)
     # print(lmcloud._lm_bluetooth._address)
     # await lmcloud.set_power(True)
     # await lmcloud.set_steam(False)
     # await lmcloud.set_coffee_temp(93.5)
     # await lmcloud.set_steam_temp(128)
     # await lmcloud.set_power(False)
+    # await lmcloud.set_auto_on_off("thu", 14, 15, 16, 15)
+    await lmcloud.set_auto_on_off_enable("thu", False)
 
     print(lmcloud.current_status)
     print("Done.")

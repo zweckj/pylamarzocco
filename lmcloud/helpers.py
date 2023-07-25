@@ -17,7 +17,7 @@ def schedule_out_to_in(schedule):
 
         schedule_conv.append({
             "day": str.upper(day),
-            "enabled": schedule[day]["enabled"],
+            "enable": schedule[day]["enabled"],
             "on" : hh_mm_on,
             "off": hh_mm_off
         })
@@ -28,7 +28,7 @@ def schedule_in_to_out(enable, schedule):
     out = {"enabled": enable}
     for day in schedule:
         out[day["day"].lower()] = {
-            "enabled": day["enabled"],
+            "enabled": day["enable"],
             "h_on": 24 if day["on"].split(':')[0] == "00" else int(day["on"].split(':')[0]),
             "h_off": 24 if day["off"].split(':')[0] == "00" else int(day["off"].split(':')[0]),
             "m_on": int(day["on"].split(':')[1]),
