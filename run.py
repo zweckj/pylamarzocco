@@ -63,7 +63,7 @@ async def main():
     # await lmcloud.set_steam_temp(128)
     # await lmcloud.set_power(False)
     # await lmcloud.set_auto_on_off("thu", 14, 15, 16, 15)
-    await lmcloud.set_auto_on_off_enable("thu", False)
+    # await lmcloud.set_auto_on_off_enable("thu", False)
 
     print(lmcloud.current_status)
     print("Done.")
