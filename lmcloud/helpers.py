@@ -65,14 +65,24 @@ def parse_preinfusion_settings(config) -> dict:
     parsed = {}
     i = 1
     preinfusion_settings = config.get("preinfusionSettings", {})
+    mode = preinfusion_settings.get("mode", "Disabled")
     for group in preinfusion_settings.get("Group1", {}):
-        parsed[f"prebrewing_ton_k{i}"] = group.get("preWetTime", 0)
-        parsed[f"prebrewing_toff_k{i}"] = group.get("preWetHoldTime", 0)
-        parsed[f"preinfusion_k{i}"] = group.get("preWetHoldTime", 0)
+        if mode == "Disabled":
+            parsed[f"preinfusion_k{i}"] = 0
+            parsed[f"prebrewing_ton_k{i}"] = 0
+            parsed[f"prebrewing_toff_k{i}"] = 0
+        elif mode == "Enabled":
+            parsed[f"prebrewing_ton_k{i}"] = group.get("preWetTime", 0)
+            parsed[f"prebrewing_toff_k{i}"] = group.get("preWetHoldTime", 0)
+            parsed[f"preinfusion_k{i}"] = 0
+        elif mode == "TypeB":
+            parsed[f"prebrewing_ton_k{i}"] = 0
+            parsed[f"prebrewing_toff_k{i}"] = 0
+            parsed[f"preinfusion_k{i}"] = group.get("preWetHoldTime", 0)
         i += 1
     return parsed
 
-def parse_doses(config):
+def parse_doses(config) -> dict:
     parsed = {}
     i = 1
     groupCapabilities = config.get("groupCapabilities", [])
@@ -85,7 +95,7 @@ def parse_doses(config):
     parsed["dose_hot_water"] = config.get("teaDoses", {}).get("DoseA", {}).get("stopTarget", 0)
     return parsed
 
-def parse_statistics(statistics):
+def parse_statistics(statistics) -> dict:
     parsed = {}
 
     if len(statistics) == 0:
