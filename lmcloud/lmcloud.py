@@ -220,17 +220,19 @@ class LMCloud:
         Load the config into variables in this class
         '''
 
-        if self._config:
+        if self._config and not bool(self._config):
             # wait at least 10 seconds between config updates to not flood the remote API
             if ((self._last_config_update and 
-                (datetime.now() - self._last_config_update).total_seconds() < POLLING_DELAY_S) or
+                (datetime.now() - self._last_config_update).total_seconds() < POLLING_DELAY_S) and not
                     force_update):
                 return
-        self._config = await self.get_config()
+        config = await self.get_config()
+        if config and bool(config):
+            self._config = config
         self._last_config_update = datetime.now()
 
 
-    async def update_local_machine_status(self, in_init=False):
+    async def update_local_machine_status(self, in_init=False, force_update=False):
         '''
         update config object
         '''
@@ -240,8 +242,9 @@ class LMCloud:
                 _logger.debug("Getting config from local API.")
                 self._config = await self._lm_local_api.local_get_config()
             except Exception as e:
-                _logger.warn(f"Could not connect to local API although initialized. Full error: {e}")
-                await self._update_config_obj()
+                _logger.warn(f"Could not connect to local API although initialized")
+                _logger.debug(f"Full error: {e}")
+                await self._update_config_obj(force_update=force_update)
 
             if self._lm_local_api._timestamp_last_websocket_msg == None or (datetime.now() - self._lm_local_api._timestamp_last_websocket_msg).total_seconds() > 30: 
                 if self._use_websocket and not in_init:  # during init we don't want to log this warning
@@ -250,13 +253,12 @@ class LMCloud:
                 self._status = self._lm_local_api._status  # reference to the same object tp get websocket updates
         else:
             _logger.debug("Getting config from cloud.")
-            await self._update_config_obj() 
+            await self._update_config_obj(force_update=force_update)
 
         self._config_coffeeboiler = next((item for item in self.config.get(BOILERS, []) if item["id"] == COFFEE_BOILER_NAME), {})
         self._config_steamboiler  = next((item for item in self.config.get(BOILERS, []) if item["id"] == STEAM_BOILER_NAME), {})
 
-
-        await self._update_statistics_obj()
+        await self._update_statistics_obj(force_update=force_update)
         self._date_received = datetime.now()
         self._current_status = self._build_current_status()
 
@@ -279,7 +281,7 @@ class LMCloud:
     async def _update_statistics_obj(self, force_update=False):
         if self._statistics:
             # wait at least 10 seconds between config updates to not flood the remote API
-            if (datetime.now() - self._last_statistics_update).total_seconds() < POLLING_DELAY_STATISTICS_S or force_update:
+            if (datetime.now() - self._last_statistics_update).total_seconds() < POLLING_DELAY_STATISTICS_S and not force_update:
                 return
         self._statistics = await self.get_statistics()
         self._last_statistics_update = datetime.now() 

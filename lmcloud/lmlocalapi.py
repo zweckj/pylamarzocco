@@ -6,6 +6,8 @@ import json
 from datetime import datetime
 from .const import *
 from .helpers import *
+from .exceptions import RequestNotSuccessful
+
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -57,6 +59,8 @@ class LMLocalAPI:
             async with session.get(f"http://{self._local_ip}:{self._local_port}/api/v1/config") as response:
                 if response.status == 200:
                     return await response.json()
+                else:
+                    raise RequestNotSuccessful(f"Querying local API failed with statuscode: {response.status}")
                 
     async def websocket_connect(self, callback=None, use_sigterm_handler=True) -> None:
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
