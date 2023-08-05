@@ -135,13 +135,19 @@ class LMCloud:
         Also initialize a local API client
         '''
         self = cls()
-        await self.init_with_local_api(credentials, ip, port, use_websocket, use_bluetooth, bluetooth_scanner)
+        await self._init_with_local_api(credentials, ip, port)
+
+        if use_websocket:
+            await self._init_websocket()
+
+        if use_bluetooth:
+            await self._init_bluetooth(credentials["username"], bluetooth_scanner)
 
         await self.update_local_machine_status(in_init=True)
         return self
     
 
-    async def init_with_local_api(self, credentials, ip, port=8081, use_websocket=False, use_bluetooth=False, bluetooth_scanner=None):
+    async def _init_with_local_api(self, credentials, ip, port=8081):
         ''' init where data is loaded '''
         self.client = await self._connect(credentials)
         self._machine_info = await self._get_machine_info()
@@ -150,27 +156,31 @@ class LMCloud:
         self._firmware = await self.get_firmware()
         self._date_received = datetime.now()
 
-        # init websockets if set
-        if use_websocket:
-            _logger.debug("Initiating lmcloud with WebSockets")
-            self._use_websocket = True
-            asyncio.create_task(self._lm_local_api.websocket_connect())
-
-        # init bluetooth if set
-        if use_bluetooth:
-            try:
-                self._lm_bluetooth = await LMBluetooth.create(username=credentials["username"], 
-                                                        serial_number=self.machine_info[SERIAL_NUMBER],
-                                                        token=self.machine_info[KEY],
-                                                        bleak_scanner=bluetooth_scanner)
-            except BluetoothDeviceNotFound as e:
-                _logger.warn(f"Could not find bluetooth device. Bluetooth commands will not be available and commands will all be sent through cloud.")
-                _logger.debug(f"Full error: {e}")
-            except BleakError as e:
-                _logger.warn(f"Bleak encountered an error while trying to connect to bluetooth device. \
-                             Maybe no bluetooth adapter is available? Bluetooth commands will not be available and commands will all be sent through cloud.")
-                _logger.debug(f"Full error: {e}")
         
+    async def _init_websocket(self):
+        _logger.debug("Initiating lmcloud with WebSockets")
+        self._use_websocket = True
+        asyncio.create_task(self._lm_local_api.websocket_connect())
+
+
+    async def _init_bluetooth(self, username, bluetooth_scanner=None):
+        try:
+
+            self._lm_bluetooth = await LMBluetooth.create(username=username, 
+                                                    serial_number=self.machine_info[SERIAL_NUMBER],
+                                                    token=self.machine_info[KEY],
+                                                    bleak_scanner=bluetooth_scanner)
+        except BluetoothDeviceNotFound as e:
+            _logger.warn(f"Could not find bluetooth device. Bluetooth commands will not be available and commands will all be sent through cloud.")
+            _logger.debug(f"Full error: {e}")
+        except BleakError as e:
+            _logger.warn(f"Bleak encountered an error while trying to connect to bluetooth device. \
+                            Maybe no bluetooth adapter is available? Bluetooth commands will not be available and commands will all be sent through cloud.")
+            _logger.debug(f"Full error: {e}")
+
+
+    async def _init_bluetooth_with_known_device(self, username, address, name):
+        self._lm_bluetooth = await LMBluetooth.create_with_known_device(username=username, address=address, name=name)
 
     async def _connect(self, credentials):
         '''
@@ -318,6 +328,9 @@ class LMCloud:
         '''
         Wrapper for bluetooth commands
         '''
+        if self._lm_bluetooth._client is None:
+            return False
+        
         try:
             await func(param)
             return True

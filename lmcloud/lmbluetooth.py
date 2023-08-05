@@ -38,6 +38,13 @@ class LMBluetooth:
             raise BluetoothDeviceNotFound("Couldn't find a machine")
 
         return self
+    
+    @classmethod
+    async def create_with_known_device(cls, username, serial_number, token, address, name):
+        self = cls(username, serial_number, token)
+        self._address = address
+        self._name = name
+        return self
 
     async def discover_device(self, scanner):
         """
