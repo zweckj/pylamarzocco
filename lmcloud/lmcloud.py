@@ -141,7 +141,7 @@ class LMCloud:
             await self._init_websocket()
 
         if use_bluetooth:
-            await self._init_bluetooth(credentials["username"], bluetooth_scanner)
+            await self._init_bluetooth(credentials["username"], bluetooth_scanner=bluetooth_scanner)
 
         await self.update_local_machine_status(in_init=True)
         return self
@@ -163,12 +163,13 @@ class LMCloud:
         asyncio.create_task(self._lm_local_api.websocket_connect())
 
 
-    async def _init_bluetooth(self, username, bluetooth_scanner=None):
+    async def _init_bluetooth(self, username, init_client=True, bluetooth_scanner=None):
         try:
 
             self._lm_bluetooth = await LMBluetooth.create(username=username, 
                                                     serial_number=self.machine_info[SERIAL_NUMBER],
                                                     token=self.machine_info[KEY],
+                                                    init_client=init_client,
                                                     bleak_scanner=bluetooth_scanner)
         except BluetoothDeviceNotFound as e:
             _logger.warn(f"Could not find bluetooth device. Bluetooth commands will not be available and commands will all be sent through cloud.")

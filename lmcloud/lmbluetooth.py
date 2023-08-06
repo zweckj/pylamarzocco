@@ -22,7 +22,7 @@ class LMBluetooth:
         self._client = None
 
     @classmethod
-    async def create(cls, username, serial_number, token, bleak_scanner=None):
+    async def create(cls, username, serial_number, token, init_client=True, bleak_scanner=None):
         """
         Init class by scanning for devices and selecting the first one with "MICRA" in the name
         """
@@ -36,8 +36,11 @@ class LMBluetooth:
         if not self._address:
             # couldn't connect
             raise BluetoothDeviceNotFound("Couldn't find a machine")
-
+        
+        if init_client:
+            self._client = BleakClient(self._address)
         return self
+
     
     @classmethod
     async def create_with_known_device(cls, username, serial_number, token, address, name):
@@ -61,8 +64,6 @@ class LMBluetooth:
         """
         connect to machine and write a message
         """
-        if not self._client:
-            self._client = BleakClient(self._address)
 
         if not self._client.is_connected:
             await self._client.connect()
@@ -88,11 +89,16 @@ class LMBluetooth:
         token = bytes(self._token, 'utf-8')
         auth_string = base64.b64encode(user) + b'@' + base64.b64encode(token)
         await self.write_bluetooth_message(auth_string, AUTH_CHARACTERISTIC)
+        
 
     async def new_bleak_client_from_ble_device(self, ble_device: BLEDevice):
         """
         initalize a new bleak client from a BLEDevice (for Home Assistant)
         """
+        if ble_device is None:
+            self._client = None
+            return
+        
         self._client = BleakClient(ble_device)
         try:
             await self._client.connect()
