@@ -181,7 +181,11 @@ class LMCloud:
 
 
     async def _init_bluetooth_with_known_device(self, username, address, name):
-        self._lm_bluetooth = await LMBluetooth.create_with_known_device(username=username, address=address, name=name)
+        self._lm_bluetooth = await LMBluetooth.create_with_known_device(username=username,
+                                                                        serial_number=self.machine_info[SERIAL_NUMBER],
+                                                                        token=self.machine_info[KEY],
+                                                                        address=address, 
+                                                                        name=name)
 
     async def _connect(self, credentials):
         '''
