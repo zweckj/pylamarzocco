@@ -487,7 +487,7 @@ class LMCloud:
         return await self._set_pre_brew_infusion(mode)
 
 
-    async def configure_prebrew(self, prebrewOnTime=5000, prebrewOffTime=5000):
+    async def configure_prebrew(self, prebrewOnTime=5000, prebrewOffTime=5000, key: int=1):
         '''
         Set Pre-Brew details
         Also used for preinfusion (prebrewOnTime=0, prebrewOnTime=ms)
@@ -497,23 +497,31 @@ class LMCloud:
             msg = "Prebrew times must be in ms (integer)"
             _logger.debug(msg)
             raise TypeError(msg)
-        else:
-            if prebrewOnTime % 100 != 0 or prebrewOffTime % 100 != 0:
-                msg = "Prebrew times must be multiple of 100"
-                _logger.debug(msg)
-                raise ValueError(msg)
-            url = f"{self._gw_url_with_serial}/setting-preinfusion"
-            data = {
-                "button": "DoseA",
-                "group": "Group1",
-                "holdTimeMs": prebrewOffTime,
-                "wetTimeMs": prebrewOnTime
-            }
-            response = await self._rest_api_call(url=url, verb="POST", data=data)
+        
+        if key < 1 or key > 4:
+            msg = f"Key must be an integer value between 1 and 4, was {key}"
+            _logger.debug(msg)
+            raise ValueError(msg)
+        
+        if prebrewOnTime % 100 != 0 or prebrewOffTime % 100 != 0:
+            msg = "Prebrew times must be multiple of 100"
+            _logger.debug(msg)
+            raise ValueError(msg)
+        
+        button = f"Dose{chr(key + 64)}"
 
-            self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetTime"] = prebrewOnTime % 1000
-            self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetHoldTime"] = prebrewOffTime % 1000
-            return response
+        url = f"{self._gw_url_with_serial}/setting-preinfusion"
+        data = {
+            "button": button,
+            "group": "Group1",
+            "holdTimeMs": prebrewOffTime,
+            "wetTimeMs": prebrewOnTime
+        }
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+
+        self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetTime"] = prebrewOnTime % 1000
+        self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetHoldTime"] = prebrewOffTime % 1000
+        return response
 
 
     async def enable_plumbin(self, enable: bool):
