@@ -85,7 +85,7 @@ class LMLocalAPI:
                 await asyncio.sleep(WEBSOCKET_RETRY_DELAY)  # wait 20 seconds before trying to reconnect
                 continue
             except Exception as e:
-                _logger.error(f"Error during websocket connection: {e}")
+                _logger.warn(f"Error during websocket connection: {e}")
 
     async def handle_websocket_message(self, message):
         try:
@@ -164,4 +164,4 @@ class LMLocalAPI:
             return None, None
 
         except Exception as e:
-            _logger.error(f"Error during handling of websocket message: {e}")
+            _logger.warn(f"Error during handling of websocket message: {e}")

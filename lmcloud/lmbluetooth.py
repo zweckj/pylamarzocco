@@ -104,7 +104,7 @@ class LMBluetooth:
             await self._client.connect()
             await self.authenticate()
         except BleakError as e:
-            _logger.error(f"Failed to connect to machine with Bluetooth: {e}")
+            _logger.warn(f"Failed to connect to machine with Bluetooth: {e}")
 
     async def set_power(self, state: bool):
         """

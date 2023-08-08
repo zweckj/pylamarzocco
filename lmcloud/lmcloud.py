@@ -218,7 +218,7 @@ class LMCloud:
             config = await self._rest_api_call(url=url, verb="GET")
             return config
         except Exception as e:
-            _logger.error(f"Could not get config from cloud. Full error: {e}")
+            _logger.warn(f"Could not get config from cloud. Full error: {e}")
             return self._config
         
 
@@ -275,7 +275,7 @@ class LMCloud:
             statistics = await self._rest_api_call(url=url, verb="GET")
             return statistics
         except Exception as e:
-            _logger.error(f"Could not get config from cloud. Full error: {e}")
+            _logger.warn(f"Could not get statistics from cloud. Full error: {e}")
             return self._statistics   
 
 
