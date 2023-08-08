@@ -2,7 +2,7 @@
 
 ## Firmware
 
-`GET https://gw.lamarzocco.io/v1/home/machines/<SN>/firmwarev2/`
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/firmwarev2/`
 
 ```json
 {
@@ -29,7 +29,7 @@
 ```
 
 ## Status
-`GET https://gw.lamarzocco.io/v1/home/machines/<SN>/status`
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/status`
 
 ```json
 {
@@ -50,7 +50,7 @@
 ```
 
 ## Configuration
-`GET https://gw.lamarzocco.io/v1/home/machines/<SN>/configuration`
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/configuration`
 
 ```json
   {{
@@ -248,7 +248,7 @@
 ```
 
 ## Counters
-`GET https://gw.lamarzocco.io/v1/home/machines/<SN>/statistics/counters`
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/statistics/counters`
 
 ```json
 {
@@ -283,7 +283,7 @@
 ```
 
 ## Preinfusion Settings
-`POST https://gw.lamarzocco.io/v1/home/machines/<SN>/setting-preinfusion`
+`POST https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/setting-preinfusion`
 
 ```json
 {
@@ -295,7 +295,7 @@
 ```
 
 # Enable/Disable Preinfusion
-`POST https://gw.lamarzocco.io/v1/home/machines/<SN>/enable-preinfusion`
+`POST https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/enable-preinfusion`
 
 ```json
 {
@@ -304,7 +304,7 @@
 ```
 
 # Power
-`POST https://gw.lamarzocco.io/v1/home/machines/<SN>/status`
+`POST https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/status`
 
 ```json
 {
@@ -313,7 +313,7 @@
 ```
 
 # Steam
-`POST https://gw.lamarzocco.io/v1/home/machines/<SN>/enable-boiler`
+`POST https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/enable-boiler`
 
 ```json
 {
@@ -323,7 +323,7 @@
 ```
 
 # Temperature
-`GET https://gw.lamarzocco.io/v1/home/machines/<SN>/target-boiler`
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/target-boiler`
 
 ```json
 {
@@ -333,7 +333,7 @@
 ```
 
 # Backflush
-`GET https://gw.lamarzocco.io/v1/home/machines/<SN>/enable-backflush`
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/enable-backflush`
 
 ```json
 {
@@ -342,7 +342,7 @@
 ```
 
 # Plumb In
-`GET https://gw.lamarzocco.io/v1/home/machines/<SN>/enable-plumbin`
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/enable-plumbin`
 
 ```json
 {
@@ -350,8 +350,8 @@
 }
 ```
 
-# Temperature
-`GET https://gw.lamarzocco.io/v1/home/machines/<SN>/scheduling`
+# Set Schedule
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/scheduling`
 
 ```json
 {
