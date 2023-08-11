@@ -144,10 +144,12 @@ class LMLocalAPI:
                     return BREW_ACTIVE, True
                 
                 elif "BrewingStartedGroup1StopType" in message[0]:
-                    return None, None
+                    self._status[BREW_ACTIVE] = True
+                    return BREW_ACTIVE, True
                 
                 elif "BrewingStoppedGroup1StopType" in message[0]:
-                    return None, None
+                    self._status[BREW_ACTIVE] = False
+                    return BREW_ACTIVE, False
                 
                 elif "BrewingSnapshotGroup1" in message[0]:
                     self._status[BREW_ACTIVE] = False
