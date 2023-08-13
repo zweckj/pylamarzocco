@@ -92,6 +92,9 @@ class LMCloud:
     def current_status(self) -> dict:
         # extend the current status from super with active brew property
         self._current_status[BREW_ACTIVE] = self.brew_active
+        self._current_status["coffee_boiler_state"]  = self._current_status.get("power", False)
+        self._current_status["steam_boiler_state"] = self._current_status.get("steam_boiler_enable", False) \
+            and self._current_status.get("power", False)
         return self._current_status
     
 
