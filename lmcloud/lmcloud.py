@@ -23,12 +23,16 @@ class LMCloud:
         self._client = value
 
     @property
-    def machine_info(self):
+    def machine_info(self) -> dict:
         return self._machine_info
 
     @property
     def model_name(self) -> str:
         return self._machine_info[MODEL_NAME]
+
+    @property
+    def serial_number(self) -> str:
+        return self.machine_info[SERIAL_NUMBER]
     
     @property 
     def firmware_version(self) -> str:
@@ -245,8 +249,13 @@ class LMCloud:
 
         if self._lm_local_api:
             try:
-                _logger.debug("Getting config from local API.")
-                self._config = await self._lm_local_api.local_get_config()
+                try:
+                    _logger.debug("Getting config from local API.")
+                    self._config = await self._lm_local_api.local_get_config()
+                except AuthFail as e:
+                    _logger.debug("Got 403 from local API, sending token request to cloud.")
+                    await self._token_command()
+                    self._config = await self._lm_local_api.local_get_config()
             except Exception as e:
                 _logger.warn(f"Could not connect to local API although initialized")
                 _logger.debug(f"Full error: {e}")
@@ -639,3 +648,15 @@ class LMCloud:
         schedule = schedule_out_to_hass(self.config)
         statistics = parse_statistics(self.statistics)
         return state | doses | preinfusion_settings | schedule | statistics
+
+    async def _token_command(self):
+        url = f"{self._gw_url_with_serial}/token-request"
+        response = await self._rest_api_call(url=url, verb="GET")
+        commandId = response.get("commandId")
+        if commandId is None:
+            return
+        
+        url = f"{GW_AWS_PROXY_BASE_URL}/{self.serial_number}/commands/{commandId}"
+        response = await self._rest_api_call(url=url, verb="GET")
+        return response
+

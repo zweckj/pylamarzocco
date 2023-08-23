@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from .const import *
 from .helpers import *
-from .exceptions import RequestNotSuccessful
+from .exceptions import RequestNotSuccessful, AuthFail
 
 import logging
 
@@ -59,6 +59,8 @@ class LMLocalAPI:
             async with session.get(f"http://{self._local_ip}:{self._local_port}/api/v1/config") as response:
                 if response.status == 200:
                     return await response.json()
+                elif response.status == 403:
+                    raise AuthFail("Local API returned 403.")
                 else:
                     raise RequestNotSuccessful(f"Querying local API failed with statuscode: {response.status}")
                 

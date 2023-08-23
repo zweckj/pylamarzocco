@@ -1,7 +1,9 @@
 # URLs
 TOKEN_URL = "https://cms.lamarzocco.io/oauth/v2/token"
 CUSTOMER_URL = "https://cms.lamarzocco.io/api/customer"
-GW_MACHINE_BASE_URL = "https://gw-lmz.lamarzocco.io/v1/home/machines"
+GW_BASE_URL = "https://gw-lmz.lamarzocco.io/v1/home"
+GW_MACHINE_BASE_URL = f"{GW_BASE_URL}/machines"
+GW_AWS_PROXY_BASE_URL = f"{GW_BASE_URL}/aws-proxy"
 
 POLLING_DELAY_S = 20
 POLLING_DELAY_STATISTICS_S = 60
