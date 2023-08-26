@@ -244,7 +244,7 @@ class LMCloud:
         self._last_config_update = datetime.now()
 
 
-    async def update_local_machine_status(self, in_init=False, force_update=False):
+    async def update_local_machine_status(self, in_init=False, force_update=False, local_api_retry_delay=3):
         """update config object"""
 
         if self._lm_local_api:
@@ -255,6 +255,7 @@ class LMCloud:
                 except AuthFail as e:
                     _logger.debug("Got 403 from local API, sending token request to cloud.")
                     await self._token_command()
+                    await asyncio.sleep(local_api_retry_delay)
                     self._config = await self._lm_local_api.local_get_config()
             except Exception as e:
                 _logger.warn(f"Could not connect to local API although initialized")
@@ -655,7 +656,7 @@ class LMCloud:
         commandId = response.get("commandId")
         if commandId is None:
             return
-        
+
         url = f"{GW_AWS_PROXY_BASE_URL}/{self.serial_number}/commands/{commandId}"
         response = await self._rest_api_call(url=url, verb="GET")
         return response
