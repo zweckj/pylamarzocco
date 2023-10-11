@@ -37,7 +37,7 @@ class LMLocalAPI:
     def termintating(self):
         return self._terminating
     
-    @property.setter
+    @terminating.setter
     def terminating(self, value):
         self._terminating = value
 

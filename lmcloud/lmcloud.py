@@ -60,7 +60,7 @@ class LMCloud:
             return self._lm_local_api.terminating
         return False
     
-    @property.setter
+    @websocket_terminating.setter
     def websocket_terminating(self, value):
         if self._lm_local_api:
             self._lm_local_api.terminating = value
