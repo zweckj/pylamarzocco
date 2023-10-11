@@ -13,6 +13,10 @@ class LMBluetooth:
     class to interact with machine via Bluetooth
     """
 
+    @property
+    def address(self):
+        return self._address
+
     def __init__(self, username, serial_number, token):
         self._username = username
         self._serial_number = serial_number

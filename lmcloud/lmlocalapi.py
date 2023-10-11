@@ -33,6 +33,14 @@ class LMLocalAPI:
     def brew_active_duration(self):
         return self._status[BREW_ACTIVE_DURATION]
 
+    @property
+    def termintating(self):
+        return self._terminating
+    
+    @property.setter
+    def terminating(self, value):
+        self._terminating = value
+
     def __init__(self, local_ip, local_bearer, local_port=8081):
         self._local_ip = local_ip
         self._local_port = local_port

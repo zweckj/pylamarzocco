@@ -43,8 +43,27 @@ class LMCloud:
         return self._firmware.get("machine_firmware", {}).get("targetVersion")
     
     @property
+    def gateway_version(self) -> str:
+        return self._firmware.get("gateway_firmware", {}).get("version")
+
+    @property
+    def latest_gateway_version(self) -> str:
+        return self._firmware.get("gateway_firmware", {}).get("targetVersion")
+    
+    @property
     def date_received(self):
         return self._date_received
+    
+    @property
+    def websocket_terminating(self):
+        if self._lm_local_api:
+            return self._lm_local_api.terminating
+        return False
+    
+    @property.setter
+    def websocket_terminating(self, value):
+        if self._lm_local_api:
+            self._lm_local_api.terminating = value
 
     @property
     def config(self):
@@ -70,7 +89,7 @@ class LMCloud:
         return coffee_heating or steam_heating
 
     @property
-    def brew_active(self) -> str:
+    def brew_active(self) -> bool:
         return self._brew_active
     
     @property 
@@ -215,7 +234,16 @@ class LMCloud:
     
         except OAuthError as err:
             raise AuthFail("Authorization failure") from err
-        
+
+    async def websocket_connect(self, callback=None, use_sigterm_handler=True):
+        await self._lm_local_api.websocket_connect(callback, use_sigterm_handler)
+
+    def update_current_status(self, property_updated: str, value):
+        """Update a property in the current status dict"""
+        if property_updated != BREW_ACTIVE:
+            self._current_status[property_updated] = value
+        else:
+            self._brew_active = value
 
     async def get_config(self):
         """Get configuration from cloud"""
