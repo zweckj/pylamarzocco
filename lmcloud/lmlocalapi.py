@@ -34,7 +34,7 @@ class LMLocalAPI:
         return self._status[BREW_ACTIVE_DURATION]
 
     @property
-    def termintating(self):
+    def terminating(self):
         return self._terminating
     
     @terminating.setter
