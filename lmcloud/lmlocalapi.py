@@ -1,179 +1,197 @@
+"""Interact with the local API of La Marzocco machines."""
+import asyncio
+import json
+import logging
+import signal
+from datetime import datetime
+from typing import Any, Callable
+
 import aiohttp
 import websockets
-import asyncio
-import signal
-import json
-from datetime import datetime
-from .const import *
-from .helpers import *
-from .exceptions import RequestNotSuccessful, AuthFail
 
-import logging
+from .const import BREW_ACTIVE, BREW_ACTIVE_DURATION, WEBSOCKET_RETRY_DELAY
+from .exceptions import AuthFail, RequestNotSuccessful, UnknownWebSocketMessage
 
 _logger = logging.getLogger(__name__)
 
-'''
-This class is for interaction with the new local API
-'''
+
 class LMLocalAPI:
+    """Class to interact with machine via local API."""
 
     @property
-    def local_port(self):
+    def local_port(self) -> int:
+        """Return the local port of the machine."""
         return self._local_port
-    
+
     @property
-    def local_ip(self):
+    def local_ip(self) -> str:
+        """Return the local ip of the machine."""
         return self._local_ip
-    
+
     @property
-    def brew_active(self):
+    def brew_active(self) -> bool:
+        """Return whether the machine is currently brewing."""
         return self._status[BREW_ACTIVE]
-    
+
     @property
-    def brew_active_duration(self):
+    def brew_active_duration(self) -> int:
+        """Return the duration of the current brew."""
         return self._status[BREW_ACTIVE_DURATION]
 
     @property
-    def terminating(self):
+    def terminating(self) -> bool:
+        """Return whether the websocket connection is terminating."""
         return self._terminating
-    
+
     @terminating.setter
-    def terminating(self, value):
+    def terminating(self, value: bool):
         self._terminating = value
 
-    def __init__(self, local_ip, local_bearer, local_port=8081):
+    @property
+    def timestamp_last_websocket_msg(self) -> datetime | None:
+        """Return the timestamp of the last websocket message."""
+        return self._timestamp_last_websocket_msg
+
+    def __init__(
+        self, local_ip: str, local_bearer: str, local_port: int = 8081
+    ) -> None:
         self._local_ip = local_ip
         self._local_port = local_port
         self._local_bearer = local_bearer
 
-        # init local variables
-        self._full_config = None
-        self._timestamp_last_websocket_msg = None
-
-        self._status = {}
-
+        self._timestamp_last_websocket_msg: datetime | None = None
+        self._status: dict[str, Any] = {}
         self._status[BREW_ACTIVE] = False
         self._status[BREW_ACTIVE_DURATION] = 0
+        self._terminating: bool = False
 
-        self._terminating = False
-
-
-    '''
-    Get current config of machine from local API
-    '''
-    async def local_get_config(self):
+    async def local_get_config(self) -> dict[str, Any]:
+        """Get current config of machine from local API."""
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(f"http://{self._local_ip}:{self._local_port}/api/v1/config") as response:
+            async with session.get(
+                f"http://{self._local_ip}:{self._local_port}/api/v1/config"
+            ) as response:
                 if response.status == 200:
                     return await response.json()
-                elif response.status == 403:
+                if response.status == 403:
                     raise AuthFail("Local API returned 403.")
-                else:
-                    raise RequestNotSuccessful(f"Querying local API failed with statuscode: {response.status}")
-                
-    async def websocket_connect(self, callback=None, use_sigterm_handler=True) -> None:
+                raise RequestNotSuccessful(
+                    f"Querying local API failed with statuscode: {response.status}"
+                )
+
+    async def websocket_connect(
+        self,
+        callback: Callable[[str, Any], None] | None = None,
+        use_sigterm_handler: bool = True,
+    ) -> None:
+        """Connect to the websocket of the machine."""
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
-        async for websocket in websockets.connect(f"ws://{self._local_ip}:{self._local_port}/api/v1/streaming", extra_headers=headers):
+        async for websocket in websockets.connect(
+            f"ws://{self._local_ip}:{self._local_port}/api/v1/streaming",
+            extra_headers=headers,
+        ):
             try:
                 if use_sigterm_handler:
                     # Close the connection when receiving SIGTERM.
                     loop = asyncio.get_running_loop()
                     loop.add_signal_handler(
-                        signal.SIGTERM, loop.create_task, websocket.close())
+                        signal.SIGTERM, loop.create_task, websocket.close()
+                    )
                 # Process messages received on the connection.
                 async for message in websocket:
                     if self._terminating:
                         return
-                    property_updated, value = await self.handle_websocket_message(message)
-                    if callback:
-                        callback(property_updated, value)
+                    try:
+                        property_updated, value = await self.handle_websocket_message(
+                            message
+                        )
+                        if callback is not None and property_updated is not None:
+                            try:
+                                callback(property_updated, value)
+                            except Exception as e:  # pylint: disable=broad-except
+                                _logger.exception(
+                                    "Error during callback: %s", e, exc_info=True
+                                )
+                    except UnknownWebSocketMessage as e:
+                        _logger.warning(e)
             except websockets.ConnectionClosed:
                 if self._terminating:
                     return
-                _logger.debug(f"Websocket disconnected, reconnecting in {WEBSOCKET_RETRY_DELAY}...")
-                await asyncio.sleep(WEBSOCKET_RETRY_DELAY)  # wait 20 seconds before trying to reconnect
+                _logger.debug(
+                    "Websocket disconnected, reconnecting in %s", WEBSOCKET_RETRY_DELAY
+                )
+                await asyncio.sleep(WEBSOCKET_RETRY_DELAY)
                 continue
-            except Exception as e:
-                _logger.warn(f"Error during websocket connection: {e}")
 
-    async def handle_websocket_message(self, message):
-        try:
-            self._timestamp_last_websocket_msg = datetime.now()
-            message = json.loads(message)
-            unmapped_msg = False
+    async def handle_websocket_message(
+        self, message: Any
+    ) -> tuple[str | None, Any | None]:
+        """Handle a message received on the websocket."""
+        self._timestamp_last_websocket_msg = datetime.now()
+        message = json.loads(message)
 
-            if type(message) is dict:
+        if isinstance(message, dict):
+            if "MachineConfiguration" in message:
+                # got machine configuration
+                value = json.loads(message["MachineConfiguration"])
+                self._status["machineConfiguration"] = value
+                return "machineConfiguration", value
 
-                if 'MachineConfiguration' in message:
-                    # got machine configuration
-                    value = json.loads(message["MachineConfiguration"])
-                    self._status["machineConfiguration"] = value
-                    return "machineConfiguration", value
-                
-                elif "SystemInfo" in message:
-                    value = json.loads(message["SystemInfo"])
-                    self._status["systemInfo"] = value
-                    return "systemInfo", value
-                else:
-                    unmapped_msg = True
+            if "SystemInfo" in message:
+                value = json.loads(message["SystemInfo"])
+                self._status["systemInfo"] = value
+                return "systemInfo", value
 
-            elif type(message) is list:
+        if isinstance(message, list):
+            if "KeepAlive" in message[0]:
+                return None, None
 
-                if "KeepAlive" in message[0]:
-                    return None, None
-                
-                elif "SteamBoilerUpdateTemperature" in message[0]:
-                    value = message[0]["SteamBoilerUpdateTemperature"]
-                    self._status["steamTemperature"] = value
-                    return "steam_temp", value
-                
-                elif "CoffeeBoiler1UpdateTemperature" in message[0]:
-                    value = message[0]["CoffeeBoiler1UpdateTemperature"]
-                    self._status["coffeeTemperature"] = value
-                    return "coffee_temp", value
+            if "SteamBoilerUpdateTemperature" in message[0]:
+                value = message[0]["SteamBoilerUpdateTemperature"]
+                self._status["steamTemperature"] = value
+                return "steam_temp", value
 
-                elif "Sleep" in message[0]:
-                    self._status["power"] = False
-                    self._status["sleepCause"] = message[0]["Sleep"]
-                    return "power", False
-                
-                elif "WakeUp" in message[0]:
-                    self._status["power"] = True
-                    self._status["wakeupCause"] = message[0]["WakeUp"]
-                    return "power", True
-                
-                elif "MachineStatistics" in message[0]:
-                    value = json.loads(message[0]["MachineStatistics"])
-                    self._status["statistics"] = value
-                    return "statistics", value
-                
-                elif "BrewingUpdateGroup1Time" in message[0]:
-                    self._status[BREW_ACTIVE] = True
-                    self._status[BREW_ACTIVE_DURATION] = message[0]["BrewingUpdateGroup1Time"]
-                    return BREW_ACTIVE, True
-                
-                elif "BrewingStartedGroup1StopType" in message[0]:
-                    self._status[BREW_ACTIVE] = True
-                    return BREW_ACTIVE, True
-                
-                elif "BrewingStoppedGroup1StopType" in message[0]:
-                    self._status[BREW_ACTIVE] = False
-                    return BREW_ACTIVE, False
-                
-                elif "BrewingSnapshotGroup1" in message[0]:
-                    self._status[BREW_ACTIVE] = False
-                    self._status["brewingSnapshot"] = json.loads(message[0]["BrewingSnapshotGroup1"])
-                    return BREW_ACTIVE, False
-                else:
-                    unmapped_msg = True
-            else:
-                unmapped_msg = True
+            if "CoffeeBoiler1UpdateTemperature" in message[0]:
+                value = message[0]["CoffeeBoiler1UpdateTemperature"]
+                self._status["coffeeTemperature"] = value
+                return "coffee_temp", value
 
-            if unmapped_msg:
-                _logger.warn(f"Unmapped message from La Marzocco WebSocket, please report to dev: {message}")
+            if "Sleep" in message[0]:
+                self._status["power"] = False
+                self._status["sleepCause"] = message[0]["Sleep"]
+                return "power", False
 
-            return None, None
+            if "WakeUp" in message[0]:
+                self._status["power"] = True
+                self._status["wakeupCause"] = message[0]["WakeUp"]
+                return "power", True
 
-        except Exception as e:
-            _logger.warn(f"Error during handling of websocket message: {e}")
+            if "MachineStatistics" in message[0]:
+                value = json.loads(message[0]["MachineStatistics"])
+                self._status["statistics"] = value
+                return "statistics", value
+
+            if "BrewingUpdateGroup1Time" in message[0]:
+                self._status[BREW_ACTIVE] = True
+                self._status[BREW_ACTIVE_DURATION] = message[0][
+                    "BrewingUpdateGroup1Time"
+                ]
+                return BREW_ACTIVE, True
+
+            if "BrewingStartedGroup1StopType" in message[0]:
+                self._status[BREW_ACTIVE] = True
+                return BREW_ACTIVE, True
+
+            if "BrewingStoppedGroup1StopType" in message[0]:
+                self._status[BREW_ACTIVE] = False
+                return BREW_ACTIVE, False
+
+            if "BrewingSnapshotGroup1" in message[0]:
+                self._status[BREW_ACTIVE] = False
+                self._status["brewingSnapshot"] = json.loads(
+                    message[0]["BrewingSnapshotGroup1"]
+                )
+                return BREW_ACTIVE, False
+
+        raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")

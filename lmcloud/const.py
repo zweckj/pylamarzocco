@@ -1,45 +1,40 @@
-# URLs
-TOKEN_URL = "https://cms.lamarzocco.io/oauth/v2/token"
-CUSTOMER_URL = "https://cms.lamarzocco.io/api/customer"
-GW_BASE_URL = "https://gw-lmz.lamarzocco.io/v1/home"
-GW_MACHINE_BASE_URL = f"{GW_BASE_URL}/machines"
-GW_AWS_PROXY_BASE_URL = f"{GW_BASE_URL}/aws-proxy"
+"""Constants for La Marzocco Cloud."""
+from typing import Final
 
-POLLING_DELAY_S = 20
-POLLING_DELAY_STATISTICS_S = 60
-WEBSOCKET_RETRY_DELAY = 20
+# Base URL for La Marzocco Cloud
+TOKEN_URL: Final = "https://cms.lamarzocco.io/oauth/v2/token"
+CUSTOMER_URL: Final = "https://cms.lamarzocco.io/api/customer"
+GW_BASE_URL: Final = "https://gw-lmz.lamarzocco.io/v1/home"
+GW_MACHINE_BASE_URL: Final = f"{GW_BASE_URL}/machines"
+GW_AWS_PROXY_BASE_URL: Final = f"{GW_BASE_URL}/aws-proxy"
 
-MODEL_LMU = "Micra"
-
-BT_MODEL_NAMES = [
-    "MICRA",
-    "MINI",
-    "GS3"
-]
+POLLING_DELAY_S: Final = 20
+POLLING_DELAY_STATISTICS_S: Final = 60
+WEBSOCKET_RETRY_DELAY: Final = 20
 
 # Key Names for Dictionaries
-KEY = "key"
-SERIAL_NUMBER = "serial_number"
-MACHINE_NAME = "machine_name"
-MODEL_NAME = "model_name"
 
-# Dict keys are camel case for local API, all upper for remote API
-MACHINE_MODE="machineMode"
-STEAM_BOILER_NAME = "SteamBoiler"
-COFFEE_BOILER_NAME = "CoffeeBoiler1"
-BOILER_TARGET_TEMP = "boilerTargetTemperature"
-BOILERS = "boilers"
-PLUMBED_IN = "isPlumbedIn"
-PRE_INFUSION_SETTINGS = "preinfusionSettings"
-WEEKLY_SCHEDULING_CONFIG = "weeklySchedulingConfig"
-BACKFLUSH_ENABLED = "isBackFlushEnabled"
-CURRENT = "current"
-TARGET = "target"
-TANK_STATUS = "tankStatus"
-BREW_ACTIVE = "brew_active"
-BREW_ACTIVE_DURATION = "brew_active_duration"
+BACKFLUSH_ENABLED: Final = "isBackFlushEnabled"
+BOILER_TARGET_TEMP: Final = "boilerTargetTemperature"
+BOILERS: Final = "boilers"
+BREW_ACTIVE: Final = "brew_active"
+BREW_ACTIVE_DURATION: Final = "brew_active_duration"
+COFFEE_BOILER_NAME: Final = "CoffeeBoiler1"
+CURRENT: Final = "current"
+KEY: Final = "key"
+MACHINE_NAME: Final = "machine_name"
+MACHINE_MODE: Final = "machineMode"
+MODEL_NAME: Final = "model_name"
+PLUMBED_IN: Final = "isPlumbedIn"
+PRE_INFUSION_SETTINGS: Final = "preinfusionSettings"
+SERIAL_NUMBER: Final = "serial_number"
+STEAM_BOILER_NAME: Final = "SteamBoiler"
+TANK_STATUS: Final = "tankStatus"
+TARGET: Final = "target"
+WEEKLY_SCHEDULING_CONFIG: Final = "weeklySchedulingConfig"
 
 
 # bluetooth
-SETTINGS_CHARACTERISTIC = "050b7847-e12b-09a8-b04b-8e0922a9abab"
-AUTH_CHARACTERISTIC = "090b7847-e12b-09a8-b04b-8e0922a9abab"
+BT_MODEL_NAMES: Final = ["MICRA", "MINI", "GS3"]
+SETTINGS_CHARACTERISTIC: Final = "050b7847-e12b-09a8-b04b-8e0922a9abab"
+AUTH_CHARACTERISTIC: Final = "090b7847-e12b-09a8-b04b-8e0922a9abab"
