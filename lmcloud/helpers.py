@@ -40,10 +40,10 @@ def schedule_out_to_in(schedule: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def schedule_in_to_out(
-    enable: bool, schedule: dict[str, Any]
+    enable: bool, schedule: list[dict[str, Any]]
 ) -> dict[str, str | float]:
     """convert API input format to API output format"""
-    out = {"enabled": enable}
+    out: dict[str, Any] = {"enabled": enable}
     for day in schedule:
         out[day["day"].lower()] = {
             "enabled": day["enable"],
@@ -59,9 +59,9 @@ def schedule_in_to_out(
     return out
 
 
-def schedule_out_to_hass(config: dict[str, Any]) -> dict[str, str | float]:
+def schedule_out_to_hass(config: dict[str, Any]) -> dict[str, str | int]:
     """API output schedule (config obj) to hass config"""
-    parsed = {}
+    parsed: dict[str, str | int] = {}
     weekly_scheduling_config = config.get("weeklySchedulingConfig", {})
     for key in weekly_scheduling_config.keys():
         if key == "enabled":
@@ -69,13 +69,13 @@ def schedule_out_to_hass(config: dict[str, Any]) -> dict[str, str | float]:
                 "Enabled" if weekly_scheduling_config[key] else "Disabled"
             )
         else:
-            day_short = key[0:3]
+            day_short: str = key[0:3]
             config_day = weekly_scheduling_config.get(key, {})
             enabled = "Enabled" if config_day.get("enabled", False) else "Disabled"
-            h_on = config_day.get("h_on", 0)
-            h_off = config_day.get("h_off", 0)
-            m_on = config_day.get("m_on", 0)
-            m_off = config_day.get("m_off", 0)
+            h_on: int = config_day.get("h_on", 0)
+            h_off: int = config_day.get("h_off", 0)
+            m_on: int = config_day.get("m_on", 0)
+            m_off: int = config_day.get("m_off", 0)
             parsed[f"{day_short}_auto"] = enabled
             parsed[f"{day_short}_on_min"] = m_on
             parsed[f"{day_short}_off_min"] = m_off
@@ -89,7 +89,7 @@ def schedule_out_to_hass(config: dict[str, Any]) -> dict[str, str | float]:
 
 def parse_preinfusion_settings(config: dict[str, Any]) -> dict[str, float]:
     """Parse preinfusion settings from API config object."""
-    parsed = {}
+    parsed: dict[str, float] = {}
     i = 1
     preinfusion_settings = config.get("preinfusionSettings", {})
     mode = preinfusion_settings.get("mode", "Disabled")
@@ -110,9 +110,9 @@ def parse_preinfusion_settings(config: dict[str, Any]) -> dict[str, float]:
     return parsed
 
 
-def parse_doses(config: dict[str, Any]) -> dict[str, str | float]:
+def parse_doses(config: dict[str, Any]) -> dict[str, int]:
     """Parse doses from API config object."""
-    parsed = {}
+    parsed: dict[str, int] = {}
     i = 1
     group_capabilities = config.get("groupCapabilities", [])
     if len(group_capabilities) == 0:
@@ -127,9 +127,9 @@ def parse_doses(config: dict[str, Any]) -> dict[str, str | float]:
     return parsed
 
 
-def parse_statistics(statistics: dict[str, Any]) -> dict[str, str | float]:
+def parse_statistics(statistics: list[dict[str, Any]]) -> dict[str, int]:
     """Parse statistics from API statistics object."""
-    parsed = {}
+    parsed: dict[str, int] = {}
 
     if len(statistics) == 0:
         return parsed
@@ -137,8 +137,8 @@ def parse_statistics(statistics: dict[str, Any]) -> dict[str, str | float]:
     parsed["total_flushing"] = statistics[-1].get("count", 0)
     coffee_sum = 0
     for stat in statistics:
-        coffee_type = stat["coffeeType"]
-        count = stat["count"]
+        coffee_type: int = stat["coffeeType"]
+        count: int = stat["count"]
         if coffee_type >= 0 and coffee_type < 4:
             parsed[f"drinks_k{coffee_type + 1}"] = count
             coffee_sum += count

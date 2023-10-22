@@ -4,7 +4,7 @@ from __future__ import annotations
 import base64
 import logging
 
-from bleak import BleakClient, BleakError, BleakScanner, BLEDevice
+from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
 
 from .const import AUTH_CHARACTERISTIC, BT_MODEL_NAMES, SETTINGS_CHARACTERISTIC
 from .exceptions import BluetoothConnectionFailed, BluetoothDeviceNotFound
@@ -16,26 +16,31 @@ class LMBluetooth:
     """Class to interact with machine via Bluetooth."""
 
     @property
-    def address(self) -> str:
+    def address(self) -> str | None:
         """Return the BT MAC address of the machine."""
         return self._address
 
     @property
-    def client(self) -> BleakClient:
+    def client(self) -> BleakClient | None:
         """Return the Bluetooth client."""
         return self._client
 
-    def __init__(self, username, serial_number, token):
+    def __init__(self, username: str, serial_number: str, token: str) -> None:
         self._username = username
         self._serial_number = serial_number
         self._token = token
-        self._address = None
-        self._name = None
-        self._client = None
+        self._address: str | None = None
+        self._name: str | None = None
+        self._client: BleakClient | None = None
 
     @classmethod
     async def create(
-        cls, username, serial_number, token, init_client=True, bleak_scanner=None
+        cls,
+        username: str,
+        serial_number: str,
+        token: str,
+        init_client: bool = True,
+        bleak_scanner: BaseBleakScanner | None = None,
     ) -> LMBluetooth:
         """Init class by scanning for devices and selecting the first one with a suppoted name."""
         self = cls(username, serial_number, token)
@@ -63,8 +68,9 @@ class LMBluetooth:
         self._name = name
         return self
 
-    async def discover_device(self, scanner: BleakScanner) -> None:
+    async def discover_device(self, scanner: BaseBleakScanner) -> None:
         """Find machine based on model name."""
+        assert hasattr(scanner, "discover")
         devices = await scanner.discover()
         for d in devices:
             if d.name:
@@ -77,27 +83,29 @@ class LMBluetooth:
     ) -> None:
         """Connect to machine and write a message."""
 
+        assert self._client
         if not self._client.is_connected:
             await self._client.connect()
             await self.authenticate()
-
-        # append trailing zeros to settings message
-        if characteristic == SETTINGS_CHARACTERISTIC:
-            message += "\x00"
 
         # check if message is already bytes string
         if not isinstance(message, bytes):
             message = bytes(message, "utf-8")
 
+        # append trailing zeros to settings message
+        if characteristic == SETTINGS_CHARACTERISTIC:
+            message += b"\x00"
+
         _logger.debug("Sending bluetooth message: %s to %s", message, characteristic)
+        assert self._client
         await self._client.write_gatt_char(characteristic, message)
 
     async def authenticate(self) -> None:
         """Build authentication string and send it to the machine."""
         user = self._username + ":" + self._serial_number
-        user = bytes(user, "utf-8")
-        token = bytes(self._token, "utf-8")
-        auth_string = base64.b64encode(user) + b"@" + base64.b64encode(token)
+        user_bytes = user.encode("utf-8")
+        token = self._token.encode("utf-8")
+        auth_string = base64.b64encode(user_bytes) + b"@" + base64.b64encode(token)
         await self.write_bluetooth_message(auth_string, AUTH_CHARACTERISTIC)
 
     async def new_bleak_client_from_ble_device(self, ble_device: BLEDevice) -> None:
@@ -107,6 +115,7 @@ class LMBluetooth:
             return
 
         self._client = BleakClient(ble_device)
+        assert self._client
         try:
             await self._client.connect()
             await self.authenticate()

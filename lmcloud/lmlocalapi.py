@@ -18,15 +18,26 @@ _logger = logging.getLogger(__name__)
 class LMLocalAPI:
     """Class to interact with machine via local API."""
 
+    def __init__(self, host: str, local_bearer: str, local_port: int = 8081) -> None:
+        self._host = host
+        self._local_port = local_port
+        self._local_bearer = local_bearer
+
+        self._timestamp_last_websocket_msg: datetime | None = None
+        self._status: dict[str, Any] = {}
+        self._status[BREW_ACTIVE] = False
+        self._status[BREW_ACTIVE_DURATION] = 0
+        self._terminating: bool = False
+
     @property
     def local_port(self) -> int:
         """Return the local port of the machine."""
         return self._local_port
 
     @property
-    def local_ip(self) -> str:
-        """Return the local ip of the machine."""
-        return self._local_ip
+    def host(self) -> str:
+        """Return the hostname of the machine."""
+        return self._host
 
     @property
     def brew_active(self) -> bool:
@@ -52,25 +63,12 @@ class LMLocalAPI:
         """Return the timestamp of the last websocket message."""
         return self._timestamp_last_websocket_msg
 
-    def __init__(
-        self, local_ip: str, local_bearer: str, local_port: int = 8081
-    ) -> None:
-        self._local_ip = local_ip
-        self._local_port = local_port
-        self._local_bearer = local_bearer
-
-        self._timestamp_last_websocket_msg: datetime | None = None
-        self._status: dict[str, Any] = {}
-        self._status[BREW_ACTIVE] = False
-        self._status[BREW_ACTIVE_DURATION] = 0
-        self._terminating: bool = False
-
     async def local_get_config(self) -> dict[str, Any]:
         """Get current config of machine from local API."""
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.get(
-                f"http://{self._local_ip}:{self._local_port}/api/v1/config"
+                f"http://{self._host}:{self._local_port}/api/v1/config"
             ) as response:
                 if response.status == 200:
                     return await response.json()
@@ -88,7 +86,7 @@ class LMLocalAPI:
         """Connect to the websocket of the machine."""
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async for websocket in websockets.connect(
-            f"ws://{self._local_ip}:{self._local_port}/api/v1/streaming",
+            f"ws://{self._host}:{self._local_port}/api/v1/streaming",
             extra_headers=headers,
         ):
             try:
