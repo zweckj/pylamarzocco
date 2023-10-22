@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="lmcloud",
-    version="0.3.37",
+    version="0.4.0b1",
     description="A Python implementation of the new La Marzocco API",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -31,6 +31,6 @@ setuptools.setup(
         "aiohttp>=3.8.6",
     ],
     package_data={
-        "license": ["LICENSE"],
+        "lmcloud": ["py.typed"],
     },
 )
