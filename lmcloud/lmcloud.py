@@ -35,7 +35,12 @@ from .const import (
     TOKEN_URL,
     WEEKLY_SCHEDULING_CONFIG,
 )
-from .exceptions import AuthFail, BluetoothDeviceNotFound, RequestNotSuccessful
+from .exceptions import (
+    AuthFail,
+    BluetoothDeviceNotFound,
+    BluetoothConnectionFailed,
+    RequestNotSuccessful,
+)
 from .helpers import (
     parse_doses,
     parse_preinfusion_settings,
@@ -493,7 +498,7 @@ class LMCloud:
         try:
             await func(param)
             return True
-        except BleakError as e:
+        except (BleakError, BluetoothConnectionFailed) as e:
             _logger.warning(
                 "Could not send command to bluetooth device, even though initalized."
                 + "Falling back to cloud"

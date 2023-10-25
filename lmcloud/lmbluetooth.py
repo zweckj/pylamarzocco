@@ -1,6 +1,7 @@
 """Bluetooth class for La Marzocco machines."""
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 
@@ -60,7 +61,7 @@ class LMBluetooth:
 
     @classmethod
     async def create_with_known_device(
-        cls, username, serial_number, token, address, name
+        cls, username: str, serial_number: str, token: str, address: str, name: str
     ) -> LMBluetooth:
         """Init class with known device."""
         self = cls(username, serial_number, token)
@@ -85,8 +86,13 @@ class LMBluetooth:
 
         assert self._client
         if not self._client.is_connected:
-            await self._client.connect()
-            await self.authenticate()
+            try:
+                await self._client.connect()
+                await self.authenticate()
+            except (BleakError, asyncio.TimeoutError) as e:
+                raise BluetoothConnectionFailed(
+                    f"Failed to connect to machine with Bluetooth: {e}"
+                ) from e
 
         # check if message is already bytes string
         if not isinstance(message, bytes):
@@ -119,7 +125,7 @@ class LMBluetooth:
         try:
             await self._client.connect()
             await self.authenticate()
-        except BleakError as e:
+        except (BleakError, asyncio.TimeoutError) as e:
             raise BluetoothConnectionFailed(
                 f"Failed to connect to machine with Bluetooth: {e}"
             ) from e
