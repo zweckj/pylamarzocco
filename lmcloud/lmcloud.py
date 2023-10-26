@@ -18,6 +18,7 @@ from .const import (
     COFFEE_BOILER_NAME,
     CURRENT,
     CUSTOMER_URL,
+    DEFAULT_PORT,
     GW_AWS_PROXY_BASE_URL,
     GW_MACHINE_BASE_URL,
     KEY,
@@ -39,6 +40,7 @@ from .exceptions import (
     AuthFail,
     BluetoothDeviceNotFound,
     BluetoothConnectionFailed,
+    MachineNotFound,
     RequestNotSuccessful,
 )
 from .helpers import (
@@ -206,10 +208,12 @@ class LMCloud:
         return self._current_status
 
     @classmethod
-    async def create(cls, credentials: dict[str, str]) -> LMCloud:
+    async def create(
+        cls, credentials: dict[str, str], machine_serial: str | None = None
+    ) -> LMCloud:
         """Initialize a cloud only client"""
         self = cls()
-        await self._init_cloud_api(credentials)
+        await self._init_cloud_api(credentials, machine_serial)
         return self
 
     @classmethod
@@ -217,14 +221,15 @@ class LMCloud:
         cls,
         credentials: dict[str, str],
         host: str,
-        port: int = 8081,
+        machine_serial: str | None = None,
+        port: int = DEFAULT_PORT,
         use_websocket: bool = False,
         use_bluetooth: bool = False,
         bluetooth_scanner: BaseBleakScanner | None = None,
     ) -> LMCloud:
         """Also initialize a local API client"""
         self = cls()
-        await self._init_cloud_api(credentials)
+        await self._init_cloud_api(credentials, machine_serial)
         await self._init_local_api(host, port)
 
         if use_websocket:
@@ -238,17 +243,56 @@ class LMCloud:
         await self.update_local_machine_status(in_init=True)
         return self
 
-    async def _init_cloud_api(self, credentials: dict[str, str]) -> None:
+    async def get_all_machines(
+        self, credentials: dict[str, Any]
+    ) -> list[tuple[str, str]]:
+        """Get a list of tuples (serial, model_name) of all machines for a user"""
+        await self._connect(credentials)
+        data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
+        machines = []
+        for machine in data.get("fleet", []):
+            machine_details = machine.get("machine", {})
+            machines.append(
+                (
+                    machine_details.get("serialNumber"),
+                    machine.get("model", {}).get("name"),
+                )
+            )
+        return machines
+
+    async def check_local_connection(
+        self,
+        credentials: dict[str, Any],
+        host: str,
+        serial: str | None = None,
+        port: int = DEFAULT_PORT,
+    ) -> bool:
+        """Check if we can connect to the local API"""
+        await self._connect(credentials)
+        try:
+            machine_info = await self._get_machine_info(serial)
+        except MachineNotFound:
+            return False
+        self._lm_local_api = LMLocalAPI(host, machine_info[KEY], port)
+        try:
+            await self._lm_local_api.local_get_config()
+            return True
+        except RequestNotSuccessful:
+            return False
+
+    async def _init_cloud_api(
+        self, credentials: dict[str, str], machine_serial: str | None = None
+    ) -> None:
         """Setup the cloud connection."""
         self.client = await self._connect(credentials)
-        self._machine_info = await self._get_machine_info()
+        self._machine_info = await self._get_machine_info(machine_serial)
         self._gw_url_with_serial = (
             GW_MACHINE_BASE_URL + "/" + self.machine_info[SERIAL_NUMBER]
         )
         self._firmware = await self.get_firmware()
         self._date_received = datetime.now()
 
-    async def _init_local_api(self, host: str, port: int = 8081) -> None:
+    async def _init_local_api(self, host: str, port: int = DEFAULT_PORT) -> None:
         """Init local connection client"""
         self._lm_local_api = LMLocalAPI(
             host=host, local_port=port, local_bearer=self.machine_info[KEY]
@@ -506,34 +550,27 @@ class LMCloud:
             _logger.debug("Full error: %s", e)
             return False
 
-    async def _get_machine_info(self) -> dict[str, str]:
+    async def _get_machine_info(self, serial: str | None = None) -> dict[str, str]:
         """Get basic machine info from the customer endpoint."""
 
         data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
 
+        fleet = data.get("fleet", [])
         machine_info = {}
-        fleet = data.get("fleet", [{}])[0]
-
-        machine_info[KEY] = fleet.get("communicationKey")
-
-        if machine_info[KEY] is None:
-            raise RequestNotSuccessful("communicationKey not part of response.")
-
+        if serial is not None:
+            machine_with_serial = [
+                m for m in fleet if m.get("machine", {}).get("serialNumber") == serial
+            ]
+            if not fleet:
+                raise MachineNotFound(f"Serial number {serial} not found")
+            machine_data = machine_with_serial[0]
+        else:
+            machine_data = fleet[0]
+        machine_info[KEY] = machine_data.get("communicationKey")
         machine_info[MACHINE_NAME] = fleet.get("name")
-
-        if machine_info[MACHINE_NAME] is None:
-            raise RequestNotSuccessful("name not part of response.")
-
         machine = fleet.get("machine", {})
         machine_info[SERIAL_NUMBER] = machine.get("serialNumber")
-
-        if machine_info[SERIAL_NUMBER] is None:
-            raise RequestNotSuccessful("serialNumber not part of response.")
-
         machine_info[MODEL_NAME] = machine.get("model", {}).get("name")
-
-        if machine_info[MODEL_NAME] is None:
-            raise RequestNotSuccessful("model_name not part of response.")
 
         return machine_info
 

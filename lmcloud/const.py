@@ -8,6 +8,8 @@ GW_BASE_URL: Final = "https://gw-lmz.lamarzocco.io/v1/home"
 GW_MACHINE_BASE_URL: Final = f"{GW_BASE_URL}/machines"
 GW_AWS_PROXY_BASE_URL: Final = f"{GW_BASE_URL}/aws-proxy"
 
+DEFAULT_PORT = 8081
+
 POLLING_DELAY_S: Final = 20
 POLLING_DELAY_STATISTICS_S: Final = 60
 WEBSOCKET_RETRY_DELAY: Final = 20
