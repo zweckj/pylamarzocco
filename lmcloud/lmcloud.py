@@ -249,13 +249,13 @@ class LMCloud:
         """Get a list of tuples (serial, model_name) of all machines for a user"""
         await self._connect(credentials)
         data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
-        machines = []
+        machines: list[tuple[str, str]] = []
         for machine in data.get("fleet", []):
             machine_details = machine.get("machine", {})
             machines.append(
                 (
                     machine_details.get("serialNumber"),
-                    machine.get("model", {}).get("name"),
+                    machine_details.get("model", {}).get("name"),
                 )
             )
         return machines
@@ -268,7 +268,10 @@ class LMCloud:
         port: int = DEFAULT_PORT,
     ) -> bool:
         """Check if we can connect to the local API"""
-        await self._connect(credentials)
+        try:
+            await self._connect(credentials)
+        except AuthFail:
+            return False
         try:
             machine_info = await self._get_machine_info(serial)
         except MachineNotFound:
@@ -553,22 +556,23 @@ class LMCloud:
     async def _get_machine_info(self, serial: str | None = None) -> dict[str, str]:
         """Get basic machine info from the customer endpoint."""
 
-        data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
+        machine_info: dict[str, Any] = {}
+        machine_data: dict[str, Any] = {}
 
+        data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
         fleet = data.get("fleet", [])
-        machine_info = {}
         if serial is not None:
             machine_with_serial = [
                 m for m in fleet if m.get("machine", {}).get("serialNumber") == serial
             ]
-            if not fleet:
+            if not machine_with_serial:
                 raise MachineNotFound(f"Serial number {serial} not found")
             machine_data = machine_with_serial[0]
         else:
             machine_data = fleet[0]
         machine_info[KEY] = machine_data.get("communicationKey")
-        machine_info[MACHINE_NAME] = fleet.get("name")
-        machine = fleet.get("machine", {})
+        machine_info[MACHINE_NAME] = machine_data.get("name")
+        machine = machine_data.get("machine", {})
         machine_info[SERIAL_NUMBER] = machine.get("serialNumber")
         machine_info[MODEL_NAME] = machine.get("model", {}).get("name")
 
