@@ -121,6 +121,8 @@ class LMLocalAPI:
                 )
                 await asyncio.sleep(WEBSOCKET_RETRY_DELAY)
                 continue
+            except websockets.WebSocketException as ex:
+                _logger.warning("Exception during websocket connection: %s", ex)
 
     async def handle_websocket_message(
         self, message: Any
