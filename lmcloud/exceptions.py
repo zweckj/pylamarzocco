@@ -19,3 +19,7 @@ class BluetoothConnectionFailed(Exception):
 
 class UnknownWebSocketMessage(Exception):
     """Error to indicate we received an unknown websocket message"""
+
+
+class MachineNotFound(Exception):
+    """Error to indicate we couldn't find the machine through the API"""
