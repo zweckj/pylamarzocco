@@ -269,14 +269,14 @@ class LMCloud:
     ) -> bool:
         """Check if we can connect to the local API"""
         try:
-            await self._connect(credentials)
+            self.client = await self._connect(credentials)
         except AuthFail:
             return False
         try:
-            machine_info = await self._get_machine_info(serial)
+            self._machine_info = await self._get_machine_info(serial)
         except MachineNotFound:
             return False
-        self._lm_local_api = LMLocalAPI(host, machine_info[KEY], port)
+        self._lm_local_api = LMLocalAPI(host, self._machine_info[KEY], port)
         try:
             await self._lm_local_api.local_get_config()
             return True
