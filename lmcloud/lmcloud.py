@@ -247,7 +247,7 @@ class LMCloud:
         self, credentials: dict[str, Any]
     ) -> list[tuple[str, str]]:
         """Get a list of tuples (serial, model_name) of all machines for a user"""
-        await self._connect(credentials)
+        self.client = await self._connect(credentials)
         data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
         machines: list[tuple[str, str]] = []
         for machine in data.get("fleet", []):
