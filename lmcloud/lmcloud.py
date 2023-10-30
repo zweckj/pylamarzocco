@@ -268,22 +268,30 @@ class LMCloud:
         port: int = DEFAULT_PORT,
     ) -> bool:
         """Check if we can connect to the local API"""
-        # try:
-        self.client = await self._connect(credentials)
-        # except AuthFail:
-        #     return False
-        # try:
-        machine_info = await self._get_machine_info(serial)
-        # except MachineNotFound:
-        #     return False
+        try:
+            self.client = await self._connect(credentials)
+        except AuthFail as ex:
+            _logger.exception("Could not authenticate to the cloud API. Error: %s", ex)
+            return False
+        try:
+            machine_info = await self._get_machine_info(serial)
+        except MachineNotFound:
+            _logger.exception("Could not find machine with serial %s", serial)
+            return False
         self._lm_local_api = LMLocalAPI(
             host=host, local_bearer=machine_info[KEY], local_port=port
         )
-        # try:
-        await self._lm_local_api.local_get_config()
-        return True
-        # except (RequestNotSuccessful, AuthFail):
-        #     return False
+        try:
+            await self._lm_local_api.local_get_config()
+            return True
+        except AuthFail:
+            return True  # IP is correct, but token is not valid, token command will be sent later
+        except RequestNotSuccessful as ex:
+            _logger.exception("Could not connect to local API. Error: %s", ex)
+            return False
+        except TimeoutError:
+            _logger.exception("Timeout while connecting to local API")
+            return False
 
     async def _init_cloud_api(
         self, credentials: dict[str, str], machine_serial: str | None = None
