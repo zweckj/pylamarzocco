@@ -15,6 +15,7 @@ from .const import (
     BOILER_TARGET_TEMP,
     BOILERS,
     BREW_ACTIVE,
+    BREW_ACTIVE_DURATION,
     COFFEE_BOILER_NAME,
     CURRENT,
     CUSTOMER_URL,
@@ -77,6 +78,7 @@ class LMCloud:
         self._last_statistics_update: datetime | None = None
         self._use_websocket: bool = False
         self._brew_active: bool = False
+        self._brew_active_duration: int = 0
         self._last_config_update: datetime | None = None
 
     @property
@@ -199,6 +201,7 @@ class LMCloud:
         """Return the current status of the machine."""
         # extend the current status from super with active brew property
         self._current_status[BREW_ACTIVE] = self.brew_active
+        self._current_status[BREW_ACTIVE_DURATION] = self._brew_active_duration
         self._current_status["coffee_boiler_on"] = self._current_status.get(
             "power", False
         )
@@ -396,12 +399,16 @@ class LMCloud:
         assert self._lm_local_api
         await self._lm_local_api.websocket_connect(callback, use_sigterm_handler)
 
-    def update_current_status(self, property_updated: str, value: Any):
+    def update_current_status(self, property_updated: str, value: Any) -> None:
         """Update a property in the current status dict"""
-        if property_updated != BREW_ACTIVE:
-            self._current_status[property_updated] = value
-        else:
+        if property_updated is None:
+            return
+        if property_updated == BREW_ACTIVE:
             self._brew_active = value
+        elif property_updated == BREW_ACTIVE_DURATION:
+            self._brew_active_duration = int(value)
+        else:
+            self._current_status[property_updated] = value
 
     async def get_config(self) -> dict[str, Any]:
         """Get configuration from cloud"""
