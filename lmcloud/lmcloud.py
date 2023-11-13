@@ -857,6 +857,10 @@ class LMCloud:
         await self._rest_api_call(url=url, verb="POST", data=data)
         self._config[BACKFLUSH_ENABLED] = True
 
+    async def reset_brew_active_duration(self) -> None:
+        """Reset the brew active duration"""
+        self._brew_active_duration = 0
+
     async def _token_command(self) -> None:
         """Send token request command to cloud. This is needed when the local API returns 403."""
         url = f"{self._gw_url_with_serial}/token-request"

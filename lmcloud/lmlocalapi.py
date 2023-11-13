@@ -162,6 +162,11 @@ class LMLocalAPI:
                 self._status["sleepCause"] = message[0]["Sleep"]
                 return "power", False
 
+            if "SteamBoilerEnabled" in message[0]:
+                value = message[0]["SteamBoilerEnabled"]
+                self._status["steamBoilerEnabled"] = value
+                return "steam_boiler_enable", value
+
             if "WakeUp" in message[0]:
                 self._status["power"] = True
                 self._status["wakeupCause"] = message[0]["WakeUp"]
