@@ -19,6 +19,8 @@ from .const import (
     COFFEE_BOILER_NAME,
     CURRENT,
     CUSTOMER_URL,
+    DEFAULT_CLIENT_ID,
+    DEFAULT_CLIENT_SECRET,
     DEFAULT_PORT,
     GW_AWS_PROXY_BASE_URL,
     GW_MACHINE_BASE_URL,
@@ -368,14 +370,14 @@ class LMCloud:
         """Establish connection by building the OAuth client and requesting the token"""
 
         client = AsyncOAuth2Client(
-            client_id=credentials["client_id"],
-            client_secret=credentials["client_secret"],
+            client_id=DEFAULT_CLIENT_ID,
+            client_secret=DEFAULT_CLIENT_SECRET,
             token_endpoint=TOKEN_URL,
         )
 
         headers = {
-            "client_id": credentials["client_id"],
-            "client_secret": credentials["client_secret"],
+            "client_id": DEFAULT_CLIENT_ID,
+            "client_secret": DEFAULT_CLIENT_SECRET,
         }
 
         try:
