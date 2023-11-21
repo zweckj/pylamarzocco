@@ -84,7 +84,11 @@ class LMCloud:
         self._use_websocket: bool = False
         self._brew_active: bool = False
         self._brew_active_duration: int = 0
+        self._initialized: bool = False
         self._last_config_update: datetime | None = None
+        self._websocket_task: asyncio.Task | None = None
+        self._websocket_initialized: bool = False
+        self._callback_websocket_notify: Callable[[], None] | None = None
 
     @property
     def client(self) -> AsyncOAuth2Client:
@@ -237,6 +241,7 @@ class LMCloud:
         """Initialize a cloud only client"""
         self = cls()
         await self._init_cloud_api(credentials, machine_serial)
+        self._initialized = True
         return self
 
     @classmethod
@@ -262,6 +267,8 @@ class LMCloud:
             await self._init_bluetooth(
                 credentials["username"], bluetooth_scanner=bluetooth_scanner
             )
+
+        self._initialized = True
 
         await self.update_local_machine_status(in_init=True)
         return self
@@ -334,12 +341,20 @@ class LMCloud:
             host=host, local_port=port, local_bearer=self.machine_info[KEY]
         )
 
-    async def _init_websocket(self) -> None:
+    async def _init_websocket(
+        self, callback: Callable[[], None] | None = None
+    ) -> None:
         """Initiate the local websocket connection"""
         _logger.debug("Initiating lmcloud with WebSockets")
         self._use_websocket = True
+        self._callback_websocket_notify = callback
         assert self._lm_local_api
-        asyncio.create_task(self._lm_local_api.websocket_connect())
+        self._websocket_task = asyncio.create_task(
+            self._lm_local_api.websocket_connect(
+                callback=self.on_websocket_message_received, use_sigterm_handler=False
+            )
+        )
+        self._websocket_initialized = True
 
     async def _init_bluetooth(
         self,
@@ -419,8 +434,17 @@ class LMCloud:
         assert self._lm_local_api
         await self._lm_local_api.websocket_connect(callback, use_sigterm_handler)
 
-    def update_current_status(self, property_updated: str, value: Any) -> None:
-        """Update a property in the current status dict"""
+    def on_websocket_message_received(self, property_updated: str, value: Any) -> None:
+        """Message received. Update a property in the current status dict"""
+        if not property_updated:
+            return
+
+        _logger.debug(
+            "Received data from websocket, property updated: %s with value: %s",
+            str(property_updated),
+            str(value),
+        )
+
         if property_updated is None:
             return
         if property_updated == BREW_ACTIVE:
@@ -429,6 +453,9 @@ class LMCloud:
             self._brew_active_duration = int(value)
         else:
             self._current_status[property_updated] = value
+
+        if self._initialized and self._callback_websocket_notify is not None:
+            self._callback_websocket_notify()
 
     async def get_config(self) -> dict[str, Any]:
         """Get configuration from cloud"""
@@ -940,3 +967,10 @@ class LMCloud:
         schedule = schedule_out_to_hass(self.config)
         statistics = parse_statistics(self.statistics)
         return state | doses | preinfusion_settings | schedule | statistics
+
+    def terminate_websocket(self) -> None:
+        """Terminate the websocket connection."""
+        self.websocket_terminating = True
+        if self._websocket_task:
+            self._websocket_task.cancel()
+            self._websocket_task = None
