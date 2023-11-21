@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable, Coroutine, Mapping
 from datetime import datetime
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
 from authlib.integrations.httpx_client import AsyncOAuth2Client  # type: ignore[import]
@@ -27,6 +28,8 @@ from .const import (
     KEY,
     MACHINE_MODE,
     MACHINE_NAME,
+    MODELS,
+    MODEL_LMU,
     MODEL_NAME,
     PLUMBED_IN,
     POLLING_DELAY_S,
@@ -98,9 +101,24 @@ class LMCloud:
         return self._machine_info
 
     @property
+    def machine_name(self) -> str:
+        """Return the name of the machine."""
+        return self.machine_info[MACHINE_NAME]
+
+    @property
     def model_name(self) -> str:
         """Return the model name of the machine."""
         return self._machine_info[MODEL_NAME]
+
+    @property
+    def true_model_name(self) -> str:
+        """Return the model name from the cloud, even if it's not one we know about.
+        Used for display only."""
+        if self.model_name == MODEL_LMU:
+            return f"Linea {MODEL_LMU}"
+        if self.model_name in MODELS:
+            return self.model_name
+        return f"Unsupported Model ({self.model_name})"
 
     @property
     def serial_number(self) -> str:
@@ -299,7 +317,7 @@ class LMCloud:
             return False
 
     async def _init_cloud_api(
-        self, credentials: dict[str, str], machine_serial: str | None = None
+        self, credentials: Mapping[str, Any], machine_serial: str | None = None
     ) -> None:
         """Setup the cloud connection."""
         self.client = await self._connect(credentials)
@@ -366,7 +384,7 @@ class LMCloud:
             name=name,
         )
 
-    async def _connect(self, credentials: dict[str, str]) -> AsyncOAuth2Client:
+    async def _connect(self, credentials: Mapping[str, Any]) -> AsyncOAuth2Client:
         """Establish connection by building the OAuth client and requesting the token"""
 
         client = AsyncOAuth2Client(
@@ -755,6 +773,18 @@ class LMCloud:
             off_time % 1000
         )
 
+    async def set_prebrew_times(
+        self, key: int, seconds_on: float, seconds_off: float
+    ) -> None:
+        """Set the prebrew times of the machine. (Alias for HA)"""
+        await self.configure_prebrew(
+            on_time=seconds_on * 1000, off_time=seconds_off * 1000, key=key
+        )
+
+    async def set_preinfusion_time(self, key: int, seconds: float) -> None:
+        """Set the preinfusion time of the machine. (Alias for HA)"""
+        await self.configure_prebrew(on_time=0, off_time=seconds * 1000, key=key)
+
     async def enable_plumbin(self, enable: bool) -> None:
         """Enable or disable plumbin mode"""
 
@@ -816,6 +846,10 @@ class LMCloud:
         data = {"enable": enable, "days": schedule}
         await self._rest_api_call(url=url, verb="POST", data=data)
         self._config[WEEKLY_SCHEDULING_CONFIG] = schedule_in_to_out(enable, schedule)
+
+    async def set_auto_on_off_global(self, enable: bool) -> None:
+        """Set the auto on/off state of the machine (Alias for HA)."""
+        await self.configure_schedule(enable, self.schedule)
 
     async def set_auto_on_off(
         self,

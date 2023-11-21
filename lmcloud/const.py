@@ -17,6 +17,12 @@ POLLING_DELAY_S: Final = 20
 POLLING_DELAY_STATISTICS_S: Final = 60
 WEBSOCKET_RETRY_DELAY: Final = 20
 
+MODEL_GS3_AV: Final = "GS3 AV"
+MODEL_GS3_MP: Final = "GS3 MP"
+MODEL_LM: Final = "Linea Mini"
+MODEL_LMU: Final = "Micra"
+MODELS: Final = [MODEL_GS3_AV, MODEL_GS3_MP, MODEL_LM, MODEL_LMU]
+
 # Key Names for Dictionaries
 
 BACKFLUSH_ENABLED: Final = "isBackFlushEnabled"
