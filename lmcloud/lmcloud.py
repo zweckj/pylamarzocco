@@ -66,7 +66,9 @@ _logger = logging.getLogger(__name__)
 class LMCloud:
     """Client to interact with the La Marzocco Cloud API."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, callback_websocket_notify: Callable[[], None] | None = None
+    ) -> None:
         """Initialize the client."""
         self._lm_local_api: LMLocalAPI | None = None
         self._lm_bluetooth: LMBluetooth | None = None
@@ -88,7 +90,9 @@ class LMCloud:
         self._last_config_update: datetime | None = None
         self._websocket_task: asyncio.Task | None = None
         self._websocket_initialized: bool = False
-        self._callback_websocket_notify: Callable[[], None] | None = None
+        self._callback_websocket_notify: Callable[
+            [], None
+        ] | None = callback_websocket_notify
 
     @property
     def client(self) -> AsyncOAuth2Client:
@@ -341,9 +345,7 @@ class LMCloud:
             host=host, local_port=port, local_bearer=self.machine_info[KEY]
         )
 
-    async def _init_websocket(
-        self, callback: Callable[[], None] | None = None
-    ) -> None:
+    async def _init_websocket(self, callback: Callable[[], None] | None = None) -> None:
         """Initiate the local websocket connection"""
         _logger.debug("Initiating lmcloud with WebSockets")
         self._use_websocket = True
