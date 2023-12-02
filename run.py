@@ -2,26 +2,22 @@ from lmcloud.lmcloud import LMCloud
 import json
 import asyncio
 
+
 async def main():
     with open("config.json") as f:
         data = json.load(f)
 
-    creds = {
-        "client_id": data["client_id"],
-        "client_secret": data["client_secret"],
-        "username": data["username"],
-        "password": data["password"]
-    }
+    creds = {"username": data["username"], "password": data["password"]}
 
     # lmcloud = await LMCloud.create(creds)
     # lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
     # await lmcloud.set_power("standby")
     # lmcloud.local_get_config()
     # await lmcloud.set_steam(True)
-    #await lmcloud.set_coffee_temp(93.5) 
+    # await lmcloud.set_coffee_temp(93.5)
     # await lmcloud.set_steam_temp(131)
     # print(await lmcloud.get_coffee_boiler_enabled())
-   
+
     # await lmcloud.get_status()
     # config = await lmcloud.get_config()
     # await lmcloud.set_steam(False)
@@ -30,7 +26,7 @@ async def main():
     # current_status = await lmcloud._get_status()
     # await lmcloud.set_steam(True)
     # current_status = lmcloud.current_status
-    #await lmcloud.set_prebrew(False)
+    # await lmcloud.set_prebrew(False)
     # config = await lmcloud.get_config()
     # await asyncio.sleep(10)
     # await lmcloud.update_local_machine_status()
@@ -42,13 +38,13 @@ async def main():
     #     await asyncio.sleep(1)
 
     lmcloud = await LMCloud.create_with_local_api(
-        creds, 
-        data["host"], 
-        data["port"], 
-        use_bluetooth=False,
-        use_websocket=False
+        creds, data["host"], use_bluetooth=False, use_websocket=False
     )
-    
+
+    await lmcloud.set_power(True)
+    await asyncio.sleep(5)
+    await lmcloud.set_power(False)
+
     # while True:
     #     print("waiting...")
     #     # print(lmcloud._lm_local_api._timestamp_last_websocket_msg)
@@ -67,5 +63,6 @@ async def main():
 
     print(lmcloud.current_status)
     print("Done.")
+
 
 asyncio.run(main())
