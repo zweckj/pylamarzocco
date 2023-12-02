@@ -278,7 +278,7 @@ class LMCloud:
         return self
 
     async def get_all_machines(
-        self, credentials: dict[str, Any]
+        self, credentials: Mapping[str, Any]
     ) -> list[tuple[str, str]]:
         """Get a list of tuples (serial, model_name) of all machines for a user"""
         self.client = await self._connect(credentials)
@@ -296,7 +296,7 @@ class LMCloud:
 
     async def check_local_connection(
         self,
-        credentials: dict[str, Any],
+        credentials: Mapping[str, Any],
         host: str,
         serial: str | None = None,
         port: int = DEFAULT_PORT,
