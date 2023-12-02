@@ -457,6 +457,7 @@ class LMCloud:
             self._current_status[property_updated] = value
 
         if self._initialized and self._callback_websocket_notify is not None:
+            _logger.debug("Calling callback function")
             self._callback_websocket_notify()
 
     async def get_config(self) -> dict[str, Any]:
@@ -771,7 +772,7 @@ class LMCloud:
             _logger.debug(msg)
             raise ValueError(msg)
 
-        url = f"{self._gw_url_with_serial}/enable-preinfusion."
+        url = f"{self._gw_url_with_serial}/enable-preinfusion"
         data = {"mode": mode}
         response = await self._rest_api_call(url=url, verb="POST", data=data)
         if await self._check_cloud_command_status(response):
@@ -980,6 +981,8 @@ class LMCloud:
         if command_id := command_response.get("commandId"):
             url = f"{GW_AWS_PROXY_BASE_URL}/{self.serial_number}/commands/{command_id}"
             response = await self._rest_api_call(url=url, verb="GET")
+            if response is None:
+                return True
             return response.get("responsePayload", {}).get("status") == "success"
         return False
 
