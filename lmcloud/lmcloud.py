@@ -83,13 +83,10 @@ class LMCloud:
         self._config_coffeeboiler: dict[str, Any] = {}
         self._statistics: list[dict[str, Any]] = []
         self._last_statistics_update: datetime | None = None
-        self._use_websocket: bool = False
         self._brew_active: bool = False
         self._brew_active_duration: int = 0
         self._initialized: bool = False
         self._last_config_update: datetime | None = None
-        self._websocket_task: asyncio.Task | None = None
-        self._websocket_initialized: bool = False
         self._callback_websocket_notify: Callable[
             [], None
         ] | None = callback_websocket_notify
@@ -274,7 +271,7 @@ class LMCloud:
 
         self._initialized = True
 
-        await self.update_local_machine_status(in_init=True)
+        await self.update_local_machine_status()
         return self
 
     async def get_all_machines(
@@ -345,18 +342,17 @@ class LMCloud:
             host=host, local_port=port, local_bearer=self.machine_info[KEY]
         )
 
-    async def _init_websocket(self, callback: Callable[[], None] | None = None) -> None:
+    async def _init_websocket(self) -> None:
         """Initiate the local websocket connection"""
+        if not self._lm_local_api:
+            _logger.warning("Local API not initialized, cannot init websockets.")
+            return
         _logger.debug("Initiating lmcloud with WebSockets")
-        self._use_websocket = True
-        self._callback_websocket_notify = callback
-        assert self._lm_local_api
-        self._websocket_task = asyncio.create_task(
+        asyncio.create_task(
             self._lm_local_api.websocket_connect(
                 callback=self.on_websocket_message_received, use_sigterm_handler=False
             )
         )
-        self._websocket_initialized = True
 
     async def _init_bluetooth(
         self,
@@ -489,7 +485,6 @@ class LMCloud:
 
     async def update_local_machine_status(
         self,
-        in_init: bool = False,
         force_update: bool = False,
         local_api_retry_delay: int = 3,
     ) -> None:
@@ -508,23 +503,12 @@ class LMCloud:
                     await asyncio.sleep(local_api_retry_delay)
                     self._config = await self._lm_local_api.local_get_config()
             except RequestNotSuccessful as e:
-                _logger.warning("Could not connect to local API although initialized")
+                _logger.warning(
+                    "Could not connect to local API although initialized, falling back to cloud."
+                )
                 _logger.debug("Full error: %s", e)
                 await self._update_config_obj(force_update=force_update)
 
-            if (
-                self._lm_local_api.timestamp_last_websocket_msg is None
-                or (
-                    datetime.now() - self._lm_local_api.timestamp_last_websocket_msg
-                ).total_seconds()
-                > 30
-            ):
-                if (
-                    self._use_websocket and not in_init
-                ):  # during init we don't want to log this warning
-                    _logger.warning(
-                        "Could not get local machine status. Falling back to cloud status"
-                    )
         else:
             _logger.debug("Getting config from cloud.")
             await self._update_config_obj(force_update=force_update)
@@ -918,10 +902,6 @@ class LMCloud:
         """Set the auto on/off state of the machine (Alias for HA)."""
         return await self.configure_schedule(enable, self.schedule)
 
-    async def set_auto_on_off_global(self, enable: bool) -> None:
-        """Set the auto on/off state of the machine (Alias for HA)."""
-        await self.configure_schedule(enable, self.schedule)
-
     async def set_auto_on_off(
         self,
         day_of_week: str,
@@ -1018,10 +998,3 @@ class LMCloud:
         schedule = schedule_out_to_hass(self.config)
         statistics = parse_statistics(self.statistics)
         return state | doses | preinfusion_settings | schedule | statistics
-
-    def terminate_websocket(self) -> None:
-        """Terminate the websocket connection."""
-        self.websocket_terminating = True
-        if self._websocket_task:
-            self._websocket_task.cancel()
-            self._websocket_task = None
