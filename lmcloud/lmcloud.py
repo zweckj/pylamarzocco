@@ -584,7 +584,7 @@ class LMCloud:
         url = f"{self._gw_url_with_serial}/firmware/"
         return await self._rest_api_call(url=url, verb="GET")
 
-    async def set_power(self, enabled: bool) -> None:
+    async def set_power(self, enabled: bool) -> bool:
         """Turn power of machine on or off"""
 
         if self._lm_bluetooth is not None:
@@ -594,14 +594,19 @@ class LMCloud:
 
         mode = "BrewingMode" if enabled else "StandBy"
 
+        cloud_ok = False
         if not self._lm_bluetooth or not bt_ok:
             data = {"status": mode}
             url = f"{self._gw_url_with_serial}/status"
-            await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            cloud_ok = await self._check_cloud_command_status(response)
 
-        self._config[MACHINE_MODE] = mode
+        if cloud_ok or bt_ok:
+            self._config[MACHINE_MODE] = mode
+            return True
+        return False
 
-    async def set_steam(self, steam_state: bool) -> None:
+    async def set_steam(self, steam_state: bool) -> bool:
         """Turn Steamboiler on or off"""
 
         if not isinstance(steam_state, bool):
@@ -614,15 +619,22 @@ class LMCloud:
                 self._lm_bluetooth.set_steam, steam_state
             )
 
+        cloud_ok = False
         if not self._lm_bluetooth or not bt_ok:
             data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
             url = f"{self._gw_url_with_serial}/enable-boiler"
-            await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            cloud_ok = await self._check_cloud_command_status(response)
 
-        idx = [STEAM_BOILER_NAME in i["id"] for i in self.config[BOILERS]].index(True)
-        self._config[BOILERS][idx]["isEnabled"] = steam_state
+        if cloud_ok or bt_ok:
+            idx = [STEAM_BOILER_NAME in i["id"] for i in self.config[BOILERS]].index(
+                True
+            )
+            self._config[BOILERS][idx]["isEnabled"] = steam_state
+            return True
+        return False
 
-    async def set_steam_temp(self, temperature: int) -> None:
+    async def set_steam_temp(self, temperature: int) -> bool:
         """Set steamboiler temperature (in Celsius)."""
         if not isinstance(temperature, int):
             msg = "Steam temp must be integer"
@@ -639,14 +651,19 @@ class LMCloud:
                 self._lm_bluetooth.set_steam_temp, temperature
             )
 
+        cloud_ok = False
         if not self._lm_bluetooth or not bt_ok:
             data = {"identifier": STEAM_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            cloud_ok = await self._check_cloud_command_status(response)
 
-        self._config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME] = temperature
+        if cloud_ok or bt_ok:
+            self._config[BOILER_TARGET_TEMP][STEAM_BOILER_NAME] = temperature
+            return True
+        return False
 
-    async def set_coffee_temp(self, temperature) -> None:
+    async def set_coffee_temp(self, temperature) -> bool:
         """Set coffee boiler temperature (in Celsius)."""
 
         if temperature > 104 or temperature < 85:
@@ -661,14 +678,19 @@ class LMCloud:
                 self._lm_bluetooth.set_coffee_temp, temperature
             )
 
+        cloud_ok = False
         if not self._lm_bluetooth or not bt_ok:
             data = {"identifier": COFFEE_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            cloud_ok = await self._check_cloud_command_status(response)
 
-        self._config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME] = temperature
+        if cloud_ok or bt_ok:
+            self._config[BOILER_TARGET_TEMP][COFFEE_BOILER_NAME] = temperature
+            return True
+        return False
 
-    async def _set_pre_brew_infusion(self, mode: str) -> None:
+    async def _set_pre_brew_infusion(self, mode: str) -> bool:
         """Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)."""
 
         if not mode in ("Disabled", "TypeB", "Enabled"):
@@ -685,24 +707,26 @@ class LMCloud:
 
         url = f"{self._gw_url_with_serial}/enable-preinfusion."
         data = {"mode": mode}
-        await self._rest_api_call(url=url, verb="POST", data=data)
-        self._config[PRE_INFUSION_SETTINGS]["mode"] = mode
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        if await self._check_cloud_command_status(response):
+            self._config[PRE_INFUSION_SETTINGS]["mode"] = mode
+        return False
 
-    async def set_prebrew(self, enabled: bool) -> None:
+    async def set_prebrew(self, enabled: bool) -> bool:
         """Enable/Disable Pre-brew (Mode = Enabled)."""
 
         mode = "Enabled" if enabled else "Disabled"
-        await self._set_pre_brew_infusion(mode)
+        return await self._set_pre_brew_infusion(mode)
 
-    async def set_preinfusion(self, enabled: bool) -> None:
+    async def set_preinfusion(self, enabled: bool) -> bool:
         """Enable/Disable Pre-Infusion (Mode = TypeB)."""
 
         mode = "TypeB" if enabled else "Disabled"
-        await self._set_pre_brew_infusion(mode)
+        return await self._set_pre_brew_infusion(mode)
 
     async def configure_prebrew(
         self, on_time=5000, off_time=5000, key: int = 1
-    ) -> None:
+    ) -> bool:
         """Set Pre-Brew details. Also used for preinfusion (prebrewOnTime=0, prebrewOnTime=ms)."""
 
         if not isinstance(on_time, int) or not isinstance(off_time, int):
@@ -729,14 +753,29 @@ class LMCloud:
             "holdTimeMs": off_time,
             "wetTimeMs": on_time,
         }
-        await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        if await self._check_cloud_command_status(response):
+            self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetTime"] = (
+                on_time % 1000
+            )
+            self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetHoldTime"] = (
+                off_time % 1000
+            )
+        return False
 
-        self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetTime"] = on_time % 1000
-        self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetHoldTime"] = (
-            off_time % 1000
+    async def set_prebrew_times(
+        self, key: int, seconds_on: float, seconds_off: float
+    ) -> bool:
+        """Set the prebrew times of the machine. (Alias for HA)"""
+        return await self.configure_prebrew(
+            on_time=seconds_on * 1000, off_time=seconds_off * 1000, key=key
         )
 
-    async def enable_plumbin(self, enable: bool) -> None:
+    async def set_preinfusion_time(self, key: int, seconds: float) -> bool:
+        """Set the preinfusion time of the machine. (Alias for HA)"""
+        return await self.configure_prebrew(on_time=0, off_time=seconds * 1000, key=key)
+
+    async def enable_plumbin(self, enable: bool) -> bool:
         """Enable or disable plumbin mode"""
 
         if not isinstance(enable, bool):
@@ -746,10 +785,12 @@ class LMCloud:
 
         data = {"enable": enable}
         url = f"{self._gw_url_with_serial}/enable-plumbin"
-        await self._rest_api_call(url=url, verb="POST", data=data)
-        self._config[PLUMBED_IN] = enable
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        if await self._check_cloud_command_status(response):
+            self._config[PLUMBED_IN] = enable
+        return False
 
-    async def set_dose(self, key: int, value: int) -> None:
+    async def set_dose(self, key: int, value: int) -> bool:
         """Set the value for a dose"""
 
         if key < 1 or key > 4:
@@ -767,36 +808,48 @@ class LMCloud:
             "value": value,
         }
 
-        await self._rest_api_call(url=url, verb="POST", data=data)
-        if (
-            "groupCapabilities" in self._config
-            and len(self._config["groupCapabilities"]) > 0
-            and "doses" in self._config["groupCapabilities"][0]
-        ):
-            idx = next(
-                index
-                for index, dose in enumerate(
-                    self._config["groupCapabilities"][0]["doses"]
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        if await self._check_cloud_command_status(response):
+            if (
+                "groupCapabilities" in self._config
+                and len(self._config["groupCapabilities"]) > 0
+                and "doses" in self._config["groupCapabilities"][0]
+            ):
+                idx = next(
+                    index
+                    for index, dose in enumerate(
+                        self._config["groupCapabilities"][0]["doses"]
+                    )
+                    if dose.get("doseIndex") == dose_index
                 )
-                if dose.get("doseIndex") == dose_index
-            )
-            self._config["groupCapabilities"][0]["doses"][idx]["stopTarget"] = value
+                self._config["groupCapabilities"][0]["doses"][idx]["stopTarget"] = value
+        return False
 
-    async def set_dose_hot_water(self, value: int) -> None:
+    async def set_dose_hot_water(self, value: int) -> bool:
         """Set the value for the hot water dose"""
         url = f"{self._gw_url_with_serial}/dose-tea"
         data = {"dose_index": "DoseA", "value": value}
-        await self._rest_api_call(url=url, verb="POST", data=data)
-        self._config["teaDoses"]["DoseA"]["stopTarget"] = value
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        if await self._check_cloud_command_status(response):
+            self._config["teaDoses"]["DoseA"]["stopTarget"] = value
+        return False
 
     async def configure_schedule(
         self, enable: bool, schedule: list[dict[str, Any]]
-    ) -> None:
+    ) -> bool:
         """Set auto-on/off schedule"""
         url = f"{self._gw_url_with_serial}/scheduling"
         data = {"enable": enable, "days": schedule}
-        await self._rest_api_call(url=url, verb="POST", data=data)
-        self._config[WEEKLY_SCHEDULING_CONFIG] = schedule_in_to_out(enable, schedule)
+        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        if await self._check_cloud_command_status(response):
+            self._config[WEEKLY_SCHEDULING_CONFIG] = schedule_in_to_out(
+                enable, schedule
+            )
+        return False
+
+    async def set_auto_on_off_global(self, enable: bool) -> bool:
+        """Set the auto on/off state of the machine (Alias for HA)."""
+        return await self.configure_schedule(enable, self.schedule)
 
     async def set_auto_on_off(
         self,
@@ -805,7 +858,7 @@ class LMCloud:
         minute_on: int,
         hour_off: int,
         minute_off: int,
-    ) -> None:
+    ) -> bool:
         """Set auto-on/off for a day of the week"""
         schedule = self.schedule
         idx = [
@@ -816,11 +869,11 @@ class LMCloud:
         schedule[idx]["enable"] = True
         schedule[idx]["on"] = f"{hour_on:02d}:{minute_on:02d}"
         schedule[idx]["off"] = f"{hour_off:02d}:{minute_off:02d}"
-        await self.configure_schedule(
+        return await self.configure_schedule(
             self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule
         )
 
-    async def set_auto_on_off_enable(self, day_of_week: str, enable: bool) -> None:
+    async def set_auto_on_off_enable(self, day_of_week: str, enable: bool) -> bool:
         """Enable or disable auto-on/off for a day of the week"""
         schedule = self.schedule
         idx = [
@@ -829,7 +882,7 @@ class LMCloud:
             if d["day"][0:3] == day_of_week[0:3].upper()
         ][0]
         schedule[idx]["enable"] = enable
-        await self.configure_schedule(
+        return await self.configure_schedule(
             self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule
         )
 
@@ -844,12 +897,17 @@ class LMCloud:
         """Send token request command to cloud. This is needed when the local API returns 403."""
         url = f"{self._gw_url_with_serial}/token-request"
         response = await self._rest_api_call(url=url, verb="GET")
-        command_id = response.get("commandId")
-        if command_id is None:
-            return
+        await self._check_cloud_command_status(response)
 
-        url = f"{GW_AWS_PROXY_BASE_URL}/{self.serial_number}/commands/{command_id}"
-        await self._rest_api_call(url=url, verb="GET")
+    async def _check_cloud_command_status(
+        self, command_response: dict[str, Any]
+    ) -> bool:
+        """Check the status of a cloud command"""
+        if command_id := command_response.get("commandId"):
+            url = f"{GW_AWS_PROXY_BASE_URL}/{self.serial_number}/commands/{command_id}"
+            response = await self._rest_api_call(url=url, verb="GET")
+            return response.get("responsePayload", {}).get("status") == "success"
+        return False
 
     def _build_current_status(self) -> dict[str, Any]:
         """Build object which holds status for lamarzocco Home Assistant Integration"""
