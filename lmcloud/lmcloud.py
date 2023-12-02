@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable, Coroutine, Mapping
 from datetime import datetime
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
 from authlib.integrations.httpx_client import AsyncOAuth2Client  # type: ignore[import]
@@ -15,15 +16,20 @@ from .const import (
     BOILER_TARGET_TEMP,
     BOILERS,
     BREW_ACTIVE,
+    BREW_ACTIVE_DURATION,
     COFFEE_BOILER_NAME,
     CURRENT,
     CUSTOMER_URL,
+    DEFAULT_CLIENT_ID,
+    DEFAULT_CLIENT_SECRET,
     DEFAULT_PORT,
     GW_AWS_PROXY_BASE_URL,
     GW_MACHINE_BASE_URL,
     KEY,
     MACHINE_MODE,
     MACHINE_NAME,
+    MODELS,
+    MODEL_LMU,
     MODEL_NAME,
     PLUMBED_IN,
     POLLING_DELAY_S,
@@ -60,7 +66,9 @@ _logger = logging.getLogger(__name__)
 class LMCloud:
     """Client to interact with the La Marzocco Cloud API."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, callback_websocket_notify: Callable[[], None] | None = None
+    ) -> None:
         """Initialize the client."""
         self._lm_local_api: LMLocalAPI | None = None
         self._lm_bluetooth: LMBluetooth | None = None
@@ -77,7 +85,14 @@ class LMCloud:
         self._last_statistics_update: datetime | None = None
         self._use_websocket: bool = False
         self._brew_active: bool = False
+        self._brew_active_duration: int = 0
+        self._initialized: bool = False
         self._last_config_update: datetime | None = None
+        self._websocket_task: asyncio.Task | None = None
+        self._websocket_initialized: bool = False
+        self._callback_websocket_notify: Callable[
+            [], None
+        ] | None = callback_websocket_notify
 
     @property
     def client(self) -> AsyncOAuth2Client:
@@ -94,9 +109,24 @@ class LMCloud:
         return self._machine_info
 
     @property
+    def machine_name(self) -> str:
+        """Return the name of the machine."""
+        return self.machine_info[MACHINE_NAME]
+
+    @property
     def model_name(self) -> str:
         """Return the model name of the machine."""
         return self._machine_info[MODEL_NAME]
+
+    @property
+    def true_model_name(self) -> str:
+        """Return the model name from the cloud, even if it's not one we know about.
+        Used for display only."""
+        if self.model_name == MODEL_LMU:
+            return f"Linea {MODEL_LMU}"
+        if self.model_name in MODELS:
+            return self.model_name
+        return f"Unsupported Model ({self.model_name})"
 
     @property
     def serial_number(self) -> str:
@@ -199,6 +229,7 @@ class LMCloud:
         """Return the current status of the machine."""
         # extend the current status from super with active brew property
         self._current_status[BREW_ACTIVE] = self.brew_active
+        self._current_status[BREW_ACTIVE_DURATION] = self._brew_active_duration
         self._current_status["coffee_boiler_on"] = self._current_status.get(
             "power", False
         )
@@ -214,6 +245,7 @@ class LMCloud:
         """Initialize a cloud only client"""
         self = cls()
         await self._init_cloud_api(credentials, machine_serial)
+        self._initialized = True
         return self
 
     @classmethod
@@ -240,6 +272,8 @@ class LMCloud:
                 credentials["username"], bluetooth_scanner=bluetooth_scanner
             )
 
+        self._initialized = True
+
         await self.update_local_machine_status(in_init=True)
         return self
 
@@ -247,7 +281,7 @@ class LMCloud:
         self, credentials: dict[str, Any]
     ) -> list[tuple[str, str]]:
         """Get a list of tuples (serial, model_name) of all machines for a user"""
-        await self._connect(credentials)
+        self.client = await self._connect(credentials)
         data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
         machines: list[tuple[str, str]] = []
         for machine in data.get("fleet", []):
@@ -269,22 +303,32 @@ class LMCloud:
     ) -> bool:
         """Check if we can connect to the local API"""
         try:
-            await self._connect(credentials)
-        except AuthFail:
+            self.client = await self._connect(credentials)
+        except AuthFail as ex:
+            _logger.exception("Could not authenticate to the cloud API. Error: %s", ex)
             return False
         try:
             machine_info = await self._get_machine_info(serial)
         except MachineNotFound:
+            _logger.exception("Could not find machine with serial %s", serial)
             return False
-        self._lm_local_api = LMLocalAPI(host, machine_info[KEY], port)
+        self._lm_local_api = LMLocalAPI(
+            host=host, local_bearer=machine_info[KEY], local_port=port
+        )
         try:
             await self._lm_local_api.local_get_config()
             return True
-        except RequestNotSuccessful:
+        except AuthFail:
+            return True  # IP is correct, but token is not valid, token command will be sent later
+        except RequestNotSuccessful as ex:
+            _logger.exception("Could not connect to local API. Error: %s", ex)
+            return False
+        except TimeoutError:
+            _logger.exception("Timeout while connecting to local API")
             return False
 
     async def _init_cloud_api(
-        self, credentials: dict[str, str], machine_serial: str | None = None
+        self, credentials: Mapping[str, Any], machine_serial: str | None = None
     ) -> None:
         """Setup the cloud connection."""
         self.client = await self._connect(credentials)
@@ -301,12 +345,18 @@ class LMCloud:
             host=host, local_port=port, local_bearer=self.machine_info[KEY]
         )
 
-    async def _init_websocket(self) -> None:
+    async def _init_websocket(self, callback: Callable[[], None] | None = None) -> None:
         """Initiate the local websocket connection"""
         _logger.debug("Initiating lmcloud with WebSockets")
         self._use_websocket = True
+        self._callback_websocket_notify = callback
         assert self._lm_local_api
-        asyncio.create_task(self._lm_local_api.websocket_connect())
+        self._websocket_task = asyncio.create_task(
+            self._lm_local_api.websocket_connect(
+                callback=self.on_websocket_message_received, use_sigterm_handler=False
+            )
+        )
+        self._websocket_initialized = True
 
     async def _init_bluetooth(
         self,
@@ -351,18 +401,18 @@ class LMCloud:
             name=name,
         )
 
-    async def _connect(self, credentials: dict[str, str]) -> AsyncOAuth2Client:
+    async def _connect(self, credentials: Mapping[str, Any]) -> AsyncOAuth2Client:
         """Establish connection by building the OAuth client and requesting the token"""
 
         client = AsyncOAuth2Client(
-            client_id=credentials["client_id"],
-            client_secret=credentials["client_secret"],
+            client_id=DEFAULT_CLIENT_ID,
+            client_secret=DEFAULT_CLIENT_SECRET,
             token_endpoint=TOKEN_URL,
         )
 
         headers = {
-            "client_id": credentials["client_id"],
-            "client_secret": credentials["client_secret"],
+            "client_id": DEFAULT_CLIENT_ID,
+            "client_secret": DEFAULT_CLIENT_SECRET,
         }
 
         try:
@@ -386,12 +436,28 @@ class LMCloud:
         assert self._lm_local_api
         await self._lm_local_api.websocket_connect(callback, use_sigterm_handler)
 
-    def update_current_status(self, property_updated: str, value: Any):
-        """Update a property in the current status dict"""
-        if property_updated != BREW_ACTIVE:
-            self._current_status[property_updated] = value
-        else:
+    def on_websocket_message_received(self, property_updated: str, value: Any) -> None:
+        """Message received. Update a property in the current status dict"""
+        if not property_updated:
+            return
+
+        _logger.debug(
+            "Received data from websocket, property updated: %s with value: %s",
+            str(property_updated),
+            str(value),
+        )
+
+        if property_updated is None:
+            return
+        if property_updated == BREW_ACTIVE:
             self._brew_active = value
+        elif property_updated == BREW_ACTIVE_DURATION:
+            self._brew_active_duration = int(value)
+        else:
+            self._current_status[property_updated] = value
+
+        if self._initialized and self._callback_websocket_notify is not None:
+            self._callback_websocket_notify()
 
     async def get_config(self) -> dict[str, Any]:
         """Get configuration from cloud"""
@@ -851,6 +917,10 @@ class LMCloud:
         """Set the auto on/off state of the machine (Alias for HA)."""
         return await self.configure_schedule(enable, self.schedule)
 
+    async def set_auto_on_off_global(self, enable: bool) -> None:
+        """Set the auto on/off state of the machine (Alias for HA)."""
+        await self.configure_schedule(enable, self.schedule)
+
     async def set_auto_on_off(
         self,
         day_of_week: str,
@@ -892,6 +962,10 @@ class LMCloud:
         data = {"enable": True}
         await self._rest_api_call(url=url, verb="POST", data=data)
         self._config[BACKFLUSH_ENABLED] = True
+
+    async def reset_brew_active_duration(self) -> None:
+        """Reset the brew active duration"""
+        self._brew_active_duration = 0
 
     async def _token_command(self) -> None:
         """Send token request command to cloud. This is needed when the local API returns 403."""
@@ -941,3 +1015,10 @@ class LMCloud:
         schedule = schedule_out_to_hass(self.config)
         statistics = parse_statistics(self.statistics)
         return state | doses | preinfusion_settings | schedule | statistics
+
+    def terminate_websocket(self) -> None:
+        """Terminate the websocket connection."""
+        self.websocket_terminating = True
+        if self._websocket_task:
+            self._websocket_task.cancel()
+            self._websocket_task = None

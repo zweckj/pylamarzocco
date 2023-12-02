@@ -162,6 +162,11 @@ class LMLocalAPI:
                 self._status["sleepCause"] = message[0]["Sleep"]
                 return "power", False
 
+            if "SteamBoilerEnabled" in message[0]:
+                value = message[0]["SteamBoilerEnabled"]
+                self._status["steamBoilerEnabled"] = value
+                return "steam_boiler_enable", value
+
             if "WakeUp" in message[0]:
                 self._status["power"] = True
                 self._status["wakeupCause"] = message[0]["WakeUp"]
@@ -174,10 +179,9 @@ class LMLocalAPI:
 
             if "BrewingUpdateGroup1Time" in message[0]:
                 self._status[BREW_ACTIVE] = True
-                self._status[BREW_ACTIVE_DURATION] = message[0][
-                    "BrewingUpdateGroup1Time"
-                ]
-                return BREW_ACTIVE, True
+                value = message[0]["BrewingUpdateGroup1Time"]
+                self._status[BREW_ACTIVE_DURATION] = value
+                return BREW_ACTIVE_DURATION, value
 
             if "BrewingStartedGroup1StopType" in message[0]:
                 self._status[BREW_ACTIVE] = True

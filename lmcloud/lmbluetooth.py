@@ -1,7 +1,6 @@
 """Bluetooth class for La Marzocco machines."""
 from __future__ import annotations
 
-import asyncio
 import base64
 import logging
 
@@ -89,7 +88,7 @@ class LMBluetooth:
             try:
                 await self._client.connect()
                 await self.authenticate()
-            except (BleakError, asyncio.TimeoutError) as e:
+            except (BleakError, TimeoutError) as e:
                 raise BluetoothConnectionFailed(
                     f"Failed to connect to machine with Bluetooth: {e}"
                 ) from e
@@ -125,7 +124,7 @@ class LMBluetooth:
         try:
             await self._client.connect()
             await self.authenticate()
-        except (BleakError, asyncio.TimeoutError) as e:
+        except (BleakError, TimeoutError) as e:
             raise BluetoothConnectionFailed(
                 f"Failed to connect to machine with Bluetooth: {e}"
             ) from e
