@@ -960,10 +960,22 @@ class LMCloud:
         """Check the status of a cloud command"""
         if command_id := command_response.get("commandId"):
             url = f"{GW_AWS_PROXY_BASE_URL}/{self.serial_number}/commands/{command_id}"
-            response = await self._rest_api_call(url=url, verb="GET")
-            if response is None:
-                return True
-            return response.get("responsePayload", {}).get("status") == "success"
+            counter = 0
+            status = "PENDING"
+            while status == "PENDING" and counter < 5:
+                await asyncio.sleep(1)  # give a second to settle in
+                response = await self._rest_api_call(url=url, verb="GET")
+                if response is None:
+                    return False
+                status = response.get("status", "PENDING")
+                if status == "PENDING":
+                    counter += 1
+                    continue
+                if status == "COMPLETED":
+                    response_payload = response.get("responsePayload")
+                    if response_payload is None:
+                        return False
+                    return response_payload.get("status") == "success"
         return False
 
     def _build_current_status(self) -> dict[str, Any]:
