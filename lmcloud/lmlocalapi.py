@@ -6,7 +6,7 @@ import signal
 from datetime import datetime
 from typing import Any, Callable
 
-import aiohttp
+import httpx
 import websockets
 
 from .const import BREW_ACTIVE, BREW_ACTIVE_DURATION, WEBSOCKET_RETRY_DELAY
@@ -66,17 +66,17 @@ class LMLocalAPI:
     async def local_get_config(self) -> dict[str, Any]:
         """Get current config of machine from local API."""
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(
+        async with httpx.AsyncClient(headers=headers) as client:
+            response = await client.get(
                 f"http://{self._host}:{self._local_port}/api/v1/config"
-            ) as response:
-                if response.status == 200:
-                    return await response.json()
-                if response.status == 403:
-                    raise AuthFail("Local API returned 403.")
-                raise RequestNotSuccessful(
-                    f"Querying local API failed with statuscode: {response.status}"
-                )
+            )
+            if response.is_success:
+                return await response.json()
+            if response.status_code == 403:
+                raise AuthFail("Local API returned 403.")
+            raise RequestNotSuccessful(
+                f"Querying local API failed with statuscode: {response.status_code}"
+            )
 
     async def websocket_connect(
         self,
