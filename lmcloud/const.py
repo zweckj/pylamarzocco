@@ -1,5 +1,16 @@
 """Constants for La Marzocco Cloud."""
 from typing import Final
+from enum import StrEnum
+
+
+class LaMarzoccoModel(StrEnum):
+    """La Marzocco Machine Models."""
+
+    GS3_AV = "GS3 AV"
+    GS3_MP = "GS3 MP"
+    LINEA_MINI = "Linea Mini"
+    LINEA_MICRA = "Micra"
+
 
 # Base URL for La Marzocco Cloud
 TOKEN_URL: Final = "https://cms.lamarzocco.io/oauth/v2/token"
@@ -16,12 +27,6 @@ DEFAULT_PORT = 8081
 POLLING_DELAY_S: Final = 20
 POLLING_DELAY_STATISTICS_S: Final = 60
 WEBSOCKET_RETRY_DELAY: Final = 20
-
-MODEL_GS3_AV: Final = "GS3 AV"
-MODEL_GS3_MP: Final = "GS3 MP"
-MODEL_LM: Final = "Linea Mini"
-MODEL_LMU: Final = "Micra"
-MODELS: Final = [MODEL_GS3_AV, MODEL_GS3_MP, MODEL_LM, MODEL_LMU]
 
 # Key Names for Dictionaries
 
