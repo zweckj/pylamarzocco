@@ -28,9 +28,8 @@ from .const import (
     KEY,
     MACHINE_MODE,
     MACHINE_NAME,
-    MODELS,
-    MODEL_LMU,
     MODEL_NAME,
+    LaMarzoccoModel,
     PLUMBED_IN,
     POLLING_DELAY_S,
     POLLING_DELAY_STATISTICS_S,
@@ -119,9 +118,9 @@ class LMCloud:
     def true_model_name(self) -> str:
         """Return the model name from the cloud, even if it's not one we know about.
         Used for display only."""
-        if self.model_name == MODEL_LMU:
-            return f"Linea {MODEL_LMU}"
-        if self.model_name in MODELS:
+        if self.model_name == LaMarzoccoModel.LINEA_MICRA:
+            return "Linea Micra"
+        if self.model_name in LaMarzoccoModel:
             return self.model_name
         return f"Unsupported Model ({self.model_name})"
 
