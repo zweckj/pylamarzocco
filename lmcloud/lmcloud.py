@@ -684,6 +684,25 @@ class LMCloud:
             return True
         return False
 
+    async def set_steam_level(self, level: int) -> bool:
+        """Set steamboiler temperature through levels (1, 2, 3)."""
+        if not isinstance(level, int):
+            msg = "Steam level must be integer"
+            _logger.debug(msg)
+            raise TypeError(msg)
+        if level < 1 or level > 3:
+            msg = "Steam level must be between 1 and 3"
+            _logger.debug(msg)
+            raise ValueError(msg)
+
+        if level == 1:
+            temperature = 126
+        elif level == 2:
+            temperature = 128
+        else:
+            temperature = 131
+        return await self.set_steam_temp(temperature)
+
     async def set_steam_temp(self, temperature: int) -> bool:
         """Set steamboiler temperature (in Celsius)."""
         if not isinstance(temperature, int):
@@ -691,10 +710,14 @@ class LMCloud:
             _logger.debug(msg)
             raise TypeError(msg)
 
-        if not temperature == 131 and not temperature == 128 and not temperature == 126:
-            msg = "Steam temp must be one of 126, 128, 131 (°C)"
-            _logger.debug(msg)
-            raise ValueError(msg)
+        if self.model_name == LaMarzoccoModel.LINEA_MICRA:
+            if not temperature in (126, 128, 131):
+                msg = "Steam temp must be one of 126, 128, 131 (°C)"
+                _logger.debug(msg)
+                raise ValueError(msg)
+        elif self.model_name == LaMarzoccoModel.LINEA_MINI:
+            _logger.warning("Steam temp is not supported on Linea Mini.")
+            return False
 
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
