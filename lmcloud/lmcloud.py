@@ -1002,6 +1002,12 @@ class LMCloud:
 
     def _build_current_status(self) -> dict[str, Any]:
         """Build object which holds status for lamarzocco Home Assistant Integration"""
+        if self._config_steamboiler.get(TARGET, 0) < 128:
+            steam_level_set = 1
+        elif self._config_steamboiler.get(TARGET, 0) == 128:
+            steam_level_set = 2
+        else:
+            steam_level_set = 3
         state = {
             "power": self.power,
             "enable_prebrewing": True
@@ -1018,6 +1024,7 @@ class LMCloud:
             "coffee_set_temp": self._config_coffeeboiler.get(TARGET, 0),
             "steam_temp": self._config_steamboiler.get(CURRENT, 0),
             "steam_set_temp": self._config_steamboiler.get(TARGET, 0),
+            "steam_level_set": steam_level_set,
             "water_reservoir_contact": self.config.get(TANK_STATUS, False),
             "plumbin_enable": self.config.get(PLUMBED_IN, False),
             "date_received:": self.date_received,
