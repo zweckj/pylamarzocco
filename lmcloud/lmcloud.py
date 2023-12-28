@@ -83,7 +83,7 @@ class LMCloud:
         self._statistics: list[dict[str, Any]] = []
         self._last_statistics_update: datetime | None = None
         self._brew_active: bool = False
-        self._brew_active_duration: int = 0
+        self._brew_active_duration: float = 0
         self._initialized: bool = False
         self._last_config_update: datetime | None = None
         self._callback_websocket_notify: Callable[
@@ -447,7 +447,7 @@ class LMCloud:
         if property_updated == BREW_ACTIVE:
             self._brew_active = value
         elif property_updated == BREW_ACTIVE_DURATION:
-            self._brew_active_duration = int(value)
+            self._brew_active_duration = round(float(value), 1)
         else:
             self._current_status[property_updated] = value
 
