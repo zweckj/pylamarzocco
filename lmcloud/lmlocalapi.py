@@ -71,7 +71,7 @@ class LMLocalAPI:
                 f"http://{self._host}:{self._local_port}/api/v1/config"
             )
             if response.is_success:
-                return await response.json()
+                return response.json()
             if response.status_code == 403:
                 raise AuthFail("Local API returned 403.")
             raise RequestNotSuccessful(
