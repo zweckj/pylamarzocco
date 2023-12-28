@@ -447,7 +447,7 @@ class LMCloud:
         if property_updated == BREW_ACTIVE:
             self._brew_active = value
         elif property_updated == BREW_ACTIVE_DURATION:
-            self._brew_active_duration = int(value)
+            self._brew_active_duration = round(value, 1)
         else:
             self._current_status[property_updated] = value
 
