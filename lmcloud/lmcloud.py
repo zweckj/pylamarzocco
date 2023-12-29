@@ -120,9 +120,10 @@ class LMCloud:
         Used for display only."""
         if self.model_name == LaMarzoccoModel.LINEA_MICRA:
             return "Linea Micra"
-        if self.model_name in LaMarzoccoModel:
-            return self.model_name
-        return f"Unsupported Model ({self.model_name})"
+        try:
+            return LaMarzoccoModel(self.model_name)
+        except ValueError:
+            return f"Unsupported Model ({self.model_name})"
 
     @property
     def serial_number(self) -> str:
