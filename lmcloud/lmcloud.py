@@ -799,14 +799,9 @@ class LMCloud:
         return await self._set_pre_brew_infusion(mode)
 
     async def configure_prebrew(
-        self, on_time=5000, off_time=5000, key: int = 1
+        self, on_time: int = 5000, off_time: int = 5000, key: int = 1
     ) -> bool:
         """Set Pre-Brew details. Also used for preinfusion (prebrewOnTime=0, prebrewOnTime=ms)."""
-
-        if not isinstance(on_time, int) or not isinstance(off_time, int):
-            msg = "Prebrew times must be in ms (integer)"
-            _logger.debug(msg)
-            raise TypeError(msg)
 
         if key < 1 or key > 4:
             msg = f"Key must be an integer value between 1 and 4, was {key}"
@@ -842,12 +837,14 @@ class LMCloud:
     ) -> bool:
         """Set the prebrew times of the machine. (Alias for HA)"""
         return await self.configure_prebrew(
-            on_time=seconds_on * 1000, off_time=seconds_off * 1000, key=key
+            on_time=int(seconds_on * 1000), off_time=int(seconds_off * 1000), key=key
         )
 
     async def set_preinfusion_time(self, key: int, seconds: float) -> bool:
         """Set the preinfusion time of the machine. (Alias for HA)"""
-        return await self.configure_prebrew(on_time=0, off_time=seconds * 1000, key=key)
+        return await self.configure_prebrew(
+            on_time=0, off_time=int(seconds * 1000), key=key
+        )
 
     async def enable_plumbin(self, enable: bool) -> bool:
         """Enable or disable plumbin mode"""
