@@ -7,7 +7,10 @@ from collections.abc import Callable, Coroutine, Mapping
 from datetime import datetime
 from typing import Any
 
+from httpx import RequestError
+
 from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
+from authlib.common.errors import AuthlibHTTPError  # type: ignore[import]
 from authlib.integrations.httpx_client import AsyncOAuth2Client  # type: ignore[import]
 from bleak import BleakError, BaseBleakScanner
 
@@ -420,8 +423,10 @@ class LMCloud:
             )
             return client
 
-        except OAuthError as err:
-            raise AuthFail("Authorization failure") from err
+        except OAuthError as exc:
+            raise AuthFail(f"Authorization failure: {exc}") from exc
+        except AuthlibHTTPError as exc:
+            raise RequestNotSuccessful(f"Exception during token request: {exc}") from exc
 
     async def websocket_connect(
         self,
@@ -569,14 +574,19 @@ class LMCloud:
             await self.client.refresh_token(TOKEN_URL)
 
         # make API call
-        if verb == "GET":
-            response = await self.client.get(url)
-        elif verb == "POST":
-            response = await self.client.post(url, json=data)
-        else:
-            raise NotImplementedError(
-                f"Wrapper function for Verb {verb} not implemented yet!"
-            )
+        try:
+            if verb == "GET":
+                response = await self.client.get(url)
+            elif verb == "POST":
+                response = await self.client.post(url, json=data)
+            else:
+                raise NotImplementedError(
+                    f"Wrapper function for Verb {verb} not implemented yet!"
+                )
+        except RequestError as ecx:
+            raise RequestNotSuccessful(
+                f"Error during HTTP request. Request to endpoint {url} failed with error: {ecx}"
+            ) from ecx
 
         # ensure status code indicates success
         if response.is_success:

@@ -67,9 +67,14 @@ class LMLocalAPI:
         """Get current config of machine from local API."""
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async with httpx.AsyncClient(headers=headers) as client:
-            response = await client.get(
-                f"http://{self._host}:{self._local_port}/api/v1/config"
-            )
+            try:
+                response = await client.get(
+                    f"http://{self._host}:{self._local_port}/api/v1/config"
+                )
+            except httpx.RequestError as exc:
+                raise RequestNotSuccessful(
+                    f"Requesting local API failed with exception: {exc}"
+                ) from exc
             if response.is_success:
                 return response.json()
             if response.status_code == 403:
