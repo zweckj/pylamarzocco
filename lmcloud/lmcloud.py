@@ -12,7 +12,7 @@ from httpx import RequestError
 from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
 from authlib.common.errors import AuthlibHTTPError  # type: ignore[import]
 from authlib.integrations.httpx_client import AsyncOAuth2Client  # type: ignore[import]
-from bleak import BleakError, BaseBleakScanner
+from bleak import BleakError, BaseBleakScanner, BLEDevice
 
 from .const import (
     BACKFLUSH_ENABLED,
@@ -646,11 +646,24 @@ class LMCloud:
         )
 
     async def _send_bluetooth_command(
-        self, func: Callable[[Any], Coroutine[Any, None, None]], param: Any
+        self,
+        func: Callable[[Any], Coroutine[Any, None, None]],
+        param: Any,
+        ble_device: BLEDevice | None = None,
     ) -> bool:
         """Wrapper for bluetooth commands."""
         if self._lm_bluetooth is None or self._lm_bluetooth.client is None:
             return False
+
+        if ble_device is not None:
+            try:
+                await self._lm_bluetooth.new_bleak_client_from_ble_device(ble_device)
+            except BluetoothConnectionFailed as e:
+                _logger.warning(
+                    "Connecting to bluetooth device failed, even though it was found."
+                )
+                _logger.debug("Full error: %s", e)
+                return False
 
         try:
             await func(param)
@@ -694,12 +707,16 @@ class LMCloud:
         url = f"{self._gw_url_with_serial}/firmware/"
         return await self._rest_api_call(url=url, verb="GET")
 
-    async def set_power(self, enabled: bool) -> bool:
+    async def set_power(
+        self, enabled: bool, ble_device: BLEDevice | None = None
+    ) -> bool:
         """Turn power of machine on or off"""
 
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
-                self._lm_bluetooth.set_power, enabled
+                self._lm_bluetooth.set_power,
+                enabled,
+                ble_device=ble_device,
             )
 
         mode = "BrewingMode" if enabled else "StandBy"
@@ -716,7 +733,9 @@ class LMCloud:
             return True
         return False
 
-    async def set_steam(self, steam_state: bool) -> bool:
+    async def set_steam(
+        self, steam_state: bool, ble_device: BLEDevice | None = None
+    ) -> bool:
         """Turn Steamboiler on or off"""
 
         if not isinstance(steam_state, bool):
@@ -726,7 +745,7 @@ class LMCloud:
 
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
-                self._lm_bluetooth.set_steam, steam_state
+                self._lm_bluetooth.set_steam, steam_state, ble_device=ble_device
             )
 
         cloud_ok = False
@@ -763,7 +782,9 @@ class LMCloud:
             temperature = 131
         return await self.set_steam_temp(temperature)
 
-    async def set_steam_temp(self, temperature: int) -> bool:
+    async def set_steam_temp(
+        self, temperature: int, ble_device: BLEDevice | None = None
+    ) -> bool:
         """Set steamboiler temperature (in Celsius)."""
         if not isinstance(temperature, int):
             msg = "Steam temp must be integer"
@@ -771,7 +792,7 @@ class LMCloud:
             raise TypeError(msg)
 
         if self.model_name == LaMarzoccoModel.LINEA_MICRA:
-            if not temperature in (126, 128, 131):
+            if temperature not in (126, 128, 131):
                 msg = "Steam temp must be one of 126, 128, 131 (°C)"
                 _logger.debug(msg)
                 raise ValueError(msg)
@@ -781,7 +802,7 @@ class LMCloud:
 
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
-                self._lm_bluetooth.set_steam_temp, temperature
+                self._lm_bluetooth.set_steam_temp, temperature, ble_device=ble_device
             )
 
         cloud_ok = False
@@ -796,7 +817,9 @@ class LMCloud:
             return True
         return False
 
-    async def set_coffee_temp(self, temperature) -> bool:
+    async def set_coffee_temp(
+        self, temperature, ble_device: BLEDevice | None = None
+    ) -> bool:
         """Set coffee boiler temperature (in Celsius)."""
 
         if temperature > 104 or temperature < 85:
@@ -808,7 +831,7 @@ class LMCloud:
 
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
-                self._lm_bluetooth.set_coffee_temp, temperature
+                self._lm_bluetooth.set_coffee_temp, temperature, ble_device=ble_device
             )
 
         cloud_ok = False
@@ -826,7 +849,7 @@ class LMCloud:
     async def _set_pre_brew_infusion(self, mode: str) -> bool:
         """Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)."""
 
-        if not mode in ("Disabled", "TypeB", "Enabled"):
+        if mode not in ("Disabled", "TypeB", "Enabled"):
             msg = (
                 "Pre-Infusion/Pre-Brew can only be TypeB (PreInfusion), "
                 "Enabled (Pre-Brew) or Disabled"
