@@ -351,11 +351,21 @@ class LMCloud:
         self._firmware = await self.get_firmware()
         self._date_received = datetime.now()
 
+    async def _init_cloud_api(
+        self, credentials: Mapping[str, Any], machine_serial: str | None = None
+    ) -> None:
+        """Backwards compatibility for init_cloud_api"""
+        await self.init_cloud_api(credentials, machine_serial)
+
     async def init_local_api(self, host: str, port: int = DEFAULT_PORT) -> None:
         """Init local connection client"""
         self._lm_local_api = LMLocalAPI(
             host=host, local_port=port, local_bearer=self.machine_info[KEY]
         )
+
+    async def _init_local_api(self, host: str, port: int = DEFAULT_PORT) -> None:
+        """Backwards compatibility for init_local_api"""
+        await self.init_local_api(host, port)
 
     async def init_websocket(self) -> None:
         """Initiate the local websocket connection"""
@@ -368,6 +378,10 @@ class LMCloud:
                 callback=self.on_websocket_message_received, use_sigterm_handler=False
             )
         )
+
+    async def _init_websocket(self) -> None:
+        """Backwards compatibility for init_websocket"""
+        await self.init_websocket()
 
     async def init_bluetooth(
         self,
@@ -400,6 +414,19 @@ class LMCloud:
             )
             _logger.debug("Full error: %s", e)
 
+    async def _init_bluetooth(
+        self,
+        username: str,
+        init_client: bool = True,
+        bluetooth_scanner: BaseBleakScanner | None = None,
+    ):
+        """Backwards compatibility for init_bluetooth"""
+        await self.init_bluetooth(
+            username=username,
+            init_client=init_client,
+            bluetooth_scanner=bluetooth_scanner,
+        )
+
     async def init_bluetooth_with_known_device(
         self, username: str, address: str, name: str
     ) -> None:
@@ -410,6 +437,14 @@ class LMCloud:
             token=self.machine_info[KEY],
             address=address,
             name=name,
+        )
+
+    async def _init_bluetooth_with_known_device(
+        self, username: str, address: str, name: str
+    ) -> None:
+        """Backwards compatibility for init_bluetooth_with_known_device"""
+        await self.init_bluetooth_with_known_device(
+            username=username, address=address, name=name
         )
 
     async def _connect(self, credentials: Mapping[str, Any]) -> AsyncOAuth2Client:
