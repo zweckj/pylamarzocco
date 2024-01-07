@@ -16,8 +16,9 @@ class LMBluetooth:
     """Class to interact with machine via Bluetooth."""
 
     @property
-    def address(self) -> str | None:
+    def address(self) -> str:
         """Return the BT MAC address of the machine."""
+        assert self._address
         return self._address
 
     @property
