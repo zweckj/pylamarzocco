@@ -250,6 +250,16 @@ class LMCloud:
         assert self._lm_bluetooth
         return self._lm_bluetooth
 
+    @property
+    def initialized(self) -> bool:
+        """Return whether the client is initialized."""
+        return self._initialized
+
+    @initialized.setter
+    def initialized(self, value: bool):
+        """Set whether the client is initialized."""
+        self._initialized = value
+
     @classmethod
     async def create(
         cls, credentials: dict[str, str], machine_serial: str | None = None
