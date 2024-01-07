@@ -238,13 +238,25 @@ class LMCloud:
         ) and self._current_status.get("power", False)
         return self._current_status
 
+    @property
+    def lm_local_api(self) -> LMLocalAPI:
+        """Return the local API client."""
+        assert self._lm_local_api
+        return self._lm_local_api
+
+    @property
+    def lm_bluetooth(self) -> LMBluetooth:
+        """Return the bluetooth client."""
+        assert self._lm_bluetooth
+        return self._lm_bluetooth
+
     @classmethod
     async def create(
         cls, credentials: dict[str, str], machine_serial: str | None = None
     ) -> LMCloud:
         """Initialize a cloud only client"""
         self = cls()
-        await self._init_cloud_api(credentials, machine_serial)
+        await self.init_cloud_api(credentials, machine_serial)
         self._initialized = True
         return self
 
@@ -261,14 +273,14 @@ class LMCloud:
     ) -> LMCloud:
         """Also initialize a local API client"""
         self = cls()
-        await self._init_cloud_api(credentials, machine_serial)
-        await self._init_local_api(host, port)
+        await self.init_cloud_api(credentials, machine_serial)
+        await self.init_local_api(host, port)
 
         if use_websocket:
-            await self._init_websocket()
+            await self.init_websocket()
 
         if use_bluetooth:
-            await self._init_bluetooth(
+            await self.init_bluetooth(
                 credentials["username"], bluetooth_scanner=bluetooth_scanner
             )
 
@@ -327,7 +339,7 @@ class LMCloud:
             _logger.exception("Timeout while connecting to local API")
             return False
 
-    async def _init_cloud_api(
+    async def init_cloud_api(
         self, credentials: Mapping[str, Any], machine_serial: str | None = None
     ) -> None:
         """Setup the cloud connection."""
@@ -339,13 +351,13 @@ class LMCloud:
         self._firmware = await self.get_firmware()
         self._date_received = datetime.now()
 
-    async def _init_local_api(self, host: str, port: int = DEFAULT_PORT) -> None:
+    async def init_local_api(self, host: str, port: int = DEFAULT_PORT) -> None:
         """Init local connection client"""
         self._lm_local_api = LMLocalAPI(
             host=host, local_port=port, local_bearer=self.machine_info[KEY]
         )
 
-    async def _init_websocket(self) -> None:
+    async def init_websocket(self) -> None:
         """Initiate the local websocket connection"""
         if not self._lm_local_api:
             _logger.warning("Local API not initialized, cannot init websockets.")
@@ -357,7 +369,7 @@ class LMCloud:
             )
         )
 
-    async def _init_bluetooth(
+    async def init_bluetooth(
         self,
         username: str,
         init_client: bool = True,
@@ -388,7 +400,7 @@ class LMCloud:
             )
             _logger.debug("Full error: %s", e)
 
-    async def _init_bluetooth_with_known_device(
+    async def init_bluetooth_with_known_device(
         self, username: str, address: str, name: str
     ) -> None:
         """Initiate the Bluetooth connection with a known device"""
@@ -426,7 +438,9 @@ class LMCloud:
         except OAuthError as exc:
             raise AuthFail(f"Authorization failure: {exc}") from exc
         except AuthlibHTTPError as exc:
-            raise RequestNotSuccessful(f"Exception during token request: {exc}") from exc
+            raise RequestNotSuccessful(
+                f"Exception during token request: {exc}"
+            ) from exc
 
     async def websocket_connect(
         self,
