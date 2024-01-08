@@ -410,19 +410,18 @@ class LMCloud:
             )
         except BluetoothDeviceNotFound as e:
             _logger.warning(
-                "Could not find bluetooth device."
-                + "Bluetooth commands will not be available"
-                + "and commands will all be sent through cloud"
+                "Could not find La Marzocco machine (serial %s) through Bluetooth.",
+                self.machine_info[SERIAL_NUMBER],
             )
             _logger.debug("Full error: %s", e)
+            raise e
         except BleakError as e:
             _logger.warning(
-                "Bleak encountered an error while trying to connect to bluetooth device."
-                + "Maybe no bluetooth adapter is available?"
-                + "Bluetooth commands will not be available"
-                + "and commands will all be sent through cloud"
+                "Error while trying to connect to La Marzocco machine (serial %s) through Bluetooth.",
+                self.machine_info[SERIAL_NUMBER],
             )
             _logger.debug("Full error: %s", e)
+            raise BluetoothConnectionFailed from e
 
     async def _init_bluetooth(
         self,
