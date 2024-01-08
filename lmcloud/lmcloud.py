@@ -7,6 +7,7 @@ from collections.abc import Callable, Coroutine, Mapping
 from datetime import datetime
 from typing import Any
 
+from http import HTTPMethod
 from httpx import RequestError
 
 from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
@@ -304,7 +305,7 @@ class LMCloud:
     ) -> list[tuple[str, str]]:
         """Get a list of tuples (serial, model_name) of all machines for a user"""
         self.client = await self._connect(credentials)
-        data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
+        data = await self._rest_api_call(url=CUSTOMER_URL, method=HTTPMethod.GET)
         machines: list[tuple[str, str]] = []
         for machine in data.get("fleet", []):
             machine_details = machine.get("machine", {})
@@ -524,7 +525,7 @@ class LMCloud:
 
         url = f"{self._gw_url_with_serial}/configuration"
         try:
-            config = await self._rest_api_call(url=url, verb="GET")
+            config = await self._rest_api_call(url=url, method=HTTPMethod.GET)
             return config
         except RequestNotSuccessful as e:
             _logger.warning("Could not get config from cloud. Full error: %s", e)
@@ -603,7 +604,7 @@ class LMCloud:
 
         url = f"{self._gw_url_with_serial}/statistics/counters"
         try:
-            statistics = await self._rest_api_call(url=url, verb="GET")
+            statistics = await self._rest_api_call(url=url, method=HTTPMethod.GET)
             return statistics
         except RequestNotSuccessful as e:
             _logger.warning("Could not get statistics from cloud. Full error: %s", e)
@@ -623,7 +624,7 @@ class LMCloud:
         self._last_statistics_update = datetime.now()
 
     async def _rest_api_call(
-        self, url: str, verb: str = "GET", data: Any | None = None
+        self, url: str, method: str = "GET", data: Any | None = None
     ) -> Any:
         """Wrapper for the API call."""
 
@@ -631,16 +632,8 @@ class LMCloud:
         if self.client.token.is_expired():
             await self.client.refresh_token(TOKEN_URL)
 
-        # make API call
         try:
-            if verb == "GET":
-                response = await self.client.get(url)
-            elif verb == "POST":
-                response = await self.client.post(url, json=data)
-            else:
-                raise NotImplementedError(
-                    f"Wrapper function for Verb {verb} not implemented yet!"
-                )
+            response = self.client.request(method, url, json=data)
         except RequestError as ecx:
             raise RequestNotSuccessful(
                 f"Error during HTTP request. Request to endpoint {url} failed with error: {ecx}"
@@ -691,7 +684,7 @@ class LMCloud:
         machine_info: dict[str, Any] = {}
         machine_data: dict[str, Any] = {}
 
-        data = await self._rest_api_call(url=CUSTOMER_URL, verb="GET")
+        data = await self._rest_api_call(url=CUSTOMER_URL, method=HTTPMethod.GET)
         fleet = data.get("fleet", [])
         if serial is not None:
             machine_with_serial = [
@@ -714,7 +707,7 @@ class LMCloud:
         """Get Firmware details."""
 
         url = f"{self._gw_url_with_serial}/firmware/"
-        return await self._rest_api_call(url=url, verb="GET")
+        return await self._rest_api_call(url=url, method=HTTPMethod.GET)
 
     async def set_power(
         self, enabled: bool, ble_device: BLEDevice | None = None
@@ -734,7 +727,9 @@ class LMCloud:
         if not self._lm_bluetooth or not bt_ok:
             data = {"status": mode}
             url = f"{self._gw_url_with_serial}/status"
-            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(
+                url=url, method=HTTPMethod.POST, data=data
+            )
             cloud_ok = await self._check_cloud_command_status(response)
 
         if cloud_ok or bt_ok:
@@ -761,7 +756,9 @@ class LMCloud:
         if not self._lm_bluetooth or not bt_ok:
             data = {"identifier": STEAM_BOILER_NAME, "state": steam_state}
             url = f"{self._gw_url_with_serial}/enable-boiler"
-            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(
+                url=url, method=HTTPMethod.POST, data=data
+            )
             cloud_ok = await self._check_cloud_command_status(response)
 
         if cloud_ok or bt_ok:
@@ -818,7 +815,9 @@ class LMCloud:
         if not self._lm_bluetooth or not bt_ok:
             data = {"identifier": STEAM_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(
+                url=url, method=HTTPMethod.POST, data=data
+            )
             cloud_ok = await self._check_cloud_command_status(response)
 
         if cloud_ok or bt_ok:
@@ -847,7 +846,9 @@ class LMCloud:
         if not self._lm_bluetooth or not bt_ok:
             data = {"identifier": COFFEE_BOILER_NAME, "value": temperature}
             url = f"{self._gw_url_with_serial}/target-boiler"
-            response = await self._rest_api_call(url=url, verb="POST", data=data)
+            response = await self._rest_api_call(
+                url=url, method=HTTPMethod.POST, data=data
+            )
             cloud_ok = await self._check_cloud_command_status(response)
 
         if cloud_ok or bt_ok:
@@ -872,7 +873,7 @@ class LMCloud:
 
         url = f"{self._gw_url_with_serial}/enable-preinfusion"
         data = {"mode": mode}
-        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(response):
             self._config[PRE_INFUSION_SETTINGS]["mode"] = mode
         return False
@@ -913,7 +914,7 @@ class LMCloud:
             "holdTimeMs": off_time,
             "wetTimeMs": on_time,
         }
-        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(response):
             self._config[PRE_INFUSION_SETTINGS]["Group1"][0]["preWetTime"] = (
                 on_time % 1000
@@ -947,7 +948,7 @@ class LMCloud:
 
         data = {"enable": enable}
         url = f"{self._gw_url_with_serial}/enable-plumbin"
-        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(response):
             self._config[PLUMBED_IN] = enable
         return False
@@ -970,7 +971,7 @@ class LMCloud:
             "value": value,
         }
 
-        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(response):
             if (
                 "groupCapabilities" in self._config
@@ -991,7 +992,7 @@ class LMCloud:
         """Set the value for the hot water dose"""
         url = f"{self._gw_url_with_serial}/dose-tea"
         data = {"dose_index": "DoseA", "value": value}
-        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(response):
             self._config["teaDoses"]["DoseA"]["stopTarget"] = value
         return False
@@ -1002,7 +1003,7 @@ class LMCloud:
         """Set auto-on/off schedule"""
         url = f"{self._gw_url_with_serial}/scheduling"
         data = {"enable": enable, "days": schedule}
-        response = await self._rest_api_call(url=url, verb="POST", data=data)
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(response):
             self._config[WEEKLY_SCHEDULING_CONFIG] = schedule_in_to_out(
                 enable, schedule
@@ -1052,7 +1053,7 @@ class LMCloud:
         """Send command to start backflushing"""
         url = f"{self._gw_url_with_serial}/enable-backflush"
         data = {"enable": True}
-        await self._rest_api_call(url=url, verb="POST", data=data)
+        await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         self._config[BACKFLUSH_ENABLED] = True
 
     async def reset_brew_active_duration(self) -> None:
@@ -1062,7 +1063,7 @@ class LMCloud:
     async def _token_command(self) -> None:
         """Send token request command to cloud. This is needed when the local API returns 403."""
         url = f"{self._gw_url_with_serial}/token-request"
-        response = await self._rest_api_call(url=url, verb="GET")
+        response = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         await self._check_cloud_command_status(response)
 
     async def _check_cloud_command_status(
@@ -1075,7 +1076,7 @@ class LMCloud:
             status = "PENDING"
             while status == "PENDING" and counter < 5:
                 await asyncio.sleep(1)  # give a second to settle in
-                response = await self._rest_api_call(url=url, verb="GET")
+                response = await self._rest_api_call(url=url, method=HTTPMethod.GET)
                 if response is None:
                     return False
                 status = response.get("status", "PENDING")
