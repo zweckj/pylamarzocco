@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from http import HTTPMethod
-from httpx import RequestError
+from httpx import AsyncClient, RequestError
 
 from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
 from authlib.common.errors import AuthlibHTTPError  # type: ignore[import]
@@ -70,7 +70,8 @@ class LMCloud:
     """Client to interact with the La Marzocco Cloud API."""
 
     def __init__(
-        self, callback_websocket_notify: Callable[[], None] | None = None
+        self,
+        callback_websocket_notify: Callable[[], None] | None = None,
     ) -> None:
         """Initialize the client."""
         self._lm_local_api: LMLocalAPI | None = None
@@ -368,10 +369,18 @@ class LMCloud:
         """Backwards compatibility for init_cloud_api"""
         await self.init_cloud_api(credentials, machine_serial)
 
-    async def init_local_api(self, host: str, port: int = DEFAULT_PORT) -> None:
+    async def init_local_api(
+        self,
+        host: str,
+        port: int = DEFAULT_PORT,
+        client: AsyncClient | None = None,
+    ) -> None:
         """Init local connection client"""
         self._lm_local_api = LMLocalAPI(
-            host=host, local_port=port, local_bearer=self.machine_info[KEY]
+            host=host,
+            local_port=port,
+            local_bearer=self.machine_info[KEY],
+            client=client,
         )
 
     async def _init_local_api(self, host: str, port: int = DEFAULT_PORT) -> None:
