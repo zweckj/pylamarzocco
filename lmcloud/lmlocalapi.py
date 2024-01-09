@@ -18,7 +18,7 @@ _logger = logging.getLogger(__name__)
 class LMLocalAPI:
     """Class to interact with machine via local API."""
 
-    def __init__(self, host: str, local_bearer: str, local_port: int = 8081) -> None:
+    def __init__(self, host: str, local_bearer: str, local_port: int = 8081, client: httpx.AsyncClient | None = None) -> None:
         self._host = host
         self._local_port = local_port
         self._local_bearer = local_bearer
@@ -28,6 +28,10 @@ class LMLocalAPI:
         self._status[BREW_ACTIVE] = False
         self._status[BREW_ACTIVE_DURATION] = 0
         self._terminating: bool = False
+        if client is None:
+            self._client = httpx.AsyncClient()
+        else:
+            self._client = client
 
     @property
     def local_port(self) -> int:
@@ -66,22 +70,22 @@ class LMLocalAPI:
     async def local_get_config(self) -> dict[str, Any]:
         """Get current config of machine from local API."""
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
-        async with httpx.AsyncClient(headers=headers) as client:
-            try:
-                response = await client.get(
-                    f"http://{self._host}:{self._local_port}/api/v1/config"
-                )
-            except httpx.RequestError as exc:
-                raise RequestNotSuccessful(
-                    f"Requesting local API failed with exception: {exc}"
-                ) from exc
-            if response.is_success:
-                return response.json()
-            if response.status_code == 403:
-                raise AuthFail("Local API returned 403.")
-            raise RequestNotSuccessful(
-                f"Querying local API failed with statuscode: {response.status_code}"
+
+        try:
+            response = await self._client.get(
+                f"http://{self._host}:{self._local_port}/api/v1/config", headers=headers
             )
+        except httpx.RequestError as exc:
+            raise RequestNotSuccessful(
+                f"Requesting local API failed with exception: {exc}"
+            ) from exc
+        if response.is_success:
+            return response.json()
+        if response.status_code == 403:
+            raise AuthFail("Local API returned 403.")
+        raise RequestNotSuccessful(
+            f"Querying local API failed with statuscode: {response.status_code}"
+        )
 
     async def websocket_connect(
         self,
