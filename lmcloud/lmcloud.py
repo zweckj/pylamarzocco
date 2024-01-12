@@ -642,7 +642,7 @@ class LMCloud:
             await self.client.refresh_token(TOKEN_URL)
 
         try:
-            response = self.client.request(method, url, json=data)
+            response = await self.client.request(method, url, json=data)
         except RequestError as ecx:
             raise RequestNotSuccessful(
                 f"Error during HTTP request. Request to endpoint {url} failed with error: {ecx}"
