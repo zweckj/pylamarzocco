@@ -723,6 +723,7 @@ class LMCloud:
     ) -> bool:
         """Turn power of machine on or off"""
 
+        bt_ok = False
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
                 self._lm_bluetooth.set_power,
@@ -756,6 +757,7 @@ class LMCloud:
             _logger.debug(msg)
             raise TypeError(msg)
 
+        bt_ok = False
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
                 self._lm_bluetooth.set_steam, steam_state, ble_device=ble_device
@@ -815,6 +817,7 @@ class LMCloud:
             _logger.warning("Steam temp is not supported on Linea Mini.")
             return False
 
+        bt_ok = False
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
                 self._lm_bluetooth.set_steam_temp, temperature, ble_device=ble_device
@@ -846,6 +849,7 @@ class LMCloud:
 
         temperature = round(temperature, 1)
 
+        bt_ok = False
         if self._lm_bluetooth is not None:
             bt_ok = await self._send_bluetooth_command(
                 self._lm_bluetooth.set_coffee_temp, temperature, ble_device=ble_device
@@ -1080,6 +1084,7 @@ class LMCloud:
     ) -> bool:
         """Check the status of a cloud command"""
         if command_id := command_response.get("commandId"):
+            _logger.debug("Checking status of command %s", command_id)
             url = f"{GW_AWS_PROXY_BASE_URL}/{self.serial_number}/commands/{command_id}"
             counter = 0
             status = "PENDING"
@@ -1090,13 +1095,16 @@ class LMCloud:
                     return False
                 status = response.get("status", "PENDING")
                 if status == "PENDING":
+                    _logger.debug("Command %s still pending", command_id)
                     counter += 1
                     continue
                 if status == "COMPLETED":
                     response_payload = response.get("responsePayload")
                     if response_payload is None:
                         return False
+                    _logger.debug("Command %s completed", command_id)
                     return response_payload.get("status") == "success"
+        _logger.debug("Command %s failed", command_id)
         return False
 
     def _build_current_status(self) -> dict[str, Any]:
