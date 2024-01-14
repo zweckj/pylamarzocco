@@ -217,6 +217,15 @@ class LMCloud:
         ]
 
     @property
+    def pre_brew_infusion_mode(self) -> str:
+        """Return the pre-brew/infusion mode of the machine."""
+        if self._current_status.get("enable_prebrewing", False):
+            return "Prebrew"
+        if self._current_status.get("enable_preinfusion", False):
+            return "Preinfusion"
+        return "Disabled"
+
+    @property
     def statistics(self) -> list[dict[str, Any]]:
         """Return the statistics of the machine."""
         return self._statistics
