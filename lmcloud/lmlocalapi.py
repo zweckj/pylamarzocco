@@ -18,7 +18,13 @@ _logger = logging.getLogger(__name__)
 class LMLocalAPI:
     """Class to interact with machine via local API."""
 
-    def __init__(self, host: str, local_bearer: str, local_port: int = 8081, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self,
+        host: str,
+        local_bearer: str,
+        local_port: int = 8081,
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
         self._host = host
         self._local_port = local_port
         self._local_bearer = local_bearer
@@ -110,16 +116,17 @@ class LMLocalAPI:
                     if self._terminating:
                         return
                     try:
-                        property_updated, value = await self.handle_websocket_message(
-                            message
-                        )
-                        if callback is not None and property_updated is not None:
-                            try:
-                                callback(property_updated, value)
-                            except Exception as e:  # pylint: disable=broad-except
-                                _logger.exception(
-                                    "Error during callback: %s", e, exc_info=True
-                                )
+                        for (
+                            property_updated,
+                            value,
+                        ) in await self.handle_websocket_message(message):
+                            if callback is not None and property_updated is not None:
+                                try:
+                                    callback(property_updated, value)
+                                except Exception as e:  # pylint: disable=broad-except
+                                    _logger.exception(
+                                        "Error during callback: %s", e, exc_info=True
+                                    )
                     except UnknownWebSocketMessage as e:
                         _logger.warning(e)
             except websockets.ConnectionClosed:
@@ -135,7 +142,7 @@ class LMLocalAPI:
 
     async def handle_websocket_message(
         self, message: Any
-    ) -> tuple[str | None, Any | None]:
+    ) -> list[tuple[str | None, Any | None]]:
         """Handle a message received on the websocket."""
         self._timestamp_last_websocket_msg = datetime.now()
         message = json.loads(message)
@@ -145,66 +152,89 @@ class LMLocalAPI:
                 # got machine configuration
                 value = json.loads(message["MachineConfiguration"])
                 self._status["machineConfiguration"] = value
-                return "machineConfiguration", value
+                return [("machineConfiguration", value)]
 
             if "SystemInfo" in message:
                 value = json.loads(message["SystemInfo"])
                 self._status["systemInfo"] = value
-                return "systemInfo", value
+                return [("systemInfo", value)]
 
         if isinstance(message, list):
             if "KeepAlive" in message[0]:
-                return None, None
+                return [(None, None)]
 
             if "SteamBoilerUpdateTemperature" in message[0]:
                 value = message[0]["SteamBoilerUpdateTemperature"]
                 self._status["steamTemperature"] = value
-                return "steam_temp", value
+                return [("steam_temp", value)]
 
             if "CoffeeBoiler1UpdateTemperature" in message[0]:
                 value = message[0]["CoffeeBoiler1UpdateTemperature"]
                 self._status["coffeeTemperature"] = value
-                return "coffee_temp", value
+                return [("coffee_temp", value)]
 
             if "Sleep" in message[0]:
                 self._status["power"] = False
                 self._status["sleepCause"] = message[0]["Sleep"]
-                return "power", False
+                return [("power", False)]
 
             if "SteamBoilerEnabled" in message[0]:
                 value = message[0]["SteamBoilerEnabled"]
                 self._status["steamBoilerEnabled"] = value
-                return "steam_boiler_enable", value
+                return [("steam_boiler_enable", value)]
 
             if "WakeUp" in message[0]:
                 self._status["power"] = True
                 self._status["wakeupCause"] = message[0]["WakeUp"]
-                return "power", True
+                return [("power", True)]
 
             if "MachineStatistics" in message[0]:
                 value = json.loads(message[0]["MachineStatistics"])
                 self._status["statistics"] = value
-                return "statistics", value
+                return [("statistics", value)]
 
             if "BrewingUpdateGroup1Time" in message[0]:
                 self._status[BREW_ACTIVE] = True
                 value = message[0]["BrewingUpdateGroup1Time"]
                 self._status[BREW_ACTIVE_DURATION] = value
-                return BREW_ACTIVE_DURATION, value
+                return [(BREW_ACTIVE_DURATION, value)]
 
             if "BrewingStartedGroup1StopType" in message[0]:
                 self._status[BREW_ACTIVE] = True
-                return BREW_ACTIVE, True
+                return [(BREW_ACTIVE, True)]
 
             if "BrewingStoppedGroup1StopType" in message[0]:
                 self._status[BREW_ACTIVE] = False
-                return BREW_ACTIVE, False
+                return [(BREW_ACTIVE, False)]
 
             if "BrewingSnapshotGroup1" in message[0]:
                 self._status[BREW_ACTIVE] = False
                 self._status["brewingSnapshot"] = json.loads(
                     message[0]["BrewingSnapshotGroup1"]
                 )
-                return BREW_ACTIVE, False
+                return [(BREW_ACTIVE, False)]
+
+            if "Boilers" in message[0]:
+                boilers = json.loads(message[0]["Boilers"])
+                updates: list[tuple[str | None, Any | None]] = []
+                for boiler in boilers:
+                    is_enabled = boiler["isEnabled"]
+                    current_temp = boiler["current"]
+                    target_temp = boiler["target"]
+                    if boiler["id"] == "CoffeeBoiler1":
+                        self._status["power"] = is_enabled
+                        self._status["coffeeTemperature"] = current_temp
+                        self._status["coffeeTemperatureSet"] = target_temp
+                        updates.append(("power", is_enabled))
+                        updates.append(("coffee_temp", current_temp))
+                        updates.append(("coffee_set_temp", target_temp))
+                    elif boiler["id"] == "SteamBoiler":
+                        self._status["steamBoilerEnabled"] = is_enabled
+                        self._status["steamTemperature"] = current_temp
+                        self._status["steamTemperatureSet"] = target_temp
+                        updates.append(("steam_boiler_enable", is_enabled))
+                        updates.append(("steam_temp", current_temp))
+                        updates.append(("steam_set_temp", target_temp))
+                return updates
 
         raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
