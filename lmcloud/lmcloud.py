@@ -174,6 +174,13 @@ class LMCloud:
             self._lm_local_api.terminating = value
 
     @property
+    def websocket_connected(self) -> bool:
+        """Return if websocket is connected."""
+        if self._lm_local_api:
+            return self._lm_local_api.websocket_connected
+        return False
+
+    @property
     def config(self) -> dict[str, Any]:
         """Return the config with capitalized keys to be consistent across local/remote APIs."""
         return self._config

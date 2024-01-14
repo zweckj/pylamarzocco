@@ -33,6 +33,7 @@ class LMLocalAPI:
         self._status: dict[str, Any] = {}
         self._status[BREW_ACTIVE] = False
         self._status[BREW_ACTIVE_DURATION] = 0
+        self._websocket_connected = False
         self._terminating: bool = False
         if client is None:
             self._client = httpx.AsyncClient()
@@ -67,6 +68,11 @@ class LMLocalAPI:
     @terminating.setter
     def terminating(self, value: bool):
         self._terminating = value
+
+    @property
+    def websocket_connected(self) -> bool:
+        """Return whether the websocket is connected."""
+        return self._websocket_connected
 
     @property
     def timestamp_last_websocket_msg(self) -> datetime | None:
@@ -111,6 +117,7 @@ class LMLocalAPI:
                     loop.add_signal_handler(
                         signal.SIGTERM, loop.create_task, websocket.close()
                     )
+                self._websocket_connected = True
                 # Process messages received on the connection.
                 async for message in websocket:
                     if self._terminating:
