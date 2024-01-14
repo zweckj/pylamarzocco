@@ -903,6 +903,19 @@ class LMCloud:
         mode = "TypeB" if enabled else "Disabled"
         return await self._set_pre_brew_infusion(mode)
 
+    async def select_pre_brew_infusion_mode(self, mode: str) -> bool:
+        """Select the preinfusion mode from ("Disabled", "Prebrew", "Preinfusion")"""
+
+        if mode not in ("Disabled", "Prebrew", "Preinfusion"):
+            raise ValueError("Mode must be one of Disabled, Prebrew, Preinfusion")
+
+        new_mode = "Disabled"
+        if mode == "Preinfusion":
+            new_mode = "TypeB"
+        elif mode == "Prebrew":
+            new_mode = "Enabled"
+        return await self._set_pre_brew_infusion(new_mode)
+
     async def configure_prebrew(
         self, on_time: int = 5000, off_time: int = 5000, key: int = 1
     ) -> bool:
