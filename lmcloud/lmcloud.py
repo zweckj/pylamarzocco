@@ -789,7 +789,9 @@ class LMCloud:
             return True
         return False
 
-    async def set_steam_level(self, level: int) -> bool:
+    async def set_steam_level(
+        self, level: int, ble_device: BLEDevice | None = None
+    ) -> bool:
         """Set steamboiler temperature through levels (1, 2, 3)."""
         if not isinstance(level, int):
             msg = "Steam level must be integer"
@@ -806,7 +808,7 @@ class LMCloud:
             temperature = 128
         else:
             temperature = 131
-        return await self.set_steam_temp(temperature)
+        return await self.set_steam_temp(temperature, ble_device)
 
     async def set_steam_temp(
         self, temperature: int, ble_device: BLEDevice | None = None
