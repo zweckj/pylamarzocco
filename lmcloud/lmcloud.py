@@ -34,6 +34,7 @@ from .const import (
     MACHINE_NAME,
     MODEL_NAME,
     LaMarzoccoModel,
+    LaMarzoccoUpdateableComponent,
     PLUMBED_IN,
     POLLING_DELAY_S,
     POLLING_DELAY_STATISTICS_S,
@@ -733,6 +734,32 @@ class LMCloud:
 
         url = f"{self._gw_url_with_serial}/firmware/"
         return await self._rest_api_call(url=url, method=HTTPMethod.GET)
+
+    async def update_firmware(self, component: LaMarzoccoUpdateableComponent) -> bool:
+        """Update Firmware."""
+        _logger.debug("Updating firmware for component %s", component)
+        url = f"{self._gw_url_with_serial}/firmware/{component}/update"
+        await self._rest_api_call(url=url, method=HTTPMethod.POST, data={})
+        retry_counter = 0
+        while retry_counter <= 20:
+            firmware = await self.get_firmware()
+            current_version = firmware.get(f"{component}_firmware", {}).get("version")
+            latest_version = firmware.get(f"{component}_firmware", {}).get(
+                "targetVersion"
+            )
+            if current_version == latest_version:
+                _logger.debug("Firmware update for component %s successful", component)
+                return True
+            _logger.debug(
+                "Firmware update for component %s still in progress", component
+            )
+            await asyncio.sleep(15)
+            retry_counter += 1
+        _logger.debug(
+            "Firmware update for component %s timed out waiting to finish",
+            component,
+        )
+        return False
 
     async def set_power(
         self, enabled: bool, ble_device: BLEDevice | None = None

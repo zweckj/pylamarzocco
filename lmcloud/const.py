@@ -12,6 +12,13 @@ class LaMarzoccoModel(StrEnum):
     LINEA_MICRA = "Micra"
 
 
+class LaMarzoccoUpdateableComponent(StrEnum):
+    """La Marzocco Machine Firmware."""
+
+    FIRMWARE = "firmware"
+    GATEWAY = "gateway"
+
+
 # Base URL for La Marzocco Cloud
 TOKEN_URL: Final = "https://cms.lamarzocco.io/oauth/v2/token"
 CUSTOMER_URL: Final = "https://cms.lamarzocco.io/api/customer"
