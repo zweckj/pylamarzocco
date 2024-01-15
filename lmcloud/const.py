@@ -13,9 +13,9 @@ class LaMarzoccoModel(StrEnum):
 
 
 class LaMarzoccoUpdateableComponent(StrEnum):
-    """La Marzocco Machine Firmware."""
+    """La Marzocco updateable firmware components."""
 
-    FIRMWARE = "firmware"
+    MACHINE = "machine"
     GATEWAY = "gateway"
 
 
