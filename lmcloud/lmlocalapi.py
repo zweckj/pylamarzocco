@@ -11,6 +11,7 @@ import websockets
 
 from .const import BREW_ACTIVE, BREW_ACTIVE_DURATION, WEBSOCKET_RETRY_DELAY
 from .exceptions import AuthFail, RequestNotSuccessful, UnknownWebSocketMessage
+from .helpers import parse_preinfusion_settings
 
 _logger = logging.getLogger(__name__)
 
@@ -135,7 +136,8 @@ class LMLocalAPI:
                                         "Error during callback: %s", e, exc_info=True
                                     )
                     except UnknownWebSocketMessage as e:
-                        _logger.warning(e)
+                        _logger.warning("Unknown websocket message received")
+                        _logger.debug(e)
             except websockets.ConnectionClosed:
                 if self._terminating:
                     return
@@ -167,81 +169,109 @@ class LMLocalAPI:
                 return [("systemInfo", value)]
 
         if isinstance(message, list):
-            if "KeepAlive" in message[0]:
-                return [(None, None)]
-
-            if "SteamBoilerUpdateTemperature" in message[0]:
-                value = message[0]["SteamBoilerUpdateTemperature"]
-                self._status["steamTemperature"] = value
-                return [("steam_temp", value)]
-
-            if "CoffeeBoiler1UpdateTemperature" in message[0]:
-                value = message[0]["CoffeeBoiler1UpdateTemperature"]
-                self._status["coffeeTemperature"] = value
-                return [("coffee_temp", value)]
-
-            if "Sleep" in message[0]:
-                self._status["power"] = False
-                self._status["sleepCause"] = message[0]["Sleep"]
-                return [("power", False)]
-
-            if "SteamBoilerEnabled" in message[0]:
-                value = message[0]["SteamBoilerEnabled"]
-                self._status["steamBoilerEnabled"] = value
-                return [("steam_boiler_enable", value)]
-
-            if "WakeUp" in message[0]:
-                self._status["power"] = True
-                self._status["wakeupCause"] = message[0]["WakeUp"]
-                return [("power", True)]
-
-            if "MachineStatistics" in message[0]:
-                value = json.loads(message[0]["MachineStatistics"])
-                self._status["statistics"] = value
-                return [("statistics", value)]
-
-            if "BrewingUpdateGroup1Time" in message[0]:
-                self._status[BREW_ACTIVE] = True
-                value = message[0]["BrewingUpdateGroup1Time"]
-                self._status[BREW_ACTIVE_DURATION] = value
-                return [(BREW_ACTIVE_DURATION, value)]
-
-            if "BrewingStartedGroup1StopType" in message[0]:
-                self._status[BREW_ACTIVE] = True
-                return [(BREW_ACTIVE, True)]
-
-            if "BrewingStoppedGroup1StopType" in message[0]:
-                self._status[BREW_ACTIVE] = False
-                return [(BREW_ACTIVE, False)]
-
-            if "BrewingSnapshotGroup1" in message[0]:
-                self._status[BREW_ACTIVE] = False
-                self._status["brewingSnapshot"] = json.loads(
-                    message[0]["BrewingSnapshotGroup1"]
-                )
-                return [(BREW_ACTIVE, False)]
-
-            if "Boilers" in message[0]:
-                boilers = json.loads(message[0]["Boilers"])
+            for msg in message:
                 updates: list[tuple[str | None, Any | None]] = []
-                for boiler in boilers:
-                    is_enabled = boiler["isEnabled"]
-                    current_temp = boiler["current"]
-                    target_temp = boiler["target"]
-                    if boiler["id"] == "CoffeeBoiler1":
-                        self._status["power"] = is_enabled
-                        self._status["coffeeTemperature"] = current_temp
-                        self._status["coffeeTemperatureSet"] = target_temp
-                        updates.append(("power", is_enabled))
-                        updates.append(("coffee_temp", current_temp))
-                        updates.append(("coffee_set_temp", target_temp))
-                    elif boiler["id"] == "SteamBoiler":
-                        self._status["steamBoilerEnabled"] = is_enabled
-                        self._status["steamTemperature"] = current_temp
-                        self._status["steamTemperatureSet"] = target_temp
-                        updates.append(("steam_boiler_enable", is_enabled))
-                        updates.append(("steam_temp", current_temp))
-                        updates.append(("steam_set_temp", target_temp))
-                return updates
+                if "KeepAlive" in msg:
+                    updates.append((None, None))
+
+                elif "SteamBoilerUpdateTemperature" in msg:
+                    value = msg["SteamBoilerUpdateTemperature"]
+                    updates.append(("steam_temp", value))
+
+                elif "CoffeeBoiler1UpdateTemperature" in msg:
+                    value = msg["CoffeeBoiler1UpdateTemperature"]
+                    updates.append(("coffee_temp", value))
+
+                elif "Sleep" in msg:
+                    self._status["power"] = False
+                    self._status["sleepCause"] = msg["Sleep"]
+                    updates.append(("power", False))
+
+                elif "SteamBoilerEnabled" in msg:
+                    value = msg["SteamBoilerEnabled"]
+                    updates.append(("steam_boiler_enable", value))
+
+                elif "WakeUp" in msg:
+                    self._status["wakeupCause"] = msg["WakeUp"]
+                    updates.append(("power", True))
+
+                elif "MachineStatistics" in msg:
+                    value = json.loads(msg["MachineStatistics"])
+                    updates.append(("statistics", value))
+
+                elif "BrewingUpdateGroup1Time" in msg:
+                    self._status[BREW_ACTIVE] = True
+                    value = msg["BrewingUpdateGroup1Time"]
+                    self._status[BREW_ACTIVE_DURATION] = value
+                    updates.append((BREW_ACTIVE_DURATION, value))
+
+                elif "BrewingStartedGroup1StopType" in msg:
+                    self._status[BREW_ACTIVE] = True
+                    updates.append((BREW_ACTIVE, True))
+
+                elif "BrewingStoppedGroup1StopType" in msg:
+                    self._status[BREW_ACTIVE] = False
+                    updates.append((BREW_ACTIVE, False))
+
+                elif "BrewingSnapshotGroup1" in msg:
+                    self._status[BREW_ACTIVE] = False
+                    self._status["brewingSnapshot"] = json.loads(
+                        msg["BrewingSnapshotGroup1"]
+                    )
+                    updates.append((BREW_ACTIVE, False))
+
+                elif "SteamBoilerUpdateSetPoint" in msg:
+                    value = msg["SteamBoilerUpdateSetPoint"]
+                    updates.append(("steam_set_temp", value))
+
+                elif "CoffeeBoiler1UpdateSetPoint" in msg:
+                    value = msg["CoffeeBoiler1UpdateSetPoint"]
+                    updates.append(("coffee_set_temp", value))
+
+                elif "BoilersTargetTemperature" in msg:
+                    boilers = json.loads(msg["BoilersTargetTemperature"])
+                    for boiler in boilers:
+                        if boiler["id"] == "CoffeeBoiler1":
+                            updates.append(("coffee_set_temp", boiler["value"]))
+                        elif boiler["id"] == "SteamBoiler":
+                            updates.append(("steam_set_temp", boiler["value"]))
+
+                elif "Boilers" in msg:
+                    boilers = json.loads(msg["Boilers"])
+                    for boiler in boilers:
+                        is_enabled = boiler["isEnabled"]
+                        current_temp = boiler["current"]
+                        target_temp = boiler["target"]
+                        if boiler["id"] == "CoffeeBoiler1":
+                            updates.append(("power", is_enabled))
+                            updates.append(("coffee_temp", current_temp))
+                            updates.append(("coffee_set_temp", target_temp))
+                        elif boiler["id"] == "SteamBoiler":
+                            updates.append(("steam_boiler_enable", is_enabled))
+                            updates.append(("steam_temp", current_temp))
+                            updates.append(("steam_set_temp", target_temp))
+
+                elif "PreinfusionSettings" in msg:
+                    settings: dict[str, Any] = {}
+                    settings["preinfusionSettings"] = json.loads(
+                        msg["PreinfusionSettings"]
+                    )
+                    mode = settings["preinfusionSettings"].get("mode", "Disabled")
+                    if mode == "Enabled":
+                        updates.append(("enable_prebrewing", True))
+                        updates.append(("enable_preinfusion", False))
+                    elif mode == "TypeB":
+                        updates.append(("enable_prebrewing", False))
+                        updates.append(("enable_preinfusion", True))
+                    else:
+                        updates.append(("enable_prebrewing", False))
+                        updates.append(("enable_preinfusion", False))
+
+                    parsed = parse_preinfusion_settings(settings)
+                    for key, value in parsed.items():
+                        updates.append((key, value))
+
+                if updates:
+                    return updates
 
         raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
