@@ -19,6 +19,14 @@ class LaMarzoccoUpdateableComponent(StrEnum):
     GATEWAY = "gateway"
 
 
+KEYS_PER_MODEL: Final = {
+    LaMarzoccoModel.LINEA_MICRA: 0,
+    LaMarzoccoModel.LINEA_MINI: 0,
+    LaMarzoccoModel.GS3_AV: 4,
+    LaMarzoccoModel.GS3_MP: 0,
+}
+
+
 # Base URL for La Marzocco Cloud
 TOKEN_URL: Final = "https://cms.lamarzocco.io/oauth/v2/token"
 CUSTOMER_URL: Final = "https://cms.lamarzocco.io/api/customer"
