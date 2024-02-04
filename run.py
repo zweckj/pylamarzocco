@@ -1,14 +1,18 @@
+"""Sample class to testrun"""
+
+import json
+import asyncio
+
 from lmcloud.lm_cloud import LaMarzoccoCloudClient
-from lmcloud.lm_iot_device LaMarzoccoIoTDevice
+from lmcloud.lm_iot_device import LaMarzoccoIoTDevice
 from lmcloud.lm_machine import LaMarzoccoMachine
 from lmcloud.const import LaMarzoccoMachineModel
 from lmcloud.lm_bluetooth import LaMarzoccoBluetoothClient
 from lmcloud.lm_local import LaMarzoccoLocalClient
-import json
-import asyncio
 
 
 async def main():
+    """Main function."""
     with open("config.json") as f:
         data = json.load(f)
 

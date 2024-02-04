@@ -129,7 +129,8 @@ class LaMarzoccoIoTDevice:
                         raise exc
                 except RequestNotSuccessful as exc:
                     _LOGGER.warning(
-                        "Could not connect to local API although initialized, falling back to cloud."
+                        "Could not connect to local API although initialized, "
+                        + "falling back to cloud."
                     )
                     _LOGGER.debug(exc)
                     if self.cloud_client is None:
