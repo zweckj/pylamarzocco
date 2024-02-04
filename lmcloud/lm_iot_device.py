@@ -17,9 +17,10 @@ from .exceptions import (
     ClientNotInitialized,
     RequestNotSuccessful,
 )
-from .lm_bluetooth import LaMarzoccoBluetoothClient
-from .lm_cloud import LaMarzoccoCloudClient
-from .lm_local import LaMarzoccoLocalClient
+from .helpers import parse_firmware
+from .lm_client_bluetooth import LaMarzoccoBluetoothClient
+from .lm_client_cloud import LaMarzoccoCloudClient
+from .lm_client_local import LaMarzoccoLocalClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,9 +79,8 @@ class LaMarzoccoIoTDevice:
         self.serial_number: str = serial_number
         self.name: str = name
         self.turned_on = False
-        self.doses: dict[int, int] = {}
-        self.machine_firmware: LaMarzoccoFirmware | None = None
-        self.gateway_firmware: LaMarzoccoFirmware | None = None
+        self.doses: dict[int, float] = {}
+        self.firmware: dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware] = {}
         self.statistics: LaMarzoccoStatistics | None = None
 
         self._raw_config: dict[str, Any] | None = None
@@ -88,9 +88,9 @@ class LaMarzoccoIoTDevice:
         self._local_client: LaMarzoccoLocalClient | None = local_client
         self._update_lock = asyncio.Lock()
 
-    @abstractmethod
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
+        self.firmware = parse_firmware(raw_config["firmwareVersions"])
 
     @abstractmethod
     def parse_statistics(
@@ -151,9 +151,7 @@ class LaMarzoccoIoTDevice:
     @cloud_only
     async def get_firmware(self) -> None:
         """Update the firmware"""
-        firmware = await self.cloud_client.get_firmware(self.serial_number)
-        self.machine_firmware = firmware[LaMarzoccoFirmwareType.MACHINE]
-        self.gateway_firmware = firmware[LaMarzoccoFirmwareType.GATEWAY]
+        self.firmware = await self.cloud_client.get_firmware(self.serial_number)
 
     async def _bluetooth_command_with_cloud_fallback(
         self, command: str, **kwargs

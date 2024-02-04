@@ -11,7 +11,7 @@ import websockets
 from .const import WEBSOCKET_RETRY_DELAY
 from .exceptions import AuthFail, RequestNotSuccessful
 
-_logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 class LaMarzoccoLocalClient:
@@ -36,18 +36,46 @@ class LaMarzoccoLocalClient:
         else:
             self._client = client
 
-    @property
-    def host(self) -> str:
-        """Return the hostname of the machine."""
-        return self._host
-
     async def get_config(self) -> dict[str, Any]:
         """Get current config of machine from local API."""
-        headers = {"Authorization": f"Bearer {self._local_bearer}"}
+        return await self._get_config(
+            self._client,
+            self._host,
+            self._local_bearer,
+            self._local_port,
+        )
+
+    @staticmethod
+    async def validate_connection(
+        client: httpx.AsyncClient,
+        host: str,
+        token: str,
+        port: int = 8080,
+    ) -> bool:
+        """Validate the connection details to the local API."""
+        try:
+            await LaMarzoccoLocalClient._get_config(client, host, token, port)
+        except AuthFail as exc:
+            _LOGGER.error(exc)
+            return False
+        except RequestNotSuccessful as exc:
+            _LOGGER.error(exc)
+            return False
+        return True
+
+    @staticmethod
+    async def _get_config(
+        client: httpx.AsyncClient,
+        host: str,
+        token: str,
+        port: int = 8080,
+    ) -> dict[str, Any]:
+        """Get current config of machine from local API."""
+        headers = {"Authorization": f"Bearer {token}"}
 
         try:
-            response = await self._client.get(
-                f"http://{self._host}:{self._local_port}/api/v1/config", headers=headers
+            response = await client.get(
+                f"http://{host}:{port}/api/v1/config", headers=headers
             )
         except httpx.RequestError as exc:
             raise RequestNotSuccessful(
@@ -87,17 +115,15 @@ class LaMarzoccoLocalClient:
                     if callback is not None:
                         try:
                             callback(message)
-                        except Exception as e:  # pylint: disable=broad-except
-                            _logger.exception(
-                                "Error during callback: %s", e, exc_info=True
-                            )
+                        except Exception as exc:  # pylint: disable=broad-except
+                            _LOGGER.exception("Error during callback: %s", exc)
             except websockets.ConnectionClosed:
                 if self.terminating:
                     return
-                _logger.debug(
+                _LOGGER.debug(
                     "Websocket disconnected, reconnecting in %s", WEBSOCKET_RETRY_DELAY
                 )
                 await asyncio.sleep(WEBSOCKET_RETRY_DELAY)
                 continue
             except websockets.WebSocketException as ex:
-                _logger.warning("Exception during websocket connection: %s", ex)
+                _LOGGER.warning("Exception during websocket connection: %s", ex)

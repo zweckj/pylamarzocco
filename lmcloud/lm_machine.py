@@ -16,18 +16,19 @@ from .helpers import (
     parse_boilers,
     parse_cloud_statistics,
     parse_coffee_doses,
+    parse_firmware,
     parse_preinfusion_settings,
     parse_schedule,
     schedule_to_request,
 )
-from .lm_bluetooth import LaMarzoccoBluetoothClient
+from .lm_client_bluetooth import LaMarzoccoBluetoothClient
 from .lm_iot_device import (
     LaMarzoccoIoTDevice,
     LaMarzoccoStatistics,
     cloud_and_bluetooth,
     cloud_only,
 )
-from .lm_local import LaMarzoccoLocalClient
+from .lm_client_local import LaMarzoccoLocalClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -136,6 +137,7 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
+        super().parse_config(raw_config)
         self._raw_config = raw_config
         self.plumbed_in = raw_config["isPlumbedIn"]
         self.doses, self.dose_hot_water = parse_coffee_doses(raw_config)

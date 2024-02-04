@@ -1,12 +1,23 @@
 """ Helper functions for lmcloud. """
 
+from copy import deepcopy
 from typing import Any
 
-from .const import LaMarzoccoBoilerType, PrebrewMode, WeekDay
-from .lm_cloud import LaMarzoccoCloudSchedule
-from .lm_machine import (LaMarzoccoBoiler, LaMarzoccoCoffeeStatistics,
-                         LaMarzoccoPrebrewConfiguration, LaMarzoccoSchedule,
-                         LaMarzoccoScheduleDay)
+from .const import (
+    LaMarzoccoBoilerType,
+    LaMarzoccoFirmwareType,
+    PrebrewMode,
+    WeekDay,
+)
+from .lm_client_cloud import LaMarzoccoCloudSchedule
+from .lm_iot_device import LaMarzoccoFirmware
+from .lm_machine import (
+    LaMarzoccoBoiler,
+    LaMarzoccoCoffeeStatistics,
+    LaMarzoccoPrebrewConfiguration,
+    LaMarzoccoSchedule,
+    LaMarzoccoScheduleDay,
+)
 
 
 def schedule_to_request(schedule: LaMarzoccoSchedule) -> LaMarzoccoCloudSchedule:
@@ -125,6 +136,27 @@ def parse_cloud_statistics(
         elif coffee_type == -1:
             total_flushing = count
     return LaMarzoccoCoffeeStatistics(drink_stats, continuous, total_flushing)
+
+
+def parse_firmware(
+    raw_firmware: list[dict[str, Any]],
+    current_firmware: dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware] | None = None,
+) -> dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware]:
+    """Parse firmware from API config object."""
+    parsed = {}
+    for fw in raw_firmware:
+        fw_type = LaMarzoccoFirmwareType(fw["name"].split("_")[0])
+        version = fw["fw_version"]
+        latest_version = (
+            version
+            if not current_firmware
+            else current_firmware[fw_type].latest_version
+        )
+        parsed[fw_type] = LaMarzoccoFirmware(
+            current_version=version,
+            latest_version=latest_version,
+        )
+    return parsed
 
 
 def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStatistics:
