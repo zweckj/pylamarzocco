@@ -23,3 +23,7 @@ class UnknownWebSocketMessage(Exception):
 
 class MachineNotFound(Exception):
     """Error to indicate we couldn't find the machine through the API"""
+
+
+class ClientNotInitialized(Exception):
+    """Error to indicate the client is not initialized"""

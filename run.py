@@ -1,4 +1,9 @@
-from lmcloud.lmcloud import LMCloud
+from lmcloud.lm_cloud import LaMarzoccoCloudClient
+from lmcloud.lm_iot_device LaMarzoccoIoTDevice
+from lmcloud.lm_machine import LaMarzoccoMachine
+from lmcloud.const import LaMarzoccoMachineModel
+from lmcloud.lm_bluetooth import LaMarzoccoBluetoothClient
+from lmcloud.lm_local import LaMarzoccoLocalClient
 import json
 import asyncio
 
@@ -7,11 +12,30 @@ async def main():
     with open("config.json") as f:
         data = json.load(f)
 
-    creds = {"username": data["username"], "password": data["password"]}
+    cloud_client = await LaMarzoccoCloudClient.create(
+        username=data["username"],
+        password=data["password"],
+    )
+    fleet = await cloud_client.get_customer_fleet()
 
-    lmcloud = await LMCloud.create(creds)
+    local_client = LaMarzoccoLocalClient(
+        host=data["host"],
+        local_bearer=fleet[0].communication_key,
+    )
+
+    # bluetooth_client =  await LaMarzoccoBluetoothClient.create()
+    LaMarzoccoIoTDevice.cloud_client = cloud_client
+    machine = LaMarzoccoMachine(
+        model=LaMarzoccoMachineModel(fleet[0].model_name),
+        serial_number=fleet[0].serial_number,
+        name=fleet[0].name,
+        local_client=local_client,
+    )
+
+    await machine.websocket_connect()
+
     # lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
-    await lmcloud.set_power("standby")
+    # await lmcloud.set_power("standby")
     # lmcloud.local_get_config()
     # await lmcloud.set_steam(True)
     # await lmcloud.set_coffee_temp(93.5)
@@ -37,13 +61,9 @@ async def main():
     #         print("Brewing")
     #     await asyncio.sleep(1)
 
-    lmcloud = await LMCloud.create_with_local_api(
-        creds, data["host"], use_bluetooth=False, use_websocket=False
-    )
-
-    await lmcloud.set_power(True)
+    await machine.set_power(True)
     await asyncio.sleep(5)
-    await lmcloud.set_power(False)
+    await machine.set_power(False)
 
     # while True:
     #     print("waiting...")
@@ -61,7 +81,7 @@ async def main():
     # await lmcloud.set_auto_on_off("thu", 14, 15, 16, 15)
     # await lmcloud.set_auto_on_off_enable("thu", False)
 
-    print(lmcloud.current_status)
+    print(str(machine))
     print("Done.")
 
 
