@@ -16,7 +16,6 @@ from .helpers import (
     parse_boilers,
     parse_cloud_statistics,
     parse_coffee_doses,
-    parse_firmware,
     parse_preinfusion_settings,
     parse_schedule,
     schedule_to_request,

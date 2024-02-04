@@ -1,6 +1,5 @@
 """ Helper functions for lmcloud. """
 
-from copy import deepcopy
 from typing import Any
 
 from .const import (
@@ -105,9 +104,9 @@ def parse_preinfusion_settings(
     return mode, parsed
 
 
-def parse_coffee_doses(config: dict[str, Any]) -> tuple[dict[int, int], int | None]:
+def parse_coffee_doses(config: dict[str, Any]) -> tuple[dict[int, float], int | None]:
     """Parse doses from API config object."""
-    parsed: dict[int, int] = {}
+    parsed: dict[int, float] = {}
     i = 1
     group_capabilities = config.get("groupCapabilities", [])
     if len(group_capabilities) == 0:
