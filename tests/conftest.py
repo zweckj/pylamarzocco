@@ -10,7 +10,6 @@ import pytest
 from httpx import Response
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
-from lmcloud.lm_machine import LaMarzoccoMachine
 
 
 def load_fixture(device_type: str, file_name: str) -> dict:
