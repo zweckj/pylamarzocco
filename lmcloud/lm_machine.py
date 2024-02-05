@@ -6,7 +6,6 @@ import json
 import logging
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -25,68 +24,19 @@ from .helpers import (
 from .client_bluetooth import LaMarzoccoBluetoothClient
 from .lm_iot_device import (
     LaMarzoccoIoTDevice,
-    LaMarzoccoStatistics,
     cloud_and_bluetooth,
     cloud_only,
 )
 from .client_local import LaMarzoccoLocalClient
+from .models import (
+    LaMarzoccoBoiler,
+    LaMarzoccoCoffeeStatistics,
+    LaMarzoccoPrebrewConfiguration,
+    LaMarzoccoSchedule,
+    LaMarzoccoScheduleDay,
+)
 
 _LOGGER = logging.getLogger(__name__)
-
-
-@dataclass
-class LaMarzoccoBoiler:
-    """Class for La Marzocco boiler"""
-
-    enabled: bool
-    current_temperature: float
-    target_temperature: float
-
-
-@dataclass
-class LaMarzoccoCoffeeStatistics(LaMarzoccoStatistics):
-    """Class for La Marzocco coffee machine statistics"""
-
-    drink_stats: dict[int, int]
-    continous: int
-    total_flushing: int
-
-    @property
-    def total_coffee(self) -> int:
-        """Return the total amount of coffee brewed"""
-        return sum(self.drink_stats.values())
-
-
-@dataclass
-class LaMarzoccoPrebrewConfiguration:
-    """Class for La Marzocco key configuration"""
-
-    on_time: float
-    off_time: float
-
-    @property
-    def preinfusion_time(self) -> float:
-        """Prefinfusion time is off time"""
-        return self.off_time
-
-
-@dataclass
-class LaMarzoccoScheduleDay:
-    """Class for La Marzocco schedule day"""
-
-    enabled: bool
-    h_on: int
-    h_off: int
-    m_on: int
-    m_off: int
-
-
-@dataclass
-class LaMarzoccoSchedule:
-    """Class for La Marzocco schedule"""
-
-    enabled: bool
-    days: dict[str, LaMarzoccoScheduleDay]
 
 
 class LaMarzoccoMachine(LaMarzoccoIoTDevice):

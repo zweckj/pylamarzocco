@@ -3,12 +3,12 @@
 import json
 import asyncio
 
-from lmcloud.lm_cloud import LaMarzoccoCloudClient
+from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.lm_iot_device import LaMarzoccoIoTDevice
 from lmcloud.lm_machine import LaMarzoccoMachine
 from lmcloud.const import LaMarzoccoMachineModel
-from lmcloud.lm_bluetooth import LaMarzoccoBluetoothClient
-from lmcloud.lm_local import LaMarzoccoLocalClient
+from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
+from lmcloud.client_local import LaMarzoccoLocalClient
 
 
 async def main():

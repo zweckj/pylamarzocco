@@ -1,3 +1,5 @@
 """Import for ease of use."""
-from .lmcloud import LMCloud
-from .lmlocalapi import LMLocalAPI
+
+from .client_local import LaMarzoccoLocalClient
+from .client_cloud import LaMarzoccoCloudClient
+from .client_bluetooth import LaMarzoccoBluetoothClient

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass
 from http import HTTPMethod
-from typing import Any, TypedDict
+from typing import Any
 
 from authlib.common.errors import AuthlibHTTPError  # type: ignore[import]
 from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
@@ -25,35 +24,9 @@ from .const import (
     PrebrewMode,
 )
 from .exceptions import AuthFail, ClientNotInitialized, RequestNotSuccessful
-from .lm_iot_device import LaMarzoccoFirmware
+from .models import LaMarzoccoCloudSchedule, LaMarzoccoFirmware, LaMarzoccoMachineInfo
 
 _logger = logging.getLogger(__name__)
-
-
-@dataclass
-class LaMarzoccoMachineInfo:
-    """Class for La Marzocco machine information."""
-
-    serial_number: str
-    name: str
-    communication_key: str
-    model_name: str
-
-
-class LaMarzoccoCloudScheduleDay(TypedDict):
-    """Input object to set the schedule"""
-
-    day: str
-    enable: bool
-    on: str
-    off: str
-
-
-class LaMarzoccoCloudSchedule(TypedDict):
-    """Input object to set the schedule"""
-
-    enable: bool
-    days: list[LaMarzoccoCloudScheduleDay]
 
 
 class LaMarzoccoCloudClient:

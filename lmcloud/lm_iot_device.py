@@ -4,7 +4,6 @@ import asyncio
 import logging
 from abc import abstractmethod
 from collections.abc import Callable, Coroutine
-from dataclasses import dataclass
 from functools import wraps
 from typing import Any
 
@@ -21,6 +20,7 @@ from .helpers import parse_firmware
 from .client_bluetooth import LaMarzoccoBluetoothClient
 from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
+from .models import LaMarzoccoFirmware, LaMarzoccoStatistics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,19 +46,6 @@ def cloud_and_bluetooth(func: Callable[..., Coroutine]) -> Callable:
         return await func(*args, **kwargs)
 
     return wrapper
-
-
-@dataclass
-class LaMarzoccoFirmware:
-    """Class for La Marzocco machine firmware"""
-
-    current_version: str
-    latest_version: str
-
-
-@dataclass
-class LaMarzoccoStatistics:
-    """Class for La Marzocco machine statistics"""
 
 
 class LaMarzoccoIoTDevice:
