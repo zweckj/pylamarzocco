@@ -4,13 +4,16 @@
     auto_on_off_enabled=False,
     auto_on_off_schedule=LaMarzoccoSchedule(enabled=True, days={<WeekDay.MONDAY: 'monday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.TUESDAY: 'tuesday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.WEDNESDAY: 'wednesday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.THURSDAY: 'thursday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.FRIDAY: 'friday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.SATURDAY: 'saturday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.SUNDAY: 'sunday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0)}),
     bluetooth_connected=False,
+    boilers=dict({
+      <LaMarzoccoBoilerType.COFFEE: 'CoffeeBoiler1'>: LaMarzoccoBoiler(enabled=False, current_temperature=96.5, target_temperature=95),
+      <LaMarzoccoBoilerType.STEAM: 'SteamBoiler'>: LaMarzoccoBoiler(enabled=False, current_temperature=123.80000305175781, target_temperature=123.9000015258789),
+    }),
     brew_active=False,
     brew_active_duration=0,
     cloud_client=LaMarzoccoCloudClient(
       password='password',
       username='username',
     ),
-    coffee_boiler=LaMarzoccoBoiler(enabled=False, current_temperature=96.5, target_temperature=95),
     dose_hot_water=8,
     doses=dict({
       1: 135,
@@ -31,7 +34,6 @@
     prebrew_mode=<PrebrewMode.PREINFUSION: 'TypeB'>,
     serial_number='123456',
     statistics=LaMarzoccoCoffeeStatistics(drink_stats={1: 167, 2: 0, 3: 0, 4: 0}, continous=0, total_flushing=228),
-    steam_boiler=LaMarzoccoBoiler(enabled=False, current_temperature=123.80000305175781, target_temperature=123.9000015258789),
     steam_level=1,
     turned_on=True,
     water_contact=True,

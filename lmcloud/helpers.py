@@ -64,28 +64,19 @@ def parse_schedule(schedule: dict[str, Any]) -> LaMarzoccoSchedule:
 
 def parse_boilers(
     boilers: list[dict[str, Any]]
-) -> tuple[LaMarzoccoBoiler, LaMarzoccoBoiler]:
+) -> dict[LaMarzoccoBoilerType, LaMarzoccoBoiler]:
     """Parse boiler settings from API config object."""
-    coffee_boiler = LaMarzoccoBoiler(False, 0, 0)
-    steam_boiler = LaMarzoccoBoiler(False, 0, 0)
+    parsed_boilers: dict[LaMarzoccoBoilerType, LaMarzoccoBoiler] = {}
     for boiler in boilers:
         is_enabled = boiler["isEnabled"] == "Enabled"
         current_temp = boiler["current"]
         target_temp = boiler["target"]
-        if boiler["id"] == LaMarzoccoBoilerType.COFFEE:
-            coffee_boiler = LaMarzoccoBoiler(
-                enabled=is_enabled,
-                current_temperature=current_temp,
-                target_temperature=target_temp,
-            )
-        elif boiler["id"] == LaMarzoccoBoilerType.STEAM:
-            steam_boiler = LaMarzoccoBoiler(
-                enabled=is_enabled,
-                current_temperature=current_temp,
-                target_temperature=target_temp,
-            )
-
-    return coffee_boiler, steam_boiler
+        parsed_boilers[LaMarzoccoBoilerType(boiler["id"])] = LaMarzoccoBoiler(
+            enabled=is_enabled,
+            current_temperature=current_temp,
+            target_temperature=target_temp,
+        )
+    return parsed_boilers
 
 
 def parse_preinfusion_settings(
