@@ -1,0 +1,29 @@
+{
+    "data": [
+        {
+            "coffeeType": 0,
+            "count": 167
+        },
+        {
+            "coffeeType": 1,
+            "count": 0
+        },
+        {
+            "coffeeType": 2,
+            "count": 0
+        },
+        {
+            "coffeeType": 3,
+            "count": 0
+        },
+        {
+            "coffeeType": 4,
+            "count": 0
+        },
+        {
+            "coffeeType": -1,
+            "count": 228
+        }
+    ],
+    "status": true
+}

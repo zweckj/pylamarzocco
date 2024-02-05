@@ -1,10 +1,11 @@
 """Constants for La Marzocco Cloud."""
-from typing import Final
+
 from enum import StrEnum
+from typing import Final
 
 
-class LaMarzoccoModel(StrEnum):
-    """La Marzocco Machine Models."""
+class LaMarzoccoMachineModel(StrEnum):
+    """La Marzocco Coffee Machine Models."""
 
     GS3_AV = "GS3 AV"
     GS3_MP = "GS3 MP"
@@ -12,18 +13,51 @@ class LaMarzoccoModel(StrEnum):
     LINEA_MICRA = "Micra"
 
 
-class LaMarzoccoUpdateableComponent(StrEnum):
+class LaMarzoccoGrinderModel(StrEnum):
+    """La Marzocco Grinder Models."""
+
+    PICO = "Pico"
+
+
+class LaMarzoccoFirmwareType(StrEnum):
     """La Marzocco updateable firmware components."""
 
     MACHINE = "machine"
     GATEWAY = "gateway"
 
 
+class LaMarzoccoBoilerType(StrEnum):
+    """La Marzocco Coffee Machine Boilers."""
+
+    COFFEE = "CoffeeBoiler1"
+    STEAM = "SteamBoiler"
+
+
+class PrebrewMode(StrEnum):
+    """Enum for prebrew infusion mode"""
+
+    DISABLED = "Disabled"
+    PREBREW = "Enabled"
+    PREINFUSION = "TypeB"
+
+
+class WeekDay(StrEnum):
+    """Enum for days of the week."""
+
+    MONDAY = "monday"
+    TUESDAY = "tuesday"
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
+
+
 KEYS_PER_MODEL: Final = {
-    LaMarzoccoModel.LINEA_MICRA: 0,
-    LaMarzoccoModel.LINEA_MINI: 0,
-    LaMarzoccoModel.GS3_AV: 4,
-    LaMarzoccoModel.GS3_MP: 0,
+    LaMarzoccoMachineModel.LINEA_MICRA: 0,
+    LaMarzoccoMachineModel.LINEA_MINI: 0,
+    LaMarzoccoMachineModel.GS3_AV: 4,
+    LaMarzoccoMachineModel.GS3_MP: 0,
 }
 
 
@@ -42,27 +76,6 @@ DEFAULT_PORT = 8081
 POLLING_DELAY_S: Final = 20
 POLLING_DELAY_STATISTICS_S: Final = 60
 WEBSOCKET_RETRY_DELAY: Final = 20
-
-# Key Names for Dictionaries
-
-BACKFLUSH_ENABLED: Final = "isBackFlushEnabled"
-BOILER_TARGET_TEMP: Final = "boilerTargetTemperature"
-BOILERS: Final = "boilers"
-BREW_ACTIVE: Final = "brew_active"
-BREW_ACTIVE_DURATION: Final = "brew_active_duration"
-COFFEE_BOILER_NAME: Final = "CoffeeBoiler1"
-CURRENT: Final = "current"
-KEY: Final = "key"
-MACHINE_NAME: Final = "machine_name"
-MACHINE_MODE: Final = "machineMode"
-MODEL_NAME: Final = "model_name"
-PLUMBED_IN: Final = "isPlumbedIn"
-PRE_INFUSION_SETTINGS: Final = "preinfusionSettings"
-SERIAL_NUMBER: Final = "serial_number"
-STEAM_BOILER_NAME: Final = "SteamBoiler"
-TANK_STATUS: Final = "tankStatus"
-TARGET: Final = "target"
-WEEKLY_SCHEDULING_CONFIG: Final = "weeklySchedulingConfig"
 
 
 # bluetooth

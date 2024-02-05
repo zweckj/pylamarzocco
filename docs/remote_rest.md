@@ -53,7 +53,7 @@
 `GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/configuration`
 
 ```json
-  {{
+  {
     "version": "v1",
     "preinfusionModesAvailable": [
         "ByDoseType"
@@ -400,5 +400,34 @@
             "on": "00:00"
         }
     ]
+}
+```
+
+# Pico
+```json
+{
+	"version": "v1",
+	"family": "PICOG",
+	"machineSn": "XXXXXXX",
+	"machineHw": "1",
+	"machineMode": "StandBy",
+	"baristaLed": true,
+	"bellOpened": false,
+	"standByTime": 5,
+	"selectedDose": "",
+	"doses": [{
+		"doseIndex": "DoseA",
+		"target": 5.3
+	}, {
+		"doseIndex": "DoseB",
+		"target": 10.3
+	}],
+	"firmwareVersions": [{
+		"name": "machine_firmware",
+		"fw_version": "1.17"
+	}, {
+		"name": "gateway_firmware",
+		"fw_version": "v3.2-rc9"
+	}]
 }
 ```
