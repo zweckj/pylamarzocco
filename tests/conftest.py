@@ -10,8 +10,12 @@ import pytest
 from httpx import Response
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
+from lmcloud.client_local import LaMarzoccoLocalClient
 
-from . import MACHINE_SERIAL, GRINDER_SERIAL
+from . import (
+    MACHINE_SERIAL,
+    GRINDER_SERIAL,
+)
 
 
 def load_fixture(device_type: str, file_name: str) -> dict:
@@ -49,6 +53,13 @@ def get_mock_response(*args, **kwargs) -> Response:  # pylint: disable=unused-ar
     return Response(204, json=data)
 
 
+def get_local_machine_mock_response(*args, **kwargs) -> Response:
+    """Get a mock response from local API."""
+
+    data = load_fixture("machine", "config.json")["data"]
+    return Response(200, json=data)
+
+
 @pytest.fixture
 def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
     """Fixture for a cloud client."""
@@ -59,4 +70,13 @@ def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
     oauth_client.request.side_effect = get_mock_response
 
     client._oauth_client = oauth_client  # pylint: disable=protected-access
+    yield client
+
+
+@pytest.fixture
+def local_machine_client() -> Generator[LaMarzoccoLocalClient, None, None]:
+    """Fixure for a local client"""
+    httpx_client = AsyncMock()
+    httpx_client.get.side_effect = get_local_machine_mock_response
+    client = LaMarzoccoLocalClient("192.168.1.42", "secret", client=httpx_client)
     yield client

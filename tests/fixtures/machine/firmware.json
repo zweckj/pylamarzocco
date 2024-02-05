@@ -9,7 +9,7 @@
             "version": "v2.2-rc0"
         },
         "machine_firmware": {
-            "targetVersion": "1.11",
+            "targetVersion": "1.12",
             "md5": "7928e9d27f612dd3136e6ebd3a45eb944b263bf053f6ea6dfa1140c4c45b64d3",
             "update": null,
             "url_firmware": "http://firmware.lamarzocco.io/new_firmware/machine/micra/atmega32/NewuLApp-111.bin",

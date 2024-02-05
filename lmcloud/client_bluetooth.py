@@ -72,10 +72,9 @@ class LaMarzoccoBluetoothClient:
             return False
         return self._client.is_connected
 
-    def update_ble_device(self, ble_device: BLEDevice | None) -> None:
+    def update_ble_device(self, ble_device: BLEDevice) -> None:
         """Initalize a new bleak client from a BLEDevice."""
-        if ble_device is not None:
-            self._client = BleakClient(ble_device)
+        self._client = BleakClient(ble_device)
 
     async def set_power(self, state: bool) -> None:
         """Power on the machine."""

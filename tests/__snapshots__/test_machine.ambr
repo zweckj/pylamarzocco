@@ -23,7 +23,7 @@
     }),
     firmware=dict({
       <LaMarzoccoFirmwareType.GATEWAY: 'gateway'>: LaMarzoccoFirmware(current_version='v2.2-rc0', latest_version='v2.2-rc0'),
-      <LaMarzoccoFirmwareType.MACHINE: 'machine'>: LaMarzoccoFirmware(current_version='1.11', latest_version='1.11'),
+      <LaMarzoccoFirmwareType.MACHINE: 'machine'>: LaMarzoccoFirmware(current_version='1.11', latest_version='1.12'),
     }),
     model='GS3',
     name='MyMachine',
