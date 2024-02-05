@@ -61,7 +61,7 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         )
         self.coffee_boiler = LaMarzoccoBoiler(False, 0, 0)
         self.steam_boiler = LaMarzoccoBoiler(False, 0, 0)
-        self.preinfusion_mode = PrebrewMode.DISABLED
+        self.prebrew_mode = PrebrewMode.DISABLED
         self.plumbed_in = False
         self.prebrew_configuration: dict[int, LaMarzoccoPrebrewConfiguration] = {}
         self.dose_hot_water: int | None = None
@@ -97,10 +97,14 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         """Parse the config object."""
         super().parse_config(raw_config)
         self._raw_config = raw_config
+        self.turned_on = raw_config["machineMode"] == "BrewingMode"
         self.plumbed_in = raw_config["isPlumbedIn"]
         self.doses, self.dose_hot_water = parse_coffee_doses(raw_config)
         self.coffee_boiler, self.steam_boiler = parse_boilers(raw_config["boilers"])
         self.auto_on_off_schedule = parse_schedule(raw_config["weeklySchedulingConfig"])
+        self.prebrew_mode, self.prebrew_configuration = parse_preinfusion_settings(
+            raw_config
+        )
 
     def parse_statistics(
         self, raw_statistics: list[dict[str, Any]]

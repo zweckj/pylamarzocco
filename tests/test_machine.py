@@ -2,12 +2,17 @@
 
 import pytest
 
+from syrupy import SnapshotAssertion
+
 from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.lm_machine import LaMarzoccoMachine
 
 
 @pytest.mark.asyncio
-async def test_create(cloud_client: LaMarzoccoCloudClient):
+async def test_create(
+    cloud_client: LaMarzoccoCloudClient,
+    snapshot: SnapshotAssertion,
+):
     """Test creation of a cloud client."""
     LaMarzoccoMachine.cloud_client = cloud_client
 
@@ -16,4 +21,4 @@ async def test_create(cloud_client: LaMarzoccoCloudClient):
         serial_number="123456",
         name="MyMachine",
     )
-    assert machine
+    assert machine == snapshot

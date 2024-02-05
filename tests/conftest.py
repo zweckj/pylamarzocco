@@ -3,7 +3,7 @@
 import json
 from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import Response
@@ -22,5 +22,5 @@ def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
     oauth_client = AsyncMock()
     oauth_client.request.return_value = Response(status_code=200, json=data)
 
-    client._oauth_client = oauth_client
+    client._oauth_client = oauth_client  # pylint: disable=protected-access
     yield client

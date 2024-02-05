@@ -1,0 +1,39 @@
+# serializer version: 1
+# name: test_create
+  LaMarzoccoMachine(
+    auto_on_off_enabled=False,
+    auto_on_off_schedule=LaMarzoccoSchedule(enabled=True, days={<WeekDay.MONDAY: 'monday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.TUESDAY: 'tuesday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.WEDNESDAY: 'wednesday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.THURSDAY: 'thursday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.FRIDAY: 'friday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.SATURDAY: 'saturday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0), <WeekDay.SUNDAY: 'sunday'>: LaMarzoccoScheduleDay(enabled=True, h_on=6, h_off=16, m_on=0, m_off=0)}),
+    bluetooth_connected=False,
+    brew_active=False,
+    brew_active_duration=0,
+    cloud_client=LaMarzoccoCloudClient(
+      password='password',
+      username='username',
+    ),
+    coffee_boiler=LaMarzoccoBoiler(enabled=False, current_temperature=96.5, target_temperature=95),
+    dose_hot_water=8,
+    doses=dict({
+      1: 135,
+      2: 97,
+      3: 108,
+      4: 121,
+    }),
+    firmware=dict({
+      <LaMarzoccoFirmwareType.GATEWAY: 'gateway'>: LaMarzoccoFirmware(current_version='v3.1-rc4', latest_version='v3.1-rc4'),
+      <LaMarzoccoFirmwareType.MACHINE: 'machine'>: LaMarzoccoFirmware(current_version='1.40', latest_version='1.40'),
+    }),
+    model='GS3',
+    name='MyMachine',
+    plumbed_in=True,
+    prebrew_configuration=dict({
+      1: LaMarzoccoPrebrewConfiguration(on_time=2, off_time=2),
+    }),
+    prebrew_mode=<PrebrewMode.PREINFUSION: 'TypeB'>,
+    serial_number='123456',
+    statistics=None,
+    steam_boiler=LaMarzoccoBoiler(enabled=False, current_temperature=123.80000305175781, target_temperature=123.9000015258789),
+    steam_level=1,
+    turned_on=True,
+    water_contact=True,
+  )
+# ---
