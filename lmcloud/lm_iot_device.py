@@ -3,8 +3,6 @@
 import asyncio
 import logging
 from abc import abstractmethod
-from collections.abc import Callable, Coroutine
-from functools import wraps
 from typing import Any
 
 from bleak import BleakError
