@@ -3,7 +3,7 @@
 from typing import Any
 
 from .lm_iot_device import LaMarzoccoIoTDevice, LaMarzoccoStatistics
-from .lm_client_local import LaMarzoccoLocalClient
+from .client_local import LaMarzoccoLocalClient
 
 
 class LaMarzoccoGrinder(LaMarzoccoIoTDevice):

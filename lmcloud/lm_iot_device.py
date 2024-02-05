@@ -18,9 +18,9 @@ from .exceptions import (
     RequestNotSuccessful,
 )
 from .helpers import parse_firmware
-from .lm_client_bluetooth import LaMarzoccoBluetoothClient
-from .lm_client_cloud import LaMarzoccoCloudClient
-from .lm_client_local import LaMarzoccoLocalClient
+from .client_bluetooth import LaMarzoccoBluetoothClient
+from .client_cloud import LaMarzoccoCloudClient
+from .client_local import LaMarzoccoLocalClient
 
 _LOGGER = logging.getLogger(__name__)
 

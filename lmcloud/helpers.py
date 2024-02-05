@@ -8,7 +8,7 @@ from .const import (
     PrebrewMode,
     WeekDay,
 )
-from .lm_client_cloud import LaMarzoccoCloudSchedule
+from .client_cloud import LaMarzoccoCloudSchedule
 from .lm_iot_device import LaMarzoccoFirmware
 from .lm_machine import (
     LaMarzoccoBoiler,

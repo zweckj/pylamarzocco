@@ -1,5 +1,7 @@
 """Module for La Marzocco coffee machine."""
 
+from __future__ import annotations
+
 import json
 import logging
 from collections.abc import Callable
@@ -20,14 +22,14 @@ from .helpers import (
     parse_schedule,
     schedule_to_request,
 )
-from .lm_client_bluetooth import LaMarzoccoBluetoothClient
+from .client_bluetooth import LaMarzoccoBluetoothClient
 from .lm_iot_device import (
     LaMarzoccoIoTDevice,
     LaMarzoccoStatistics,
     cloud_and_bluetooth,
     cloud_only,
 )
-from .lm_client_local import LaMarzoccoLocalClient
+from .client_local import LaMarzoccoLocalClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -124,6 +126,13 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         self._machine_configuration: dict[str, Any] | None = None
 
         self._timestamp_last_websocket_msg: datetime | None = None
+
+    @classmethod
+    async def create(cls, *args: Any, **kwargs: Any) -> LaMarzoccoMachine:
+        """Create a new LaMarzoccoMachine instance"""
+        self = cls(*args, **kwargs)
+        await self.get_config()
+        return self
 
     @property
     def steam_level(self) -> int:

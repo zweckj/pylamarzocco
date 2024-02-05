@@ -49,7 +49,6 @@ class LaMarzoccoBluetoothClient:
         self._serial_number = serial_number
         self._token = token
         self._address: str | None = None
-        self._name: str | None = None
         self._client: BleakClient | None = None
 
     @classmethod
@@ -78,13 +77,17 @@ class LaMarzoccoBluetoothClient:
         return self
 
     @classmethod
-    def create_with_known_device(
-        cls, username: str, serial_number: str, token: str, address: str, name: str
+    def create_from_device(
+        cls,
+        username: str,
+        serial_number: str,
+        token: str,
+        ble_device: BLEDevice,
     ) -> LaMarzoccoBluetoothClient:
         """Init class with known device."""
         self = cls(username, serial_number, token)
-        self._address = address
-        self._name = name
+        self._address = ble_device.address
+        self._client = BleakClient(ble_device)
         return self
 
     async def discover_device(self, scanner: BaseBleakScanner) -> None:
@@ -95,14 +98,14 @@ class LaMarzoccoBluetoothClient:
             if d.name:
                 if d.name.startswith(tuple(BT_MODEL_NAMES)):
                     self._address = d.address
-                    self._name = d.name
 
-    async def write_bluetooth_message(
+    async def _write_bluetooth_message(
         self, message: bytes | str, characteristic: str
     ) -> None:
         """Connect to machine and write a message."""
+        if self._client is None:
+            raise ClientNotInitialized("Bluetooth client not initialized")
 
-        assert self._client
         if not self._client.is_connected:
             try:
                 await self._client.connect()
@@ -121,7 +124,7 @@ class LaMarzoccoBluetoothClient:
             message += b"\x00"
 
         _logger.debug("Sending bluetooth message: %s to %s", message, characteristic)
-        assert self._client
+
         await self._client.write_gatt_char(characteristic, message)
 
     async def authenticate(self) -> None:
@@ -130,16 +133,13 @@ class LaMarzoccoBluetoothClient:
         user_bytes = user.encode("utf-8")
         token = self._token.encode("utf-8")
         auth_string = base64.b64encode(user_bytes) + b"@" + base64.b64encode(token)
-        await self.write_bluetooth_message(auth_string, AUTH_CHARACTERISTIC)
+        await self._write_bluetooth_message(auth_string, AUTH_CHARACTERISTIC)
 
     async def new_client_from_ble_device(self, ble_device: BLEDevice) -> None:
         """Initalize a new bleak client from a BLEDevice (for Home Assistant)."""
-        if ble_device is None:
-            self._client = None
-            return
 
         self._client = BleakClient(ble_device)
-        assert self._client
+
         try:
             await self._client.connect()
             await self.authenticate()
@@ -152,7 +152,7 @@ class LaMarzoccoBluetoothClient:
         """Power on the machine."""
         mode = "BrewingMode" if state else "StandBy"
         msg = '{"name":"MachineChangeMode","parameter":{"mode":"' + mode + '"}}'
-        await self.write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
+        await self._write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
 
     async def set_steam(self, state: bool) -> None:
         """Power cycle steam."""
@@ -161,7 +161,7 @@ class LaMarzoccoBluetoothClient:
             + str(state).lower()
             + "}}"
         )
-        await self.write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
+        await self._write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
 
     async def set_temp(self, boiler: LaMarzoccoBoilerType, temperature: int) -> None:
         """Set boiler temperature (in Celsius)"""
@@ -172,4 +172,4 @@ class LaMarzoccoBluetoothClient:
             + str(temperature)
             + "}}"
         )
-        await self.write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
+        await self._write_bluetooth_message(msg, SETTINGS_CHARACTERISTIC)
