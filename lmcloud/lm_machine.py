@@ -47,7 +47,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         cloud_client: LaMarzoccoCloudClient | None = None,
         local_client: LaMarzoccoLocalClient | None = None,
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
-        notify_callback: Callable[[], None] | None = None,
     ) -> None:
         """Initializes a new LaMarzoccoCoffeeMachine instance"""
         super().__init__(
@@ -69,7 +68,7 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         self.brew_active = False
         self.brew_active_duration = 0
 
-        self._notify_callback: Callable[[], None] | None = notify_callback
+        self._notify_callback: Callable[[], None] | None = None
         self._system_info: dict[str, Any] | None = None
         self._machine_configuration: dict[str, Any] | None = None
         self._timestamp_last_websocket_msg: datetime | None = None
@@ -271,8 +270,11 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         schedule.days[day] = day_settings
         return await self.set_schedule(schedule)
 
-    async def websocket_connect(self) -> None:
+    async def websocket_connect(
+        self, notify_callback: Callable[[], None] | None = None
+    ) -> None:
         """Connect to the websocket of the machine."""
+        self._notify_callback = notify_callback
         if self._local_client is None:
             raise ClientNotInitialized("Local client not initialized")
 
