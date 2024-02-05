@@ -31,7 +31,14 @@ async def main():
         local_bearer=data["token"],
     )
 
-    # bluetooth_client =  await LaMarzoccoBluetoothClient.create()
+    # if bluetooth_devices := LaMarzoccoBluetoothClient.discover_devices():
+    #     print("Found bluetooth device:", bluetooth_devices[0])
+    #     bluetooth_client = LaMarzoccoBluetoothClient(
+    #         data["username"],
+    #         data["serial"],
+    #         data["token"],
+    #         bluetooth_devices[0],
+    #     )
 
     # machine = await LaMarzoccoMachine.create(
     #     model=LaMarzoccoMachineModel(fleet[serial].model_name),

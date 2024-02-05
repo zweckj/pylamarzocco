@@ -112,22 +112,36 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         """Parse the statistics object."""
         return parse_cloud_statistics(raw_statistics)
 
-    async def set_power(self, enabled: bool) -> bool:
+    async def set_power(
+        self,
+        enabled: bool,
+        ble_device: BLEDevice | None = None,
+    ) -> bool:
         """Turn power of machine on or off"""
 
         if await self._bluetooth_command_with_cloud_fallback(
-            "set_power", serial_number=self.serial_number, enabled=enabled
+            command="set_power",
+            ble_device=ble_device,
+            serial_number=self.serial_number,
+            enabled=enabled,
         ):
             self.turned_on = enabled
             self.boilers[LaMarzoccoBoilerType.COFFEE].enabled = enabled
             return True
         return False
 
-    async def set_steam(self, steam_state: bool) -> bool:
+    async def set_steam(
+        self,
+        steam_state: bool,
+        ble_device: BLEDevice | None = None,
+    ) -> bool:
         """Turn Steamboiler on or off"""
 
         if await self._bluetooth_command_with_cloud_fallback(
-            "set_steam", serial_number=self.serial_number, enabled=steam_state
+            command="set_steam",
+            ble_device=ble_device,
+            serial_number=self.serial_number,
+            enabled=steam_state,
         ):
             self.boilers[LaMarzoccoBoilerType.STEAM].enabled = steam_state
             return True
@@ -137,6 +151,7 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         self,
         boiler: LaMarzoccoBoilerType,
         temperature: float,
+        ble_device: BLEDevice | None = None,
     ) -> bool:
         """Set target temperature for boiler"""
         if boiler == LaMarzoccoBoilerType.STEAM:
@@ -157,7 +172,8 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             temperature = round(temperature, 1)
 
         if await self._bluetooth_command_with_cloud_fallback(
-            "set_temp",
+            command="set_temp",
+            ble_device=ble_device,
             serial_number=self.serial_number,
             boiler=boiler,
             temperature=temperature,
@@ -395,9 +411,3 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
                 self.prebrew_configuration = config
 
         raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
-
-    async def set_ble_device(self, ble_device: BLEDevice) -> None:
-        """Update the BLE device of the bluetooth client."""
-        if self._bluetooth_client is None:
-            raise ClientNotInitialized("Bluetooth client not initialized")
-        await self._bluetooth_client.new_client_from_ble_device(ble_device)

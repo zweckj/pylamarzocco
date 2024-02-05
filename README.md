@@ -37,7 +37,15 @@ The class `LaMarzoccoBluetoothClient` discovers any bluetooth devices connects t
 
 To use Bluetooth you can either init LMCloud with
 ```python
-    bluetooth_client = await LaMarzoccoBluetoothClient.create(username, serial_number, local_token)
+    if bluetooth_devices := LaMarzoccoBluetoothClient.discover_devices():
+        print("Found bluetooth device:", bluetooth_devices[0])
+        
+    bluetooth_client = LaMarzoccoBluetoothClient(
+        username,
+        serial_number,
+        local_token
+        bluetooth_devices[0],
+    )
 ```
 
 The local_token is the same token you need to initialize the local API, which you need to get from LM's cloud once. The serial number is your machine's serial number and the username is the email of your LaMarzocco account.

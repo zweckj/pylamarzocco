@@ -5,7 +5,7 @@ import logging
 from abc import abstractmethod
 from typing import Any
 
-from bleak import BleakError
+from bleak import BleakError, BLEDevice
 
 from .const import LaMarzoccoFirmwareType
 from .exceptions import (
@@ -121,12 +121,16 @@ class LaMarzoccoIoTDevice:
         self.firmware = await self.cloud_client.get_firmware(self.serial_number)
 
     async def _bluetooth_command_with_cloud_fallback(
-        self, command: str, **kwargs
+        self,
+        command: str,
+        ble_device: BLEDevice | None,
+        **kwargs,
     ) -> bool:
         """Send a command to the machine via Bluetooth, falling back to cloud if necessary."""
 
         # First, try with bluetooth
         if self._bluetooth_client is not None:
+            self._bluetooth_client.update_ble_device(ble_device)
             func = getattr(self._bluetooth_client, command)
             try:
                 await func(kwargs.copy().pop("serial_number"))

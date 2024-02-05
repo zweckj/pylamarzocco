@@ -32,43 +32,31 @@ class LaMarzoccoBluetoothClient:
         username: str,
         serial_number: str,
         token: str,
-        ble_device: BLEDevice | None = None,
+        ble_device: BLEDevice,
     ) -> None:
         """Initializes a new LaMarzoccoBluetoothClient instance, optionally from a BLEDevice."""
         self._username = username
         self._serial_number = serial_number
         self._token = token
-        self._address: str | None = None
-        self._client: BleakClient | None = None
+        self._address = ble_device.address
+        self._client = BleakClient(ble_device)
 
-        if ble_device:
-            self._address = ble_device.address
-            self._client = BleakClient(ble_device)
+    @staticmethod
+    async def discover_devices(
+        scanner: BaseBleakScanner,
+    ) -> list[BLEDevice]:
+        """Find machines based on model name."""
+        ble_devices: list[BLEDevice] = []
 
-    @classmethod
-    async def create(
-        cls,
-        username: str,
-        serial_number: str,
-        token: str,
-        init_client: bool = True,
-        bleak_scanner: BaseBleakScanner | None = None,
-    ) -> LaMarzoccoBluetoothClient:
-        """Init class by scanning for devices and selecting the first one with a suppoted name."""
-        self = cls(username, serial_number, token)
-        if bleak_scanner is None:
-            async with BleakScanner() as scanner:
-                await self._discover_device(scanner)
-        else:
-            await self._discover_device(bleak_scanner)
+        if scanner is None:
+            scanner = BleakScanner()
+        assert hasattr(scanner, "discover")
+        devices: list[BLEDevice] = await scanner.discover()
+        for device in devices:
+            if device.name and device.name.startswith(BT_MODEL_NAMES):
+                ble_devices.append(device)
 
-        if not self._address:
-            # couldn't connect
-            raise BluetoothDeviceNotFound("Couldn't find a machine")
-
-        if init_client:
-            self._client = BleakClient(self._address)
-        return self
+        return ble_devices
 
     @property
     def address(self) -> str:
@@ -84,18 +72,10 @@ class LaMarzoccoBluetoothClient:
             return False
         return self._client.is_connected
 
-    async def new_client_from_ble_device(self, ble_device: BLEDevice) -> None:
-        """Initalize a new bleak client from a BLEDevice (for Home Assistant)."""
-
-        self._client = BleakClient(ble_device)
-
-        try:
-            await self._client.connect()
-            await self._authenticate()
-        except (BleakError, TimeoutError) as e:
-            raise BluetoothConnectionFailed(
-                f"Failed to connect to machine with Bluetooth: {e}"
-            ) from e
+    def update_ble_device(self, ble_device: BLEDevice | None) -> None:
+        """Initalize a new bleak client from a BLEDevice."""
+        if ble_device is not None:
+            self._client = BleakClient(ble_device)
 
     async def set_power(self, state: bool) -> None:
         """Power on the machine."""
@@ -129,15 +109,6 @@ class LaMarzoccoBluetoothClient:
             },
         }
         await self._write_bluetooth_json_message(data)
-
-    async def _discover_device(self, scanner: BaseBleakScanner) -> None:
-        """Find machine based on model name."""
-        assert hasattr(scanner, "discover")
-        devices = await scanner.discover()
-        for d in devices:
-            if d.name:
-                if d.name.startswith(tuple(BT_MODEL_NAMES)):
-                    self._address = d.address
 
     async def _write_bluetooth_message(
         self, characteristic: str, message: bytes | str
