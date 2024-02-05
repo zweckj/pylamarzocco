@@ -82,6 +82,8 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         """Create a new LaMarzoccoMachine instance"""
         self = cls(*args, **kwargs)
         await self.get_config()
+        await self.get_firmware()
+        await self.get_statistics()
         return self
 
     @property

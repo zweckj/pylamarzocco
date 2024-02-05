@@ -1,0 +1,21 @@
+{
+    "data": {
+        "gateway_firmware": {
+            "targetVersion": "v2.2-rc0",
+            "md5": "",
+            "update": null,
+            "url_firmware": "http://firmware.lamarzocco.io/new_firmware/gateway/v2/home-gateway_v2.2-rc0.bin",
+            "url_schema": "http://firmware.lamarzocco.io/new_json/gw/v2.2rc0.json",
+            "version": "v2.2-rc0"
+        },
+        "machine_firmware": {
+            "targetVersion": "1.11",
+            "md5": "7928e9d27f612dd3136e6ebd3a45eb944b263bf053f6ea6dfa1140c4c45b64d3",
+            "update": null,
+            "url_firmware": "http://firmware.lamarzocco.io/new_firmware/machine/micra/atmega32/NewuLApp-111.bin",
+            "url_schema": "http://firmware.lamarzocco.io/new_json/fw/MR/v1.11.json",
+            "version": "1.11"
+        }
+    },
+    "status": true
+}
