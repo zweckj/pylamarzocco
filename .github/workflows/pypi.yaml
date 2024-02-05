@@ -5,6 +5,7 @@ on:
     - 'main'
     - 'releases/**'
     - 'dev'
+    - 'v0'
     paths:
       - 'setup.py'
     
