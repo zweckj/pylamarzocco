@@ -32,7 +32,7 @@
       1: LaMarzoccoPrebrewConfiguration(on_time=2, off_time=2),
     }),
     prebrew_mode=<PrebrewMode.PREINFUSION: 'TypeB'>,
-    serial_number='123456',
+    serial_number='GS01234',
     statistics=LaMarzoccoCoffeeStatistics(drink_stats={1: 167, 2: 0, 3: 0, 4: 0}, continous=0, total_flushing=228),
     steam_level=1,
     turned_on=True,

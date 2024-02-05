@@ -9,7 +9,7 @@ from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.const import LaMarzoccoBoilerType, WeekDay
 from lmcloud.lm_machine import LaMarzoccoMachine
 
-from . import init_machine
+from . import init_machine, MACHINE_SERIAL
 
 pytestmark = pytest.mark.asyncio
 
@@ -22,7 +22,7 @@ async def test_create(
 
     machine = await LaMarzoccoMachine.create(
         model="GS3",
-        serial_number="123456",
+        serial_number=MACHINE_SERIAL,
         name="MyMachine",
         cloud_client=cloud_client,
     )

@@ -1,0 +1,26 @@
+# serializer version: 1
+# name: test_create
+  LaMarzoccoGrinder(
+    bell_opened=True,
+    bluetooth_connected=False,
+    cloud_client=LaMarzoccoCloudClient(
+      password='password',
+      username='username',
+    ),
+    doses=dict({
+      1: 5.3,
+      2: 10.3,
+    }),
+    firmware=dict({
+      <LaMarzoccoFirmwareType.GATEWAY: 'gateway'>: LaMarzoccoFirmware(current_version='v3.2-rc9', latest_version='v3.2-rc9'),
+      <LaMarzoccoFirmwareType.MACHINE: 'machine'>: LaMarzoccoFirmware(current_version='1.17', latest_version='1.17'),
+    }),
+    led_enabled=True,
+    model='PICO',
+    name='MyMachine',
+    serial_number='G00000000000',
+    stand_by_time=10,
+    statistics=None,
+    turned_on=True,
+  )
+# ---

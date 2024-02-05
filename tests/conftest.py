@@ -11,6 +11,8 @@ from httpx import Response
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
 
+from . import MACHINE_SERIAL, GRINDER_SERIAL
+
 
 def load_fixture(device_type: str, file_name: str) -> dict:
     """Load a fixture."""
@@ -25,7 +27,13 @@ def get_mock_response(*args, **kwargs) -> Response:  # pylint: disable=unused-ar
     method: HTTPMethod = args[0]
     url: str = str(args[1])
 
-    device_type = "machine"
+    if MACHINE_SERIAL in url:
+        device_type = "machine"
+    elif GRINDER_SERIAL in url:
+        device_type = "grinder"
+    else:
+        raise ValueError(f"Unknown device in URL: {url}")
+
     data: dict = {"data": {"commandId": "123456"}}
     if "configuration" in url:
         data = load_fixture(device_type, "config.json")
