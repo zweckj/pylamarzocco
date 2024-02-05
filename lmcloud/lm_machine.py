@@ -297,7 +297,7 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         if notify and self._notify_callback:
             self._notify_callback()
 
-    async def _parse_websocket_message(self, message: str) -> bool:
+    def _parse_websocket_message(self, message: str) -> bool:
         """Handle a message received on the websocket."""
         message = json.loads(message)
 
