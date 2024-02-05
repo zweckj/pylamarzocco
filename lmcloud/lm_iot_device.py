@@ -167,7 +167,7 @@ class LaMarzoccoIoTDevice:
                 return True
 
         # no bluetooth or failed, try with cloud
-        if self.cloud_client is None:
+        if self.cloud_client is not None:
             func = getattr(self.cloud_client, command)
             if await func(**kwargs):
                 return True

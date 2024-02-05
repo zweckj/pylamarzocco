@@ -293,45 +293,6 @@ class LaMarzoccoCloudClient:
             return True
         return False
 
-    # async def set_auto_on_off_global(self, enable: bool) -> bool:
-    #     """Set the auto on/off state of the machine (Alias for HA)."""
-    #     return await self.configure_schedule(enable, self.schedule)
-
-    # async def set_auto_on_off(
-    #     self,
-    #     day_of_week: str,
-    #     hour_on: int,
-    #     minute_on: int,
-    #     hour_off: int,
-    #     minute_off: int,
-    # ) -> bool:
-    #     """Set auto-on/off for a day of the week"""
-    #     schedule = self.schedule
-    #     idx = [
-    #         index
-    #         for (index, d) in enumerate(schedule)
-    #         if d["day"][0:3] == day_of_week[0:3].upper()
-    #     ][0]
-    #     schedule[idx]["enable"] = True
-    #     schedule[idx]["on"] = f"{hour_on:02d}:{minute_on:02d}"
-    #     schedule[idx]["off"] = f"{hour_off:02d}:{minute_off:02d}"
-    #     return await self.configure_schedule(
-    #         self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule
-    #     )
-
-    # async def set_auto_on_off_enable(self, day_of_week: str, enable: bool) -> bool:
-    #     """Enable or disable auto-on/off for a day of the week"""
-    #     schedule = self.schedule
-    #     idx = [
-    #         index
-    #         for (index, d) in enumerate(schedule)
-    #         if d["day"][0:3] == day_of_week[0:3].upper()
-    #     ][0]
-    #     schedule[idx]["enable"] = enable
-    #     return await self.configure_schedule(
-    #         self.config[WEEKLY_SCHEDULING_CONFIG]["enabled"], schedule
-    #     )
-
     async def start_backflush(self, serial_number: str) -> None:
         """Send command to start backflushing"""
         url = f"{GW_BASE_URL}/{serial_number}/enable-backflush"

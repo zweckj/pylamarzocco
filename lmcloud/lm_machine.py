@@ -205,7 +205,7 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
     @cloud_only
     async def set_preinfusion_time(
         self,
-        preinfusion_time: float = 0,
+        preinfusion_time: float,
         key: int = 1,
     ) -> bool:
         """Set preinfusion time"""
@@ -274,8 +274,8 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         day: WeekDay,
         enabled: bool,
         h_on: int,
-        h_off: int,
         m_on: int,
+        h_off: int,
         m_off: int,
     ) -> bool:
         """Configure a single day in the schedule"""
