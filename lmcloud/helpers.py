@@ -117,6 +117,9 @@ def parse_cloud_statistics(
     """Parse statistics from API statistics object."""
 
     drink_stats: dict[int, int] = {}
+    continuous = 0
+    total_flushing = 0
+
     for stat in statistics:
         coffee_type: int = stat["coffeeType"]
         count: int = stat["count"]

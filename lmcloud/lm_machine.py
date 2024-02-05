@@ -22,12 +22,9 @@ from .helpers import (
     schedule_to_request,
 )
 from .client_bluetooth import LaMarzoccoBluetoothClient
-from .lm_iot_device import (
-    LaMarzoccoIoTDevice,
-    cloud_and_bluetooth,
-    cloud_only,
-)
+from .lm_iot_device import LaMarzoccoIoTDevice
 from .client_local import LaMarzoccoLocalClient
+from .client_cloud import LaMarzoccoCloudClient
 from .models import (
     LaMarzoccoBoiler,
     LaMarzoccoCoffeeStatistics,
@@ -47,6 +44,7 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         model: LaMarzoccoMachineModel,
         serial_number: str,
         name: str,
+        cloud_client: LaMarzoccoCloudClient | None = None,
         local_client: LaMarzoccoLocalClient | None = None,
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
         notify_callback: Callable[[], None] | None = None,
@@ -56,6 +54,7 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             model=model,
             serial_number=serial_number,
             name=name,
+            cloud_client=cloud_client,
             local_client=local_client,
             bluetooth_client=bluetooth_client,
         )
@@ -80,8 +79,9 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         """Create a new LaMarzoccoMachine instance"""
         self = cls(*args, **kwargs)
         await self.get_config()
-        await self.get_firmware()
-        await self.get_statistics()
+        if self._cloud_client is not None:
+            await self.get_firmware()
+            await self.get_statistics()
         return self
 
     @property
@@ -113,7 +113,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         """Parse the statistics object."""
         return parse_cloud_statistics(raw_statistics)
 
-    @cloud_and_bluetooth
     async def set_power(self, enabled: bool) -> bool:
         """Turn power of machine on or off"""
 
@@ -125,7 +124,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_and_bluetooth
     async def set_steam(self, steam_state: bool) -> bool:
         """Turn Steamboiler on or off"""
 
@@ -136,7 +134,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_and_bluetooth
     async def set_temp(
         self,
         boiler: LaMarzoccoBoilerType,
@@ -171,7 +168,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_only
     async def set_prebrew_mode(self, mode: PrebrewMode) -> bool:
         """Set preinfusion mode"""
 
@@ -185,7 +181,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_only
     async def set_prebrew_time(
         self,
         prebrew_on_time: float,
@@ -202,7 +197,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_only
     async def set_preinfusion_time(
         self,
         preinfusion_time: float,
@@ -217,7 +211,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_only
     async def set_dose(self, dose: int, key: int = 1) -> bool:
         """Set dose"""
 
@@ -226,7 +219,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_only
     async def set_dose_tea_water(self, dose: int) -> bool:
         """Set tea dose"""
 
@@ -235,7 +227,6 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_only
     async def set_plumbed_in(self, enabled: bool) -> bool:
         """Set plumbed in"""
 
@@ -244,13 +235,11 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_only
     async def start_backflush(self) -> None:
         """Start backflush"""
 
         await self.cloud_client.start_backflush(self.serial_number)
 
-    @cloud_only
     async def set_schedule(self, schedule: LaMarzoccoSchedule) -> bool:
         """Set schedule"""
 
@@ -261,14 +250,12 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
             return True
         return False
 
-    @cloud_only
     async def enable_schedule_globally(self, enabled: bool) -> bool:
         """Enable schedule globally"""
         schedule = deepcopy(self.auto_on_off_schedule)
         schedule.enabled = enabled
         return await self.set_schedule(schedule)
 
-    @cloud_only
     async def set_schedule_day(
         self,
         day: WeekDay,

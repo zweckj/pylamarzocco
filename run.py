@@ -3,6 +3,8 @@
 import json
 import asyncio
 
+from pathlib import Path
+
 from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.lm_iot_device import LaMarzoccoIoTDevice
 from lmcloud.lm_machine import LaMarzoccoMachine
@@ -13,7 +15,7 @@ from lmcloud.client_local import LaMarzoccoLocalClient
 
 async def main():
     """Main function."""
-    with open("config.json") as f:
+    with open(f"{Path(__file__).parent}/config.json", encoding="utf-8") as f:
         data = json.load(f)
 
     cloud_client = await LaMarzoccoCloudClient.create(
@@ -22,17 +24,20 @@ async def main():
     )
     fleet = await cloud_client.get_customer_fleet()
 
+    serial = list(fleet.keys())[0]
+
     local_client = LaMarzoccoLocalClient(
         host=data["host"],
-        local_bearer=fleet[0].communication_key,
+        local_bearer=fleet[serial].communication_key,
     )
 
     # bluetooth_client =  await LaMarzoccoBluetoothClient.create()
-    LaMarzoccoIoTDevice.cloud_client = cloud_client
-    machine = LaMarzoccoMachine(
-        model=LaMarzoccoMachineModel(fleet[0].model_name),
-        serial_number=fleet[0].serial_number,
-        name=fleet[0].name,
+
+    machine = await LaMarzoccoMachine.create(
+        model=LaMarzoccoMachineModel(fleet[serial].model_name),
+        serial_number=fleet[serial].serial_number,
+        name=fleet[serial].name,
+        cloud_client=cloud_client,
         local_client=local_client,
     )
 

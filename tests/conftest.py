@@ -2,12 +2,12 @@
 
 import json
 from collections.abc import Generator
+from http import HTTPMethod
 from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
 from httpx import Response
-from http import HTTPMethod
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.lm_machine import LaMarzoccoMachine

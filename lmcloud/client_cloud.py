@@ -17,7 +17,7 @@ from .const import (
     DEFAULT_CLIENT_ID,
     DEFAULT_CLIENT_SECRET,
     GW_AWS_PROXY_BASE_URL,
-    GW_BASE_URL,
+    GW_MACHINE_BASE_URL,
     TOKEN_URL,
     LaMarzoccoBoilerType,
     LaMarzoccoFirmwareType,
@@ -128,7 +128,7 @@ class LaMarzoccoCloudClient:
     async def get_config(self, serial_number: str) -> dict[str, Any]:
         """Get configuration from cloud"""
 
-        url = f"{GW_BASE_URL}/{serial_number}/configuration"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/configuration"
         return await self._rest_api_call(url=url, method=HTTPMethod.GET)
 
     async def set_power(
@@ -141,7 +141,7 @@ class LaMarzoccoCloudClient:
         mode = "BrewingMode" if enabled else "StandBy"
 
         data = {"status": mode}
-        url = f"{GW_BASE_URL}/{serial_number}/status"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/status"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
             return True
@@ -158,7 +158,7 @@ class LaMarzoccoCloudClient:
             "identifier": LaMarzoccoBoilerType.STEAM,
             "state": steam_state,
         }
-        url = f"{GW_BASE_URL}/{serial_number}/enable-boiler"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/enable-boiler"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
             return True
@@ -173,7 +173,7 @@ class LaMarzoccoCloudClient:
         """Set boiler temperature (in Celsius)."""
 
         data = {"identifier": boiler, "value": temperature}
-        url = f"{GW_BASE_URL}/{serial_number}/target-boiler"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/target-boiler"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
             return True
@@ -187,7 +187,7 @@ class LaMarzoccoCloudClient:
     ) -> bool:
         """Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)."""
 
-        url = f"{GW_BASE_URL}/{serial_number}/enable-preinfusion"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/enable-preinfusion"
         data = {"mode": mode}
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
@@ -212,7 +212,7 @@ class LaMarzoccoCloudClient:
         off_time = round(off_time, 1) * 100
         button = f"Dose{chr(key + 64)}"
 
-        url = f"{GW_BASE_URL}/{serial_number}/setting-preinfusion"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/setting-preinfusion"
         data = {
             "button": button,
             "group": "Group1",
@@ -232,7 +232,7 @@ class LaMarzoccoCloudClient:
         """Enable or disable plumbin mode"""
 
         data = {"enable": enable}
-        url = f"{GW_BASE_URL}/{serial_number}/enable-plumbin"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/enable-plumbin"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
             return True
@@ -253,7 +253,7 @@ class LaMarzoccoCloudClient:
 
         dose_index = f"Dose{chr(key + 64)}"
 
-        url = f"{GW_BASE_URL}/{serial_number}/dose"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/dose"
         data = {
             "dose_index": dose_index,
             "dose_type": "PulsesType",
@@ -272,7 +272,7 @@ class LaMarzoccoCloudClient:
         value: int,
     ) -> bool:
         """Set the value for the hot water dose"""
-        url = f"{GW_BASE_URL}/{serial_number}/dose-tea"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/dose-tea"
         data = {"dose_index": "DoseA", "value": value}
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
@@ -285,7 +285,7 @@ class LaMarzoccoCloudClient:
         schedule: LaMarzoccoCloudSchedule,
     ) -> bool:
         """Set auto-on/off schedule"""
-        url = f"{GW_BASE_URL}/{serial_number}/scheduling"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/scheduling"
         response = await self._rest_api_call(
             url=url, method=HTTPMethod.POST, data=dict(schedule)
         )
@@ -295,13 +295,13 @@ class LaMarzoccoCloudClient:
 
     async def start_backflush(self, serial_number: str) -> None:
         """Send command to start backflushing"""
-        url = f"{GW_BASE_URL}/{serial_number}/enable-backflush"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/enable-backflush"
         data = {"enable": True}
         await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
 
     async def token_command(self, serial_number: str) -> None:
         """Send token request command to cloud. This is needed when the local API returns 403."""
-        url = f"{GW_BASE_URL}/{serial_number}/token-request"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/token-request"
         response = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         await self._check_cloud_command_status(serial_number, response)
 
@@ -341,7 +341,7 @@ class LaMarzoccoCloudClient:
     ) -> dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware]:
         """Get Firmware details."""
 
-        url = f"{GW_BASE_URL}/{serial_number}/firmware/"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/firmware/"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         firmware: dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware] = {}
         for component in LaMarzoccoFirmwareType:
@@ -357,7 +357,7 @@ class LaMarzoccoCloudClient:
     ) -> bool:
         """Update Firmware."""
         _logger.debug("Updating firmware for component %s", component)
-        url = f"{GW_BASE_URL}/{serial_number}/firmware/{component}/update"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/firmware/{component}/update"
         await self._rest_api_call(url=url, method=HTTPMethod.POST, data={})
         retry_counter = 0
         while retry_counter <= 20:
@@ -384,6 +384,6 @@ class LaMarzoccoCloudClient:
         """Get statistics from cloud."""
         _logger.debug("Getting statistics from cloud")
 
-        url = f"{GW_BASE_URL}/{serial_number}/statistics/counters"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/statistics/counters"
 
         return await self._rest_api_call(url=url, method=HTTPMethod.GET)

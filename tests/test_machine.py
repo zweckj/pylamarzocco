@@ -1,15 +1,13 @@
 """Test the LaMarzoccoMachine class."""
 
-import pytest
-
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from syrupy import SnapshotAssertion
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
+from lmcloud.const import LaMarzoccoBoilerType, WeekDay
 from lmcloud.lm_machine import LaMarzoccoMachine
-
-from lmcloud.const import LaMarzoccoBoilerType
 
 from . import init_machine
 
@@ -21,12 +19,12 @@ async def test_create(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test creation of a cloud client."""
-    LaMarzoccoMachine.cloud_client = cloud_client
 
     machine = await LaMarzoccoMachine.create(
         model="GS3",
         serial_number="123456",
         name="MyMachine",
+        cloud_client=cloud_client,
     )
     assert machine == snapshot
 
@@ -74,7 +72,7 @@ async def test_set_schedule(
 
     with patch("asyncio.sleep", new_callable=AsyncMock):
         result = await machine.set_schedule_day(
-            day="monday",
+            day=WeekDay.MONDAY,
             enabled=True,
             h_on=3,
             m_on=0,

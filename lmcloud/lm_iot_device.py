@@ -25,39 +25,15 @@ from .models import LaMarzoccoFirmware, LaMarzoccoStatistics
 _LOGGER = logging.getLogger(__name__)
 
 
-def cloud_only(func: Callable[..., Coroutine]) -> Callable:
-    """Decorator to ensure that the cloud client is initialized"""
-
-    @wraps(func)
-    async def wrapper(*args: Any, **kwargs: dict) -> Any:
-        machine: LaMarzoccoIoTDevice = args[0]
-        if machine.cloud_client is None:
-            raise ClientNotInitialized("Cloud client is not initialized.")
-        return await func(*args, **kwargs)
-
-    return wrapper
-
-
-def cloud_and_bluetooth(func: Callable[..., Coroutine]) -> Callable:
-    """Decorator to show that the command can be sent via Bluetooth or Cloud"""
-
-    @wraps(func)
-    async def wrapper(*args: Any, **kwargs: dict) -> Any:
-        return await func(*args, **kwargs)
-
-    return wrapper
-
-
 class LaMarzoccoIoTDevice:
     """Base class for all La Marzocco devices"""
-
-    cloud_client: LaMarzoccoCloudClient
 
     def __init__(
         self,
         model: str,
         serial_number: str,
         name: str,
+        cloud_client: LaMarzoccoCloudClient | None = None,
         local_client: LaMarzoccoLocalClient | None = None,
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
@@ -71,13 +47,21 @@ class LaMarzoccoIoTDevice:
         self.statistics: LaMarzoccoStatistics | None = None
 
         self._raw_config: dict[str, Any] | None = None
-        self._bluetooth_client: LaMarzoccoBluetoothClient | None = bluetooth_client
-        self._local_client: LaMarzoccoLocalClient | None = local_client
+        self._cloud_client = cloud_client
+        self._bluetooth_client = bluetooth_client
+        self._local_client = local_client
         self._update_lock = asyncio.Lock()
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
         self.firmware = parse_firmware(raw_config["firmwareVersions"])
+
+    @property
+    def cloud_client(self) -> LaMarzoccoCloudClient:
+        """Ensure that the cloud client is initialized."""
+        if self._cloud_client is None:
+            raise ClientNotInitialized("Cloud client not initialized")
+        return self._cloud_client
 
     @abstractmethod
     def parse_statistics(
@@ -108,8 +92,8 @@ class LaMarzoccoIoTDevice:
                     _LOGGER.debug(
                         "Got 403 from local API, sending token request to cloud"
                     )
-                    if self.cloud_client is None:
-                        await self.cloud_client.token_command(self.serial_number)
+                    if self._cloud_client is not None:
+                        await self._cloud_client.token_command(self.serial_number)
                         await asyncio.sleep(local_api_retry_delay)
                         raw_config = await self._local_client.get_config()
                     else:
@@ -120,22 +104,20 @@ class LaMarzoccoIoTDevice:
                         + "falling back to cloud."
                     )
                     _LOGGER.debug(exc)
-                    if self.cloud_client is None:
+                    if self._cloud_client is None:
                         raise exc
 
             # if local update failed, try to update from cloud
-            if self.cloud_client is not None and not raw_config:
-                raw_config = await self.cloud_client.get_config(self.serial_number)
+            if self._cloud_client is not None and not raw_config:
+                raw_config = await self._cloud_client.get_config(self.serial_number)
 
             self.parse_config(raw_config)
 
-    @cloud_only
     async def get_statistics(self) -> None:
         """Update the statistics"""
         raw_statistics = await self.cloud_client.get_statistics(self.serial_number)
         self.statistics = self.parse_statistics(raw_statistics)
 
-    @cloud_only
     async def get_firmware(self) -> None:
         """Update the firmware"""
         self.firmware = await self.cloud_client.get_firmware(self.serial_number)
@@ -153,7 +135,7 @@ class LaMarzoccoIoTDevice:
             except (BleakError, BluetoothConnectionFailed) as exc:
                 msg = "Could not send command to bluetooth device, even though initalized."
 
-                if self.cloud_client is None:
+                if self._cloud_client is None:
                     _LOGGER.error(
                         "%s Cloud client not initialized, cannot fallback. Full error %s",
                         msg,
@@ -167,8 +149,8 @@ class LaMarzoccoIoTDevice:
                 return True
 
         # no bluetooth or failed, try with cloud
-        if self.cloud_client is not None:
-            func = getattr(self.cloud_client, command)
+        if self._cloud_client is not None:
+            func = getattr(self._cloud_client, command)
             if await func(**kwargs):
                 return True
         return False
