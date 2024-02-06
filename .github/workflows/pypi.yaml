@@ -4,6 +4,7 @@ on:
     branches:
     - 'main'
     - 'releases/**'
+    - 'v0'
     paths:
       - 'setup.py'
     
@@ -24,6 +25,19 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: "3.x"
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install -r requirements_tests.txt
+
+    - name: Run Tests
+      run: |
+        coverage run --source=lmcloud -m pytest tests/
+
+    - name: Report coverage
+      run: |
+        coverage report -m
     
     - name: Build source and wheel distributions
       run: |

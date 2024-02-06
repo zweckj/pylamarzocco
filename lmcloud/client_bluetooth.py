@@ -17,7 +17,6 @@ from .const import (
 )
 from .exceptions import (
     BluetoothConnectionFailed,
-    BluetoothDeviceNotFound,
     ClientNotInitialized,
 )
 
@@ -61,6 +60,7 @@ class LaMarzoccoBluetoothClient:
     @property
     def address(self) -> str:
         """Return the BT MAC address of the machine."""
+
         if self._address is None:
             raise ClientNotInitialized("Bluetooth client not initialized")
         return self._address
@@ -68,6 +68,7 @@ class LaMarzoccoBluetoothClient:
     @property
     def connected(self) -> bool:
         """Return the connection status."""
+
         if self._client is None:
             return False
         return self._client.is_connected
@@ -78,6 +79,7 @@ class LaMarzoccoBluetoothClient:
 
     async def set_power(self, state: bool) -> None:
         """Power on the machine."""
+
         mode = "BrewingMode" if state else "StandBy"
         data = {
             "name": "MachineChangeMode",
@@ -89,6 +91,7 @@ class LaMarzoccoBluetoothClient:
 
     async def set_steam(self, state: bool) -> None:
         """Power cycle steam."""
+
         data = {
             "name": "SettingBoilerEnable",
             "parameter": {
@@ -100,6 +103,7 @@ class LaMarzoccoBluetoothClient:
 
     async def set_temp(self, boiler: LaMarzoccoBoilerType, temperature: int) -> None:
         """Set boiler temperature (in Celsius)"""
+
         data = {
             "name": "SettingBoilerTarget",
             "parameter": {
@@ -113,6 +117,7 @@ class LaMarzoccoBluetoothClient:
         self, characteristic: str, message: bytes | str
     ) -> None:
         """Connect to machine and write a message."""
+
         if self._client is None:
             raise ClientNotInitialized("Bluetooth client not initialized")
 
@@ -143,6 +148,7 @@ class LaMarzoccoBluetoothClient:
         characteristic: str = SETTINGS_CHARACTERISTIC,
     ) -> None:
         """Write a json message to the machine."""
+
         await self._write_bluetooth_message(
             characteristic=characteristic,
             message=json.dumps(data, separators=(",", ":")),
@@ -150,6 +156,7 @@ class LaMarzoccoBluetoothClient:
 
     async def _authenticate(self) -> None:
         """Build authentication string and send it to the machine."""
+
         user = self._username + ":" + self._serial_number
         user_bytes = user.encode("utf-8")
         token = self._token.encode("utf-8")
