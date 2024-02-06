@@ -8,7 +8,7 @@ from typing import Any, Callable
 from httpx import AsyncClient, RequestError
 import websockets
 
-from .const import WEBSOCKET_RETRY_DELAY
+from .const import DEFAULT_PORT, WEBSOCKET_RETRY_DELAY
 from .exceptions import AuthFail, RequestNotSuccessful
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class LaMarzoccoLocalClient:
         self,
         host: str,
         local_bearer: str,
-        local_port: int = 8081,
+        local_port: int = DEFAULT_PORT,
         client: AsyncClient | None = None,
     ) -> None:
         self._host = host
@@ -50,7 +50,7 @@ class LaMarzoccoLocalClient:
         client: AsyncClient,
         host: str,
         token: str,
-        port: int = 8080,
+        port: int = DEFAULT_PORT,
     ) -> bool:
         """Validate the connection details to the local API."""
         try:
@@ -68,7 +68,7 @@ class LaMarzoccoLocalClient:
         client: AsyncClient,
         host: str,
         token: str,
-        port: int = 8080,
+        port: int = DEFAULT_PORT,
     ) -> dict[str, Any]:
         """Get current config of machine from local API."""
         headers = {"Authorization": f"Bearer {token}"}
