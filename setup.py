@@ -1,6 +1,8 @@
-import setuptools
+"""Setup the pypi package."""
 
-with open("README.md", "r") as f:
+import setuptools  # type: ignore[import]
+
+with open("README.md", "r", encoding="utf-8") as f:
     readme = f.read()
 
 setuptools.setup(
@@ -19,7 +21,7 @@ setuptools.setup(
         "Natural Language :: English",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: Implementation :: CPython",
     ],
     packages=setuptools.find_packages(),
