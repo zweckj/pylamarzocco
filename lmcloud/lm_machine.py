@@ -11,6 +11,9 @@ from typing import Any
 
 from bleak import BLEDevice
 
+from .client_bluetooth import LaMarzoccoBluetoothClient
+from .client_cloud import LaMarzoccoCloudClient
+from .client_local import LaMarzoccoLocalClient
 from .const import LaMarzoccoBoilerType, LaMarzoccoMachineModel, PrebrewMode, WeekDay
 from .exceptions import ClientNotInitialized, UnknownWebSocketMessage
 from .helpers import (
@@ -21,10 +24,7 @@ from .helpers import (
     parse_schedule,
     schedule_to_request,
 )
-from .client_bluetooth import LaMarzoccoBluetoothClient
 from .lm_device import LaMarzoccoDevice
-from .client_local import LaMarzoccoLocalClient
-from .client_cloud import LaMarzoccoCloudClient
 from .models import (
     LaMarzoccoCoffeeStatistics,
     LaMarzoccoMachineConfig,
