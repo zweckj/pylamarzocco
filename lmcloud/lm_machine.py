@@ -412,8 +412,8 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
                 settings: dict[str, Any] = {}
                 settings["preinfusionSettings"] = json.loads(msg["PreinfusionSettings"])
 
-                mode, config = parse_preinfusion_settings(settings)
-                self.config.prebrew_mode = mode
-                self.config.prebrew_configuration = config
+                self.config.prebrew_mode, self.config.prebrew_configuration = (
+                    parse_preinfusion_settings(settings)
+                )
 
         raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
