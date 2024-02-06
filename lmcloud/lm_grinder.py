@@ -23,6 +23,7 @@ class LaMarzoccoGrinder(LaMarzoccoDevice):
         local_client: LaMarzoccoLocalClient | None = None,
     ) -> None:
         """Initializes a new LaMarzoccoGrinder instance."""
+
         super().__init__(model, serial_number, name, cloud_client, local_client)
         self.config: LaMarzoccoGrinderConfig = LaMarzoccoGrinderConfig(
             turned_on=False,
@@ -35,12 +36,14 @@ class LaMarzoccoGrinder(LaMarzoccoDevice):
     @classmethod
     async def create(cls, *args, **kwargs) -> LaMarzoccoGrinder:
         """Create a new LaMarzoccoGrinder instance."""
+
         self = LaMarzoccoGrinder(*args, **kwargs)
         await self.get_config()
         return self
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
+
         super().parse_config(raw_config)
         self.config.turned_on = raw_config["machineMode"] == "StandBy"
         self.config.led_enabled = raw_config["baristaLed"]
@@ -53,4 +56,5 @@ class LaMarzoccoGrinder(LaMarzoccoDevice):
         self, raw_statistics: list[dict[str, Any]]
     ) -> LaMarzoccoStatistics:
         """Parse the statistics object."""
+
         raise NotImplementedError

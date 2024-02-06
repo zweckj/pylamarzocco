@@ -48,6 +48,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
         """Initializes a new LaMarzoccoCoffeeMachine instance"""
+
         super().__init__(
             model=model,
             serial_number=serial_number,
@@ -78,6 +79,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     @classmethod
     async def create(cls, *args: Any, **kwargs: Any) -> LaMarzoccoMachine:
         """Create a new LaMarzoccoMachine instance"""
+
         self = cls(*args, **kwargs)
         await self.get_config()
         if self._cloud_client is not None:
@@ -88,6 +90,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     @property
     def steam_level(self) -> int:
         """Return the steam level"""
+
         steam_boiler = self.config.boilers[LaMarzoccoBoilerType.STEAM]
         if steam_boiler.target_temperature < 128:
             return 1
@@ -97,6 +100,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
+
         super().parse_config(raw_config)
         self._raw_config = raw_config
         self.config.turned_on = raw_config["machineMode"] == "BrewingMode"
@@ -114,6 +118,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self, raw_statistics: list[dict[str, Any]]
     ) -> LaMarzoccoCoffeeStatistics:
         """Parse the statistics object."""
+
         return parse_cloud_statistics(raw_statistics)
 
     async def set_power(
@@ -158,6 +163,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         ble_device: BLEDevice | None = None,
     ) -> bool:
         """Set target temperature for boiler"""
+
         if boiler == LaMarzoccoBoilerType.STEAM:
             if self.model == LaMarzoccoMachineModel.LINEA_MICRA:
                 if temperature not in (126, 128, 131):
@@ -271,6 +277,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     async def enable_schedule_globally(self, enabled: bool) -> bool:
         """Enable schedule globally"""
+
         schedule = deepcopy(self.config.auto_on_off_schedule)
         schedule.enabled = enabled
         return await self.set_schedule(schedule)
@@ -285,6 +292,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         m_off: int,
     ) -> bool:
         """Configure a single day in the schedule"""
+
         day_settings = LaMarzoccoScheduleDay(
             enabled=enabled,
             h_on=h_on,
@@ -300,6 +308,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self, notify_callback: Callable[[], None] | None = None
     ) -> None:
         """Connect to the websocket of the machine."""
+
         self._notify_callback = notify_callback
         if self._local_client is None:
             raise ClientNotInitialized("Local client not initialized")
@@ -310,6 +319,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     def on_websocket_message_received(self, message: str | bytes) -> None:
         """Websocket message received"""
+
         self._timestamp_last_websocket_msg = datetime.now()
         message = str(message)
 
@@ -325,6 +335,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     def _parse_websocket_message(self, message: str) -> bool:
         """Handle a message received on the websocket."""
+
         message = json.loads(message)
 
         if isinstance(message, dict):
@@ -340,6 +351,8 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
 
     def _parse_dict_message(self, message: Any) -> bool:
+        """"Parse websocket message that is a dict."""
+
         if "MachineConfiguration" in message:
             # got machine configuration
             self._raw_config = json.loads(message["MachineConfiguration"])
@@ -352,6 +365,8 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
 
     def _parse_list_message(self, message: list[dict[str, Any]]) -> bool:
+        """Parse websocket message that is a list."""
+        
         for msg in message:
 
             if "SteamBoilerUpdateTemperature" in msg:

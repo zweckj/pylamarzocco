@@ -48,6 +48,7 @@ def schedule_to_request(schedule: LaMarzoccoSchedule) -> LaMarzoccoCloudSchedule
 
 def parse_schedule(schedule: dict[str, Any]) -> LaMarzoccoSchedule:
     """Parse schedule from API config object."""
+
     global_enable: bool = schedule["enabled"]
     days: dict[str, LaMarzoccoScheduleDay] = {}
     for weekday in WeekDay:
@@ -66,6 +67,7 @@ def parse_boilers(
     boilers: list[dict[str, Any]]
 ) -> dict[LaMarzoccoBoilerType, LaMarzoccoBoiler]:
     """Parse boiler settings from API config object."""
+
     parsed_boilers: dict[LaMarzoccoBoilerType, LaMarzoccoBoiler] = {}
     for boiler in boilers:
         is_enabled = boiler["isEnabled"] == "Enabled"
@@ -83,6 +85,7 @@ def parse_preinfusion_settings(
     config: dict[str, Any]
 ) -> tuple[PrebrewMode, dict[int, LaMarzoccoPrebrewConfiguration]]:
     """Parse preinfusion settings from API config object."""
+
     parsed: dict[int, LaMarzoccoPrebrewConfiguration] = {}
     i = 1
     preinfusion_settings = config.get("preinfusionSettings", {})
@@ -98,6 +101,7 @@ def parse_preinfusion_settings(
 
 def parse_coffee_doses(config: dict[str, Any]) -> tuple[dict[int, float], int | None]:
     """Parse doses from API config object."""
+
     parsed: dict[int, float] = {}
     i = 1
     group_capabilities = config.get("groupCapabilities", [])
@@ -141,6 +145,7 @@ def parse_firmware(
     current_firmware: dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware] | None = None,
 ) -> dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware]:
     """Parse firmware from API config object."""
+
     parsed = {}
     for fw in raw_firmware:
         fw_type = LaMarzoccoFirmwareType(fw["name"].split("_")[0])
@@ -159,6 +164,7 @@ def parse_firmware(
 
 def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStatistics:
     """Parse statistics from webhook statistics object."""
+
     group = statistics["groups"][0]
     doses = group["doses"]
     drink_stats: dict[int, int] = {}

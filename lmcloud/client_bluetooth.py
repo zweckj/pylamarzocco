@@ -7,7 +7,13 @@ import json
 import logging
 from typing import Any
 
-from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
+from bleak import (
+    BaseBleakScanner,
+    BleakClient,
+    BleakError,
+    BleakScanner,
+    BLEDevice,
+)
 
 from .const import (
     AUTH_CHARACTERISTIC,
@@ -33,7 +39,7 @@ class LaMarzoccoBluetoothClient:
         token: str,
         ble_device: BLEDevice,
     ) -> None:
-        """Initializes a new LaMarzoccoBluetoothClient instance, optionally from a BLEDevice."""
+        """Initializes a new LaMarzoccoBluetoothClient instance."""
         self._username = username
         self._serial_number = serial_number
         self._token = token
@@ -75,6 +81,7 @@ class LaMarzoccoBluetoothClient:
 
     def update_ble_device(self, ble_device: BLEDevice) -> None:
         """Initalize a new bleak client from a BLEDevice."""
+        
         self._client = BleakClient(ble_device)
 
     async def set_power(self, state: bool) -> None:

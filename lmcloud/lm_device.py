@@ -38,6 +38,7 @@ class LaMarzoccoDevice:
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
         """Initializes a new LaMarzoccoMachine instance"""
+
         self.model: str = model
         self.serial_number: str = serial_number
         self.name: str = name
@@ -56,11 +57,13 @@ class LaMarzoccoDevice:
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
+
         self.firmware = parse_firmware(raw_config["firmwareVersions"], self.firmware)
 
     @property
     def cloud_client(self) -> LaMarzoccoCloudClient:
         """Ensure that the cloud client is initialized."""
+
         if self._cloud_client is None:
             raise ClientNotInitialized("Cloud client not initialized")
         return self._cloud_client
@@ -74,6 +77,7 @@ class LaMarzoccoDevice:
     @property
     def bluetooth_connected(self) -> bool:
         """Return the connection status of the bluetooth client."""
+
         if self._bluetooth_client is None:
             return False
         return self._bluetooth_client.connected
@@ -83,6 +87,7 @@ class LaMarzoccoDevice:
         local_api_retry_delay: int = 3,
     ) -> None:
         """Update the machine status."""
+
         raw_config: dict[str, Any] = {}
 
         async with self._update_lock:
@@ -117,11 +122,13 @@ class LaMarzoccoDevice:
 
     async def get_statistics(self) -> None:
         """Update the statistics"""
+
         raw_statistics = await self.cloud_client.get_statistics(self.serial_number)
         self.statistics = self.parse_statistics(raw_statistics)
 
     async def get_firmware(self) -> None:
         """Update the firmware"""
+
         self.firmware = await self.cloud_client.get_firmware(self.serial_number)
 
     async def _bluetooth_command_with_cloud_fallback(

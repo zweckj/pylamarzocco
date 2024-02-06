@@ -95,6 +95,7 @@ class LaMarzoccoLocalClient:
         use_sigterm_handler: bool = True,
     ) -> None:
         """Connect to the websocket of the machine."""
+
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         async for websocket in websockets.connect(
             f"ws://{self._host}:{self._local_port}/api/v1/streaming",
