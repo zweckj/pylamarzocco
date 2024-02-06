@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 #local config
-config.json
+secrets.json
 bleak_device_info.py
 bleak_discover.py
 .gitignore
