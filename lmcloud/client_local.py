@@ -5,7 +5,7 @@ import logging
 import signal
 from typing import Any, Callable
 
-import httpx
+from httpx import AsyncClient, RequestError
 import websockets
 
 from .const import WEBSOCKET_RETRY_DELAY
@@ -22,7 +22,7 @@ class LaMarzoccoLocalClient:
         host: str,
         local_bearer: str,
         local_port: int = 8081,
-        client: httpx.AsyncClient | None = None,
+        client: AsyncClient | None = None,
     ) -> None:
         self._host = host
         self._local_port = local_port
@@ -32,7 +32,7 @@ class LaMarzoccoLocalClient:
         self.terminating: bool = False
 
         if client is None:
-            self._client = httpx.AsyncClient()
+            self._client = AsyncClient()
         else:
             self._client = client
 
@@ -47,7 +47,7 @@ class LaMarzoccoLocalClient:
 
     @staticmethod
     async def validate_connection(
-        client: httpx.AsyncClient,
+        client: AsyncClient,
         host: str,
         token: str,
         port: int = 8080,
@@ -65,7 +65,7 @@ class LaMarzoccoLocalClient:
 
     @staticmethod
     async def _get_config(
-        client: httpx.AsyncClient,
+        client: AsyncClient,
         host: str,
         token: str,
         port: int = 8080,
@@ -77,7 +77,7 @@ class LaMarzoccoLocalClient:
             response = await client.get(
                 f"http://{host}:{port}/api/v1/config", headers=headers
             )
-        except httpx.RequestError as exc:
+        except RequestError as exc:
             raise RequestNotSuccessful(
                 f"Requesting local API failed with exception: {exc}"
             ) from exc

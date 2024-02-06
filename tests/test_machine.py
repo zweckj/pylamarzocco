@@ -6,7 +6,8 @@ import pytest
 from syrupy import SnapshotAssertion
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
-from lmcloud.const import LaMarzoccoBoilerType, WeekDay
+from lmcloud.client_local import LaMarzoccoLocalClient
+from lmcloud.const import LaMarzoccoBoilerType, LaMarzoccoMachineModel, WeekDay
 from lmcloud.lm_machine import LaMarzoccoMachine
 
 from . import init_machine, MACHINE_SERIAL
@@ -20,13 +21,34 @@ async def test_create(
 ) -> None:
     """Test creation of a cloud client."""
 
+    machine = await init_machine(cloud_client)
+    assert machine == snapshot
+
+
+async def test_local_client(
+    local_machine_client: LaMarzoccoLocalClient,
+    cloud_client: LaMarzoccoCloudClient,
+) -> None:
+    """Ensure that the local client delivers same result"""
+
     machine = await LaMarzoccoMachine.create(
-        model="GS3",
+        model=LaMarzoccoMachineModel.GS3_AV,
         serial_number=MACHINE_SERIAL,
         name="MyMachine",
-        cloud_client=cloud_client,
+        local_client=local_machine_client,
     )
-    assert machine == snapshot
+
+    machine2 = await init_machine(cloud_client)
+
+    # cloud machine will have extra stats data -> clear
+    machine2.statistics = None
+
+    # firmware can also be different
+    machine.firmware = {}
+    machine2.firmware = {}
+
+    assert machine
+    assert str(machine) == str(machine2)
 
 
 async def test_set_temp(

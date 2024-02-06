@@ -18,30 +18,46 @@ async def main():
     with open(f"{Path(__file__).parent}/config.json", encoding="utf-8") as f:
         data = json.load(f)
 
-    cloud_client = await LaMarzoccoCloudClient.create(
-        username=data["username"],
-        password=data["password"],
-    )
-    fleet = await cloud_client.get_customer_fleet()
+    # cloud_client = await LaMarzoccoCloudClient.create(
+    #     username=data["username"],
+    #     password=data["password"],
+    # )
+    # fleet = await cloud_client.get_customer_fleet()
 
-    serial = list(fleet.keys())[0]
+    # serial = list(fleet.keys())[0]
 
     local_client = LaMarzoccoLocalClient(
         host=data["host"],
-        local_bearer=fleet[serial].communication_key,
+        local_bearer=data["token"],
     )
 
-    # bluetooth_client =  await LaMarzoccoBluetoothClient.create()
+    # if bluetooth_devices := LaMarzoccoBluetoothClient.discover_devices():
+    #     print("Found bluetooth device:", bluetooth_devices[0])
+    #     bluetooth_client = LaMarzoccoBluetoothClient(
+    #         data["username"],
+    #         data["serial"],
+    #         data["token"],
+    #         bluetooth_devices[0],
+    #     )
+
+    # machine = await LaMarzoccoMachine.create(
+    #     model=LaMarzoccoMachineModel(fleet[serial].model_name),
+    #     serial_number=fleet[serial].serial_number,
+    #     name=fleet[serial].name,
+    #     # cloud_client=cloud_client,
+    #     local_client=local_client,
+    # )
 
     machine = await LaMarzoccoMachine.create(
-        model=LaMarzoccoMachineModel(fleet[serial].model_name),
-        serial_number=fleet[serial].serial_number,
-        name=fleet[serial].name,
-        cloud_client=cloud_client,
+        model=LaMarzoccoMachineModel(data["model"]),
+        serial_number=data["serial"],
+        name=data["serial"],
+        # cloud_client=cloud_client,
         local_client=local_client,
     )
 
     await machine.websocket_connect()
+    await asyncio.sleep(300)
 
     # lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
     # await lmcloud.set_power("standby")

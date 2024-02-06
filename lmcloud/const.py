@@ -71,14 +71,10 @@ GW_AWS_PROXY_BASE_URL: Final = f"{GW_BASE_URL}/aws-proxy"
 DEFAULT_CLIENT_ID: Final = "7_1xwei9rtkuckso44ks4o8s0c0oc4swowo00wgw0ogsok84kosg"
 DEFAULT_CLIENT_SECRET: Final = "2mgjqpikbfuok8g4s44oo4gsw0ks44okk4kc4kkkko0c8soc8s"
 
-DEFAULT_PORT = 8081
-
-POLLING_DELAY_S: Final = 20
-POLLING_DELAY_STATISTICS_S: Final = 60
 WEBSOCKET_RETRY_DELAY: Final = 20
 
 
 # bluetooth
-BT_MODEL_NAMES: Final = ["MICRA", "MINI", "GS3"]
+BT_MODEL_NAMES: Final = ("MICRA", "MINI", "GS3")
 SETTINGS_CHARACTERISTIC: Final = "050b7847-e12b-09a8-b04b-8e0922a9abab"
 AUTH_CHARACTERISTIC: Final = "090b7847-e12b-09a8-b04b-8e0922a9abab"

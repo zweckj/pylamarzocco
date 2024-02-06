@@ -1,7 +1,8 @@
 # La Marzocco Client
-This is a library to interface with La Marzocco's "new" Home machines (currently only the Micra).
+This is a library to interface with La Marzocco's Home machines.
+It also has support to get information for the Pico grinder.
 
-It's in experimentals stages and meant mainly to connect to the Micra, as for the other IoT enabled machines you can use the [lmdirect](https://github.com/rccoleman/lmdirect) library.
+
 
 # Libraries in this project
 - `LaMarzoccoLocalClient` calls the new local API the Micra exposes, using the Bearer token from the customer cloud endpoint. However, this API currently only supports getting the config, and some status objects (like shottimer) over websockets, but does not support setting anything (to my knowledge). Local settings appear to only happen through [Bluetooth connections](#lmbluetooth). 
@@ -37,7 +38,15 @@ The class `LaMarzoccoBluetoothClient` discovers any bluetooth devices connects t
 
 To use Bluetooth you can either init LMCloud with
 ```python
-    bluetooth_client = await LaMarzoccoBluetoothClient.create(username, serial_number, local_token)
+    if bluetooth_devices := LaMarzoccoBluetoothClient.discover_devices():
+        print("Found bluetooth device:", bluetooth_devices[0])
+
+    bluetooth_client = LaMarzoccoBluetoothClient(
+        username,
+        serial_number,
+        local_token
+        bluetooth_devices[0],
+    )
 ```
 
 The local_token is the same token you need to initialize the local API, which you need to get from LM's cloud once. The serial number is your machine's serial number and the username is the email of your LaMarzocco account.
@@ -50,6 +59,13 @@ machine = Machine.create(model, serial_number, name, cloud_client, local_client,
 ```
 
 You can then use the machine object to send commands to the machine, or to get the current status of the machine. If you're running in cloud only mode, please be mindful with the requests to not flood the cloud API.
+
+## Grinder
+The Pico grinder can be initialized with
+```python
+grinder = LaMarzoccoGrinder.create(model, serial_number, name, cloud_client, local_client, bluetooth_client)
+```
+where you can use the same cloud client as for the machine, but you need to initialize new local and bluetooth clients (the same way as for the machine) to use the grinder.
 
 ### Websockets
 The local API initiates a websocket connection to
