@@ -18,13 +18,15 @@ from .helpers import parse_firmware
 from .client_bluetooth import LaMarzoccoBluetoothClient
 from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
-from .models import LaMarzoccoFirmware, LaMarzoccoStatistics
+from .models import LaMarzoccoDeviceConfig, LaMarzoccoFirmware, LaMarzoccoStatistics
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class LaMarzoccoIoTDevice:
     """Base class for all La Marzocco devices"""
+
+    _cloud_client: LaMarzoccoCloudClient | None
 
     def __init__(
         self,
@@ -39,10 +41,12 @@ class LaMarzoccoIoTDevice:
         self.model: str = model
         self.serial_number: str = serial_number
         self.name: str = name
-        self.turned_on = False
-        self.doses: dict[int, float] = {}
         self.firmware: dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware] = {}
         self.statistics: LaMarzoccoStatistics | None = None
+        self.config: LaMarzoccoDeviceConfig = LaMarzoccoDeviceConfig(
+            turned_on=False,
+            doses={},
+        )
 
         self._raw_config: dict[str, Any] | None = None
         self._cloud_client = cloud_client
@@ -159,7 +163,5 @@ class LaMarzoccoIoTDevice:
         return False
 
     def __str__(self) -> str:
-        attributes = {
-            key: value for key, value in vars(self).items() if not key.startswith("_")
-        }
-        return str(attributes)
+        config = dict(vars(self.config).items())
+        return str(config)

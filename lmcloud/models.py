@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import TypedDict
+from .const import LaMarzoccoBoilerType, PrebrewMode
 
 ####################################
 #### base iot device specific ######
@@ -21,9 +22,19 @@ class LaMarzoccoStatistics:
     """Class for La Marzocco machine statistics"""
 
 
+@dataclass(kw_only=True)
+class LaMarzoccoDeviceConfig:
+    """Class for La Marzocco device configuration"""
+
+    turned_on: bool
+    doses: dict[int, float]
+
+
 ####################################
 ###### machine specific ############
 ####################################
+
+
 @dataclass
 class LaMarzoccoBoiler:
     """Class for La Marzocco boiler"""
@@ -79,6 +90,22 @@ class LaMarzoccoSchedule:
     days: dict[str, LaMarzoccoScheduleDay]
 
 
+@dataclass(kw_only=True)
+class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
+    """Class for La Marzocco machine configuration"""
+
+    boilers: dict[LaMarzoccoBoilerType, LaMarzoccoBoiler]
+    prebrew_mode: PrebrewMode = PrebrewMode.DISABLED
+    plumbed_in: bool
+    prebrew_configuration: dict[int, LaMarzoccoPrebrewConfiguration]
+    dose_hot_water: int | None
+    water_contact: bool
+    auto_on_off_enabled: bool
+    auto_on_off_schedule: LaMarzoccoSchedule
+    brew_active: bool
+    brew_active_duration: float
+
+
 ####################################
 ###### cloud client specific #######
 ####################################
@@ -106,3 +133,16 @@ class LaMarzoccoCloudSchedule(TypedDict):
 
     enable: bool
     days: list[LaMarzoccoCloudScheduleDay]
+
+
+####################################
+###### grinder specific ############
+####################################
+@dataclass(kw_only=True)
+class LaMarzoccoGrinderConfig(LaMarzoccoDeviceConfig):
+    """Class for La Marzocco grinder configuration"""
+
+    turned_on: bool
+    led_enabled: bool
+    bell_opened: bool
+    stand_by_time: int

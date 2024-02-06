@@ -40,15 +40,8 @@ async def test_local_client(
 
     machine2 = await init_machine(cloud_client)
 
-    # cloud machine will have extra stats data -> clear
-    machine2.statistics = None
-
-    # firmware can also be different
-    machine.firmware = {}
-    machine2.firmware = {}
-
     assert machine
-    assert str(machine) == str(machine2)
+    assert str(machine.config) == str(machine2.config)
 
 
 async def test_set_temp(
@@ -63,7 +56,7 @@ async def test_set_temp(
             120,
         )
     assert result is True
-    assert machine.boilers[LaMarzoccoBoilerType.STEAM].target_temperature == 120
+    assert machine.config.boilers[LaMarzoccoBoilerType.STEAM].target_temperature == 120
 
 
 async def test_set_prebrew_infusion(
@@ -78,12 +71,12 @@ async def test_set_prebrew_infusion(
             3.5,
         )
         assert result is True
-        assert machine.prebrew_configuration[1].on_time == 1.0
-        assert machine.prebrew_configuration[1].off_time == 3.5
+        assert machine.config.prebrew_configuration[1].on_time == 1.0
+        assert machine.config.prebrew_configuration[1].off_time == 3.5
 
         result = await machine.set_preinfusion_time(4.5)
         assert result is True
-        assert machine.prebrew_configuration[1].off_time == 4.5
+        assert machine.config.prebrew_configuration[1].off_time == 4.5
 
 
 async def test_set_schedule(
