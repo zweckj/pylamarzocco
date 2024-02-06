@@ -15,7 +15,7 @@ from lmcloud.client_local import LaMarzoccoLocalClient
 
 async def main():
     """Main function."""
-    with open(f"{Path(__file__).parent}/config.json", encoding="utf-8") as f:
+    with open(f"{Path(__file__).parent}/secrets.json", encoding="utf-8") as f:
         data = json.load(f)
 
     # cloud_client = await LaMarzoccoCloudClient.create(

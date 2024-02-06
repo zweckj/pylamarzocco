@@ -1,0 +1,33 @@
+{
+  "data": {
+    "version": "v1",
+    "family": "PICOG",
+    "machineSn": "G000000000000000",
+    "machineHw": "1",
+    "machineMode": "StandBy",
+    "baristaLed": true,
+    "bellOpened": true,
+    "standByTime": 10,
+    "selectedDose": "",
+    "doses": [
+      {
+        "doseIndex": "DoseA",
+        "target": 5.3
+      },
+      {
+        "doseIndex": "DoseB",
+        "target": 10.3
+      }
+    ],
+    "firmwareVersions": [
+      {
+        "name": "machine_firmware",
+        "fw_version": "1.17"
+      },
+      {
+        "name": "gateway_firmware",
+        "fw_version": "v3.2-rc9"
+      }
+    ]
+  }
+}
