@@ -22,7 +22,7 @@ from .helpers import (
     schedule_to_request,
 )
 from .client_bluetooth import LaMarzoccoBluetoothClient
-from .lm_iot_device import LaMarzoccoIoTDevice
+from .lm_device import LaMarzoccoDevice
 from .client_local import LaMarzoccoLocalClient
 from .client_cloud import LaMarzoccoCloudClient
 from .models import (
@@ -35,7 +35,7 @@ from .models import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class LaMarzoccoMachine(LaMarzoccoIoTDevice):
+class LaMarzoccoMachine(LaMarzoccoDevice):
     """Class for La Marzocco coffee machine"""
 
     def __init__(
