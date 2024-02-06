@@ -6,7 +6,7 @@ import asyncio
 from pathlib import Path
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
-from lmcloud.lm_iot_device import LaMarzoccoIoTDevice
+from lmcloud.lm_device import LaMarzoccoDevice
 from lmcloud.lm_machine import LaMarzoccoMachine
 from lmcloud.const import LaMarzoccoMachineModel
 from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient

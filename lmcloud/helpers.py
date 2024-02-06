@@ -129,7 +129,11 @@ def parse_cloud_statistics(
             continuous = count
         elif coffee_type == -1:
             total_flushing = count
-    return LaMarzoccoCoffeeStatistics(drink_stats, continuous, total_flushing)
+    return LaMarzoccoCoffeeStatistics(
+        drink_stats=drink_stats,
+        continous=continuous,
+        total_flushing=total_flushing,
+    )
 
 
 def parse_firmware(
@@ -165,4 +169,8 @@ def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStat
         elif key == "ContinuousDose":
             continuous = dose[key]
     total_flushing = group["clean"]
-    return LaMarzoccoCoffeeStatistics(drink_stats, continuous, total_flushing)
+    return LaMarzoccoCoffeeStatistics(
+        drink_stats=drink_stats,
+        continous=continuous,
+        total_flushing=total_flushing,
+    )

@@ -11,6 +11,9 @@ from typing import Any
 
 from bleak import BLEDevice
 
+from .client_bluetooth import LaMarzoccoBluetoothClient
+from .client_cloud import LaMarzoccoCloudClient
+from .client_local import LaMarzoccoLocalClient
 from .const import LaMarzoccoBoilerType, LaMarzoccoMachineModel, PrebrewMode, WeekDay
 from .exceptions import ClientNotInitialized, UnknownWebSocketMessage
 from .helpers import (
@@ -21,10 +24,7 @@ from .helpers import (
     parse_schedule,
     schedule_to_request,
 )
-from .client_bluetooth import LaMarzoccoBluetoothClient
-from .lm_iot_device import LaMarzoccoIoTDevice
-from .client_local import LaMarzoccoLocalClient
-from .client_cloud import LaMarzoccoCloudClient
+from .lm_device import LaMarzoccoDevice
 from .models import (
     LaMarzoccoCoffeeStatistics,
     LaMarzoccoMachineConfig,
@@ -35,7 +35,7 @@ from .models import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class LaMarzoccoMachine(LaMarzoccoIoTDevice):
+class LaMarzoccoMachine(LaMarzoccoDevice):
     """Class for La Marzocco coffee machine"""
 
     def __init__(
@@ -285,7 +285,13 @@ class LaMarzoccoMachine(LaMarzoccoIoTDevice):
         m_off: int,
     ) -> bool:
         """Configure a single day in the schedule"""
-        day_settings = LaMarzoccoScheduleDay(enabled, h_on, h_off, m_on, m_off)
+        day_settings = LaMarzoccoScheduleDay(
+            enabled=enabled,
+            h_on=h_on,
+            h_off=h_off,
+            m_on=m_on,
+            m_off=m_off,
+        )
         schedule = deepcopy(self.config.auto_on_off_schedule)
         schedule.days[day] = day_settings
         return await self.set_schedule(schedule)

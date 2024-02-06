@@ -4,6 +4,7 @@ import pytest
 from syrupy import SnapshotAssertion
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
+from lmcloud.const import LaMarzoccoGrinderModel
 from lmcloud.lm_grinder import LaMarzoccoGrinder
 
 from . import GRINDER_SERIAL
@@ -18,7 +19,7 @@ async def test_create(
     """Test creation of a cloud client."""
 
     machine = await LaMarzoccoGrinder.create(
-        model="PICO",
+        model=LaMarzoccoGrinderModel("Pico"),
         serial_number=GRINDER_SERIAL,
         name="MyMachine",
         cloud_client=cloud_client,

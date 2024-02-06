@@ -4,18 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from .lm_iot_device import LaMarzoccoIoTDevice, LaMarzoccoStatistics
+from .const import LaMarzoccoGrinderModel
 from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
+from .lm_device import LaMarzoccoDevice, LaMarzoccoStatistics
 from .models import LaMarzoccoGrinderConfig
 
 
-class LaMarzoccoGrinder(LaMarzoccoIoTDevice):
+class LaMarzoccoGrinder(LaMarzoccoDevice):
     """Class for La Marzocco grinder"""
 
     def __init__(
         self,
-        model: str,
+        model: LaMarzoccoGrinderModel,
         serial_number: str,
         name: str,
         cloud_client: LaMarzoccoCloudClient | None = None,

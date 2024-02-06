@@ -23,7 +23,7 @@ from .models import LaMarzoccoDeviceConfig, LaMarzoccoFirmware, LaMarzoccoStatis
 _LOGGER = logging.getLogger(__name__)
 
 
-class LaMarzoccoIoTDevice:
+class LaMarzoccoDevice:
     """Base class for all La Marzocco devices"""
 
     _cloud_client: LaMarzoccoCloudClient | None

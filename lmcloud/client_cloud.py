@@ -349,7 +349,10 @@ class LaMarzoccoCloudClient:
             latest_version = result.get(f"{component}_firmware", {}).get(
                 "targetVersion"
             )
-            firmware[component] = LaMarzoccoFirmware(current_version, latest_version)
+            firmware[component] = LaMarzoccoFirmware(
+                current_version=current_version,
+                latest_version=latest_version,
+            )
         return firmware
 
     async def update_firmware(
