@@ -285,7 +285,13 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         m_off: int,
     ) -> bool:
         """Configure a single day in the schedule"""
-        day_settings = LaMarzoccoScheduleDay(enabled, h_on, h_off, m_on, m_off)
+        day_settings = LaMarzoccoScheduleDay(
+            enabled=enabled,
+            h_on=h_on,
+            h_off=h_off,
+            m_on=m_on,
+            m_off=m_off,
+        )
         schedule = deepcopy(self.config.auto_on_off_schedule)
         schedule.days[day] = day_settings
         return await self.set_schedule(schedule)

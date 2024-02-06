@@ -9,7 +9,7 @@ from .const import LaMarzoccoBoilerType, PrebrewMode
 ####################################
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LaMarzoccoFirmware:
     """Class for La Marzocco machine firmware"""
 
@@ -17,7 +17,7 @@ class LaMarzoccoFirmware:
     latest_version: str
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LaMarzoccoStatistics:
     """Class for La Marzocco machine statistics"""
 
@@ -35,7 +35,7 @@ class LaMarzoccoDeviceConfig:
 ####################################
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LaMarzoccoBoiler:
     """Class for La Marzocco boiler"""
 
@@ -44,7 +44,7 @@ class LaMarzoccoBoiler:
     target_temperature: float
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LaMarzoccoCoffeeStatistics(LaMarzoccoStatistics):
     """Class for La Marzocco coffee machine statistics"""
 
@@ -58,7 +58,7 @@ class LaMarzoccoCoffeeStatistics(LaMarzoccoStatistics):
         return sum(self.drink_stats.values())
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LaMarzoccoPrebrewConfiguration:
     """Class for La Marzocco key configuration"""
 
@@ -71,7 +71,7 @@ class LaMarzoccoPrebrewConfiguration:
         return self.off_time
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LaMarzoccoScheduleDay:
     """Class for La Marzocco schedule day"""
 
@@ -82,7 +82,7 @@ class LaMarzoccoScheduleDay:
     m_off: int
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LaMarzoccoSchedule:
     """Class for La Marzocco schedule"""
 
@@ -109,7 +109,7 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
 ####################################
 ###### cloud client specific #######
 ####################################
-@dataclass
+@dataclass(kw_only=True)
 class LaMarzoccoMachineInfo:
     """Class for La Marzocco machine information."""
 
