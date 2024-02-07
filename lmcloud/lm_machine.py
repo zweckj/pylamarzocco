@@ -106,15 +106,15 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
         if self.model == MachineModel.LINEA_MICRA:
             return "Linea Micra"
-        else:
-            return self.model
+
+        return self.model
 
     @property
     def steam_level(self) -> SteamLevel:
         """Return the steam level"""
 
         steam_boiler = self.config.boilers[BoilerType.STEAM]
-        return SteamLevel(int(steam_boiler.target_temperature))
+        return  min(SteamLevel, key=lambda x:abs(x - steam_boiler.target_temperature))
 
     @property
     def websocket_connected(self) -> bool:
@@ -192,7 +192,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
         if boiler == BoilerType.STEAM:
             if self.model == MachineModel.LINEA_MICRA:
-                if temperature not in (126, 128, 131):
+                if temperature not in SteamLevel:
                     msg = "Steam temp must be one of 126, 128, 131 (°C)"
                     _LOGGER.debug(msg)
                     raise ValueError(msg)
