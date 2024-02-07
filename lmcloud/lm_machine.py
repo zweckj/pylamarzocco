@@ -16,9 +16,11 @@ from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
 from .const import (
     BoilerType,
+    FirmwareType,
     MachineModel,
     PhysicalKey,
     PrebrewMode,
+    SteamLevel,
     WeekDay,
 )
 from .exceptions import ClientNotInitialized, UnknownWebSocketMessage
@@ -69,13 +71,18 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             prebrew_mode=PrebrewMode.DISABLED,
             plumbed_in=False,
             prebrew_configuration={},
-            dose_hot_water=None,
+            dose_hot_water=0,
             doses={},
             water_contact=False,
             auto_on_off_enabled=False,
             auto_on_off_schedule=LaMarzoccoSchedule(enabled=False, days={}),
             brew_active=False,
             brew_active_duration=0,
+        )
+        self.statistics: LaMarzoccoCoffeeStatistics = LaMarzoccoCoffeeStatistics(
+            drink_stats={},
+            continous=0,
+            total_flushes=0,
         )
 
         self._notify_callback: Callable[[], None] | None = None
@@ -94,15 +101,28 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         return self
 
     @property
-    def steam_level(self) -> int:
+    def full_model_name(self) -> str:
+        """Return the full model name"""
+
+        if self.model == MachineModel.LINEA_MICRA:
+            return "Linea Micra"
+        else:
+            return self.model
+
+    @property
+    def steam_level(self) -> SteamLevel:
         """Return the steam level"""
 
         steam_boiler = self.config.boilers[BoilerType.STEAM]
-        if steam_boiler.target_temperature < 128:
-            return 1
-        if steam_boiler.target_temperature == 128:
-            return 2
-        return 3
+        return SteamLevel(int(steam_boiler.target_temperature))
+
+    @property
+    def websocket_connected(self) -> bool:
+        """Return the connection status of the websocket client."""
+
+        if self._local_client is None:
+            return False
+        return self._local_client.websocket_connected
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
@@ -198,6 +218,14 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             self.config.boilers[boiler].target_temperature = temperature
             return True
         return False
+
+    async def set_steam_level(
+        self,
+        level: SteamLevel,
+        ble_device: BLEDevice | None = None,
+    ) -> bool:
+        """Set steam level"""
+        return await self.set_temp(BoilerType.STEAM, level, ble_device)
 
     async def set_prebrew_mode(self, mode: PrebrewMode) -> bool:
         """Set preinfusion mode"""
@@ -309,6 +337,11 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         schedule = deepcopy(self.config.auto_on_off_schedule)
         schedule.days[day] = day_settings
         return await self.set_schedule(schedule)
+
+    async def update_firmware(self, component: FirmwareType) -> bool:
+        """Update firmware"""
+
+        return await self.cloud_client.update_firmware(self.serial_number, component)
 
     async def websocket_connect(
         self, notify_callback: Callable[[], None] | None = None

@@ -50,6 +50,14 @@ class PhysicalKey(IntEnum):
     D = 4
 
 
+class SteamLevel(IntEnum):
+    """Enum for steam level."""
+
+    LEVEL_1 = 126
+    LEVEL_2 = 128
+    LEVEL_3 = 131
+
+
 class WeekDay(StrEnum):
     """Enum for days of the week."""
 

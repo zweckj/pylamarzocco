@@ -50,7 +50,7 @@ class LaMarzoccoCoffeeStatistics(LaMarzoccoStatistics):
 
     drink_stats: dict[PhysicalKey, int]
     continous: int
-    total_flushing: int
+    total_flushes: int
 
     @property
     def total_coffee(self) -> int:
@@ -98,7 +98,7 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     prebrew_mode: PrebrewMode = PrebrewMode.DISABLED
     plumbed_in: bool
     prebrew_configuration: dict[int, LaMarzoccoPrebrewConfiguration]
-    dose_hot_water: int | None
+    dose_hot_water: int
     water_contact: bool
     auto_on_off_enabled: bool
     auto_on_off_schedule: LaMarzoccoSchedule
@@ -110,13 +110,13 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
 ###### cloud client specific #######
 ####################################
 @dataclass(kw_only=True)
-class LaMarzoccoMachineInfo:
+class LaMarzoccoDeviceInfo:
     """Class for La Marzocco machine information."""
 
     serial_number: str
     name: str
     communication_key: str
-    model_name: str
+    model: str
 
 
 class LaMarzoccoCloudScheduleDay(TypedDict):
