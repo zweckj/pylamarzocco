@@ -24,7 +24,7 @@ from .const import (
     PrebrewMode,
 )
 from .exceptions import AuthFail, ClientNotInitialized, RequestNotSuccessful
-from .models import LaMarzoccoCloudSchedule, LaMarzoccoFirmware, LaMarzoccoMachineInfo
+from .models import LaMarzoccoCloudSchedule, LaMarzoccoFirmware, LaMarzoccoDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -101,10 +101,10 @@ class LaMarzoccoCloudClient:
             f"Request to endpoint {response.url} failed with status code {response.status_code}"
         )
 
-    async def get_customer_fleet(self) -> dict[str, LaMarzoccoMachineInfo]:
+    async def get_customer_fleet(self) -> dict[str, LaMarzoccoDeviceInfo]:
         """Get basic machine info from the customer endpoint."""
 
-        machine_info: dict[str, LaMarzoccoMachineInfo] = {}
+        machine_info: dict[str, LaMarzoccoDeviceInfo] = {}
 
         data = await self._rest_api_call(url=CUSTOMER_URL, method=HTTPMethod.GET)
         fleet = data.get("fleet", [])
@@ -116,11 +116,11 @@ class LaMarzoccoCloudClient:
             serial_number = machine.get("serialNumber")
             model_name = machine.get("model", {}).get("name")
 
-            machine_info[serial_number] = LaMarzoccoMachineInfo(
+            machine_info[serial_number] = LaMarzoccoDeviceInfo(
                 serial_number=serial_number,
                 name=name,
                 communication_key=key,
-                model_name=model_name,
+                model=model_name,
             )
 
         return machine_info

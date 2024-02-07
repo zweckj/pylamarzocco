@@ -98,21 +98,21 @@ def parse_preinfusion_settings(
     return mode, parsed
 
 
-def parse_coffee_doses(
-    config: dict[str, Any]
-) -> tuple[dict[PhysicalKey, float], int | None]:
+def parse_coffee_doses(config: dict[str, Any]) -> tuple[dict[PhysicalKey, float], int]:
     """Parse doses from API config object."""
 
     parsed: dict[PhysicalKey, float] = {}
     i = 1
     group_capabilities = config.get("groupCapabilities", [])
     if len(group_capabilities) == 0:
-        return parsed, None
+        return parsed, 0
 
     for dose in group_capabilities[0].get("doses", []):
         parsed[PhysicalKey(i)] = dose.get("stopTarget", 0)
         i += 1
-    dose_hot_water = config.get("teaDoses", {}).get("DoseA", {}).get("stopTarget", 0)
+    dose_hot_water: int = (
+        config.get("teaDoses", {}).get("DoseA", {}).get("stopTarget", 0)
+    )
     return parsed, dose_hot_water
 
 
@@ -123,7 +123,7 @@ def parse_cloud_statistics(
 
     drink_stats: dict[PhysicalKey, int] = {}
     continuous = 0
-    total_flushing = 0
+    total_flushes = 0
 
     for stat in statistics:
         coffee_type: int = stat["coffeeType"]
@@ -133,11 +133,11 @@ def parse_cloud_statistics(
         elif coffee_type == 4:
             continuous = count
         elif coffee_type == -1:
-            total_flushing = count
+            total_flushes = count
     return LaMarzoccoCoffeeStatistics(
         drink_stats=drink_stats,
         continous=continuous,
-        total_flushing=total_flushing,
+        total_flushes=total_flushes,
     )
 
 
@@ -179,5 +179,5 @@ def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStat
     return LaMarzoccoCoffeeStatistics(
         drink_stats=drink_stats,
         continous=continuous,
-        total_flushing=total_flushing,
+        total_flushes=total_flushing,
     )
