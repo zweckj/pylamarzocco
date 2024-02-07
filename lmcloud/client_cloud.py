@@ -19,8 +19,8 @@ from .const import (
     GW_AWS_PROXY_BASE_URL,
     GW_MACHINE_BASE_URL,
     TOKEN_URL,
-    LaMarzoccoBoilerType,
-    LaMarzoccoFirmwareType,
+    BoilerType,
+    FirmwareType,
     PrebrewMode,
 )
 from .exceptions import AuthFail, ClientNotInitialized, RequestNotSuccessful
@@ -155,7 +155,7 @@ class LaMarzoccoCloudClient:
         """Turn Steamboiler on or off"""
 
         data = {
-            "identifier": LaMarzoccoBoilerType.STEAM,
+            "identifier": BoilerType.STEAM,
             "state": steam_state,
         }
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/enable-boiler"
@@ -167,7 +167,7 @@ class LaMarzoccoCloudClient:
     async def set_temp(
         self,
         serial_number: str,
-        boiler: LaMarzoccoBoilerType,
+        boiler: BoilerType,
         temperature: float,
     ) -> bool:
         """Set boiler temperature (in Celsius)."""
@@ -333,13 +333,13 @@ class LaMarzoccoCloudClient:
     async def get_firmware(
         self,
         serial_number: str,
-    ) -> dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware]:
+    ) -> dict[FirmwareType, LaMarzoccoFirmware]:
         """Get Firmware details."""
 
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/firmware/"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
-        firmware: dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware] = {}
-        for component in LaMarzoccoFirmwareType:
+        firmware: dict[FirmwareType, LaMarzoccoFirmware] = {}
+        for component in FirmwareType:
             current_version = result.get(f"{component}_firmware", {}).get("version")
             latest_version = result.get(f"{component}_firmware", {}).get(
                 "targetVersion"
@@ -351,7 +351,7 @@ class LaMarzoccoCloudClient:
         return firmware
 
     async def update_firmware(
-        self, serial_number: str, component: LaMarzoccoFirmwareType
+        self, serial_number: str, component: FirmwareType
     ) -> bool:
         """Update Firmware."""
 

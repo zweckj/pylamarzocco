@@ -19,7 +19,7 @@ from .const import (
     AUTH_CHARACTERISTIC,
     BT_MODEL_PREFIXES,
     SETTINGS_CHARACTERISTIC,
-    LaMarzoccoBoilerType,
+    BoilerType,
 )
 from .exceptions import (
     BluetoothConnectionFailed,
@@ -108,7 +108,7 @@ class LaMarzoccoBluetoothClient:
         }
         await self._write_bluetooth_json_message(data)
 
-    async def set_temp(self, boiler: LaMarzoccoBoilerType, temperature: int) -> None:
+    async def set_temp(self, boiler: BoilerType, temperature: int) -> None:
         """Set boiler temperature (in Celsius)"""
 
         data = {

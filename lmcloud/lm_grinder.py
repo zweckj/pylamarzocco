@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .const import LaMarzoccoGrinderModel
+from .const import GrinderModel, PhysicalKey
 from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
 from .lm_device import LaMarzoccoDevice, LaMarzoccoStatistics
@@ -16,7 +16,7 @@ class LaMarzoccoGrinder(LaMarzoccoDevice):
 
     def __init__(
         self,
-        model: LaMarzoccoGrinderModel,
+        model: GrinderModel,
         serial_number: str,
         name: str,
         cloud_client: LaMarzoccoCloudClient | None = None,
@@ -50,7 +50,9 @@ class LaMarzoccoGrinder(LaMarzoccoDevice):
         self.config.bell_opened = raw_config["bellOpened"]
         self.config.stand_by_time = raw_config["standByTime"]
         for dose in raw_config["doses"]:
-            self.config.doses[ord(dose["doseIndex"][-1]) - 64] = dose["target"]
+            self.config.doses[PhysicalKey(ord(dose["doseIndex"][-1]) - 64)] = dose[
+                "target"
+            ]
 
     def parse_statistics(
         self, raw_statistics: list[dict[str, Any]]

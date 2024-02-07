@@ -7,7 +7,7 @@ from typing import Any
 
 from bleak import BleakError, BLEDevice
 
-from .const import LaMarzoccoFirmwareType
+from .const import FirmwareType
 from .exceptions import (
     AuthFail,
     BluetoothConnectionFailed,
@@ -42,7 +42,7 @@ class LaMarzoccoDevice:
         self.model: str = model
         self.serial_number: str = serial_number
         self.name: str = name
-        self.firmware: dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware] = {}
+        self.firmware: dict[FirmwareType, LaMarzoccoFirmware] = {}
         self.statistics: LaMarzoccoStatistics | None = None
         self.config: LaMarzoccoDeviceConfig = LaMarzoccoDeviceConfig(
             turned_on=False,

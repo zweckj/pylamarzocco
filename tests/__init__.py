@@ -1,7 +1,7 @@
 """Test utilities"""
 
 from lmcloud import LaMarzoccoCloudClient, LaMarzoccoMachine, LaMarzoccoGrinder
-from lmcloud.const import LaMarzoccoMachineModel, LaMarzoccoGrinderModel
+from lmcloud.const import MachineModel, GrinderModel
 
 MACHINE_SERIAL = "GS01234"
 GRINDER_SERIAL = "G00000000000"
@@ -13,7 +13,7 @@ async def init_machine(
     """Get an initialized machine"""
 
     machine = await LaMarzoccoMachine.create(
-        model=LaMarzoccoMachineModel.GS3_AV,
+        model=MachineModel.GS3_AV,
         serial_number=MACHINE_SERIAL,
         name="MyMachine",
         cloud_client=cloud_client,
@@ -27,7 +27,7 @@ async def init_grinder(
     """Get an initialized machine"""
 
     grinder = await LaMarzoccoGrinder.create(
-        model=LaMarzoccoGrinderModel.PICO,
+        model=GrinderModel.PICO,
         serial_number=GRINDER_SERIAL,
         name="MyMachine",
         cloud_client=cloud_client,

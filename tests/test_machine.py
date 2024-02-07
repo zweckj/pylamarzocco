@@ -7,7 +7,7 @@ from syrupy import SnapshotAssertion
 
 from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.client_local import LaMarzoccoLocalClient
-from lmcloud.const import LaMarzoccoBoilerType, LaMarzoccoMachineModel, WeekDay
+from lmcloud.const import BoilerType, MachineModel, WeekDay
 from lmcloud.lm_machine import LaMarzoccoMachine
 
 from . import init_machine, MACHINE_SERIAL
@@ -32,7 +32,7 @@ async def test_local_client(
     """Ensure that the local client delivers same result"""
 
     machine = await LaMarzoccoMachine.create(
-        model=LaMarzoccoMachineModel.GS3_AV,
+        model=MachineModel.GS3_AV,
         serial_number=MACHINE_SERIAL,
         name="MyMachine",
         local_client=local_machine_client,
@@ -52,11 +52,11 @@ async def test_set_temp(
 
     with patch("asyncio.sleep", new_callable=AsyncMock):
         result = await machine.set_temp(
-            LaMarzoccoBoilerType.STEAM,
+            BoilerType.STEAM,
             120,
         )
     assert result is True
-    assert machine.config.boilers[LaMarzoccoBoilerType.STEAM].target_temperature == 120
+    assert machine.config.boilers[BoilerType.STEAM].target_temperature == 120
 
 
 async def test_set_prebrew_infusion(
