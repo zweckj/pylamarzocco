@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from typing import TypedDict
-from .const import LaMarzoccoBoilerType, PrebrewMode
+from .const import PhysicalKey, BoilerType, PrebrewMode
 
 ####################################
 #### base iot device specific ######
@@ -27,7 +27,7 @@ class LaMarzoccoDeviceConfig:
     """Class for La Marzocco device configuration"""
 
     turned_on: bool
-    doses: dict[int, float]
+    doses: dict[PhysicalKey, float]
 
 
 ####################################
@@ -48,7 +48,7 @@ class LaMarzoccoBoiler:
 class LaMarzoccoCoffeeStatistics(LaMarzoccoStatistics):
     """Class for La Marzocco coffee machine statistics"""
 
-    drink_stats: dict[int, int]
+    drink_stats: dict[PhysicalKey, int]
     continous: int
     total_flushing: int
 
@@ -94,7 +94,7 @@ class LaMarzoccoSchedule:
 class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     """Class for La Marzocco machine configuration"""
 
-    boilers: dict[LaMarzoccoBoilerType, LaMarzoccoBoiler]
+    boilers: dict[BoilerType, LaMarzoccoBoiler]
     prebrew_mode: PrebrewMode = PrebrewMode.DISABLED
     plumbed_in: bool
     prebrew_configuration: dict[int, LaMarzoccoPrebrewConfiguration]

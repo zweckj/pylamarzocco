@@ -14,7 +14,13 @@ from bleak import BLEDevice
 from .client_bluetooth import LaMarzoccoBluetoothClient
 from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
-from .const import LaMarzoccoBoilerType, LaMarzoccoMachineModel, PrebrewMode, WeekDay
+from .const import (
+    BoilerType,
+    MachineModel,
+    PhysicalKey,
+    PrebrewMode,
+    WeekDay,
+)
 from .exceptions import ClientNotInitialized, UnknownWebSocketMessage
 from .helpers import (
     parse_boilers,
@@ -40,7 +46,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     def __init__(
         self,
-        model: LaMarzoccoMachineModel,
+        model: MachineModel,
         serial_number: str,
         name: str,
         cloud_client: LaMarzoccoCloudClient | None = None,
@@ -48,6 +54,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
         """Initializes a new LaMarzoccoCoffeeMachine instance"""
+
         super().__init__(
             model=model,
             serial_number=serial_number,
@@ -78,6 +85,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     @classmethod
     async def create(cls, *args: Any, **kwargs: Any) -> LaMarzoccoMachine:
         """Create a new LaMarzoccoMachine instance"""
+
         self = cls(*args, **kwargs)
         await self.get_config()
         if self._cloud_client is not None:
@@ -88,7 +96,8 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     @property
     def steam_level(self) -> int:
         """Return the steam level"""
-        steam_boiler = self.config.boilers[LaMarzoccoBoilerType.STEAM]
+
+        steam_boiler = self.config.boilers[BoilerType.STEAM]
         if steam_boiler.target_temperature < 128:
             return 1
         if steam_boiler.target_temperature == 128:
@@ -97,6 +106,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
+
         super().parse_config(raw_config)
         self._raw_config = raw_config
         self.config.turned_on = raw_config["machineMode"] == "BrewingMode"
@@ -114,6 +124,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self, raw_statistics: list[dict[str, Any]]
     ) -> LaMarzoccoCoffeeStatistics:
         """Parse the statistics object."""
+
         return parse_cloud_statistics(raw_statistics)
 
     async def set_power(
@@ -130,7 +141,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             enabled=enabled,
         ):
             self.config.turned_on = enabled
-            self.config.boilers[LaMarzoccoBoilerType.COFFEE].enabled = enabled
+            self.config.boilers[BoilerType.COFFEE].enabled = enabled
             return True
         return False
 
@@ -147,24 +158,25 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             serial_number=self.serial_number,
             enabled=steam_state,
         ):
-            self.config.boilers[LaMarzoccoBoilerType.STEAM].enabled = steam_state
+            self.config.boilers[BoilerType.STEAM].enabled = steam_state
             return True
         return False
 
     async def set_temp(
         self,
-        boiler: LaMarzoccoBoilerType,
+        boiler: BoilerType,
         temperature: float,
         ble_device: BLEDevice | None = None,
     ) -> bool:
         """Set target temperature for boiler"""
-        if boiler == LaMarzoccoBoilerType.STEAM:
-            if self.model == LaMarzoccoMachineModel.LINEA_MICRA:
+
+        if boiler == BoilerType.STEAM:
+            if self.model == MachineModel.LINEA_MICRA:
                 if temperature not in (126, 128, 131):
                     msg = "Steam temp must be one of 126, 128, 131 (°C)"
                     _LOGGER.debug(msg)
                     raise ValueError(msg)
-            elif self.model == LaMarzoccoMachineModel.LINEA_MINI:
+            elif self.model == MachineModel.LINEA_MINI:
                 _LOGGER.error("Steam temp is not supported on Linea Mini.")
                 return False
         else:
@@ -234,7 +246,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         """Set dose"""
 
         if await self.cloud_client.set_dose(self.serial_number, key, dose):
-            self.config.doses[key] = dose
+            self.config.doses[PhysicalKey(key)] = dose
             return True
         return False
 
@@ -271,6 +283,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     async def enable_schedule_globally(self, enabled: bool) -> bool:
         """Enable schedule globally"""
+
         schedule = deepcopy(self.config.auto_on_off_schedule)
         schedule.enabled = enabled
         return await self.set_schedule(schedule)
@@ -285,6 +298,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         m_off: int,
     ) -> bool:
         """Configure a single day in the schedule"""
+
         day_settings = LaMarzoccoScheduleDay(
             enabled=enabled,
             h_on=h_on,
@@ -300,6 +314,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self, notify_callback: Callable[[], None] | None = None
     ) -> None:
         """Connect to the websocket of the machine."""
+
         self._notify_callback = notify_callback
         if self._local_client is None:
             raise ClientNotInitialized("Local client not initialized")
@@ -310,6 +325,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     def on_websocket_message_received(self, message: str | bytes) -> None:
         """Websocket message received"""
+
         self._timestamp_last_websocket_msg = datetime.now()
         message = str(message)
 
@@ -325,6 +341,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     def _parse_websocket_message(self, message: str) -> bool:
         """Handle a message received on the websocket."""
+
         message = json.loads(message)
 
         if isinstance(message, dict):
@@ -340,6 +357,8 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
 
     def _parse_dict_message(self, message: Any) -> bool:
+        """ "Parse websocket message that is a dict."""
+
         if "MachineConfiguration" in message:
             # got machine configuration
             self._raw_config = json.loads(message["MachineConfiguration"])
@@ -352,26 +371,26 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
 
     def _parse_list_message(self, message: list[dict[str, Any]]) -> bool:
+        """Parse websocket message that is a list."""
+
         for msg in message:
 
             if "SteamBoilerUpdateTemperature" in msg:
-                self.config.boilers[LaMarzoccoBoilerType.STEAM].current_temperature = (
-                    msg["SteamBoilerUpdateTemperature"]
-                )
+                self.config.boilers[BoilerType.STEAM].current_temperature = msg[
+                    "SteamBoilerUpdateTemperature"
+                ]
 
             elif "CoffeeBoiler1UpdateTemperature" in msg:
-                self.config.boilers[LaMarzoccoBoilerType.COFFEE].current_temperature = (
-                    msg["CoffeeBoiler1UpdateTemperature"]
-                )
+                self.config.boilers[BoilerType.COFFEE].current_temperature = msg[
+                    "CoffeeBoiler1UpdateTemperature"
+                ]
 
             elif "Sleep" in msg:
                 self.config.turned_on = False
 
             elif "SteamBoilerEnabled" in msg:
                 value = msg["SteamBoilerEnabled"]
-                self.config.boilers[LaMarzoccoBoilerType.STEAM].enabled = (
-                    value == "Enabled"
-                )
+                self.config.boilers[BoilerType.STEAM].enabled = value == "Enabled"
 
             elif "WakeUp" in msg:
                 self.config.turned_on = True
@@ -393,22 +412,22 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                 self.config.brew_active = False
 
             elif "SteamBoilerUpdateSetPoint" in msg:
-                self.config.boilers[LaMarzoccoBoilerType.STEAM].target_temperature = (
-                    msg["SteamBoilerUpdateSetPoint"]
-                )
+                self.config.boilers[BoilerType.STEAM].target_temperature = msg[
+                    "SteamBoilerUpdateSetPoint"
+                ]
 
             elif "CoffeeBoiler1UpdateSetPoint" in msg:
-                self.config.boilers[LaMarzoccoBoilerType.COFFEE].target_temperature = (
-                    msg["CoffeeBoiler1UpdateSetPoint"]
-                )
+                self.config.boilers[BoilerType.COFFEE].target_temperature = msg[
+                    "CoffeeBoiler1UpdateSetPoint"
+                ]
 
             elif "BoilersTargetTemperature" in msg:
                 boilers = json.loads(msg["BoilersTargetTemperature"])
                 for boiler in boilers:
                     value = boiler["value"]
-                    self.config.boilers[
-                        LaMarzoccoBoilerType(boiler["id"])
-                    ].target_temperature = value
+                    self.config.boilers[BoilerType(boiler["id"])].target_temperature = (
+                        value
+                    )
 
             elif "Boilers" in msg:
                 boilers = json.loads(msg["Boilers"])

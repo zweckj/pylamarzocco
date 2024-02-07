@@ -1,10 +1,10 @@
 """Constants for La Marzocco Cloud."""
 
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 from typing import Final
 
 
-class LaMarzoccoMachineModel(StrEnum):
+class MachineModel(StrEnum):
     """La Marzocco Coffee Machine Models."""
 
     GS3_AV = "GS3 AV"
@@ -13,20 +13,20 @@ class LaMarzoccoMachineModel(StrEnum):
     LINEA_MICRA = "Micra"
 
 
-class LaMarzoccoGrinderModel(StrEnum):
+class GrinderModel(StrEnum):
     """La Marzocco Grinder Models."""
 
     PICO = "Pico"
 
 
-class LaMarzoccoFirmwareType(StrEnum):
+class FirmwareType(StrEnum):
     """La Marzocco updateable firmware components."""
 
     MACHINE = "machine"
     GATEWAY = "gateway"
 
 
-class LaMarzoccoBoilerType(StrEnum):
+class BoilerType(StrEnum):
     """La Marzocco Coffee Machine Boilers."""
 
     COFFEE = "CoffeeBoiler1"
@@ -39,6 +39,15 @@ class PrebrewMode(StrEnum):
     DISABLED = "Disabled"
     PREBREW = "Enabled"
     PREINFUSION = "TypeB"
+
+
+class PhysicalKey(IntEnum):
+    """Describe the physical keys of the La Marzocco devices."""
+
+    A = 1
+    B = 2
+    C = 3
+    D = 4
 
 
 class WeekDay(StrEnum):
@@ -54,10 +63,10 @@ class WeekDay(StrEnum):
 
 
 KEYS_PER_MODEL: Final = {
-    LaMarzoccoMachineModel.LINEA_MICRA: 0,
-    LaMarzoccoMachineModel.LINEA_MINI: 0,
-    LaMarzoccoMachineModel.GS3_AV: 4,
-    LaMarzoccoMachineModel.GS3_MP: 0,
+    MachineModel.LINEA_MICRA: 0,
+    MachineModel.LINEA_MINI: 0,
+    MachineModel.GS3_AV: 4,
+    MachineModel.GS3_MP: 0,
 }
 
 
@@ -76,6 +85,6 @@ WEBSOCKET_RETRY_DELAY: Final = 20
 
 
 # bluetooth
-BT_MODEL_NAMES: Final = ("MICRA", "MINI", "GS3")
+BT_MODEL_PREFIXES: Final = ("MICRA", "MINI", "GS3")
 SETTINGS_CHARACTERISTIC: Final = "050b7847-e12b-09a8-b04b-8e0922a9abab"
 AUTH_CHARACTERISTIC: Final = "090b7847-e12b-09a8-b04b-8e0922a9abab"

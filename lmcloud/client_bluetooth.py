@@ -7,13 +7,19 @@ import json
 import logging
 from typing import Any
 
-from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
+from bleak import (
+    BaseBleakScanner,
+    BleakClient,
+    BleakError,
+    BleakScanner,
+    BLEDevice,
+)
 
 from .const import (
     AUTH_CHARACTERISTIC,
-    BT_MODEL_NAMES,
+    BT_MODEL_PREFIXES,
     SETTINGS_CHARACTERISTIC,
-    LaMarzoccoBoilerType,
+    BoilerType,
 )
 from .exceptions import (
     BluetoothConnectionFailed,
@@ -33,7 +39,7 @@ class LaMarzoccoBluetoothClient:
         token: str,
         ble_device: BLEDevice,
     ) -> None:
-        """Initializes a new LaMarzoccoBluetoothClient instance, optionally from a BLEDevice."""
+        """Initializes a new LaMarzoccoBluetoothClient instance."""
         self._username = username
         self._serial_number = serial_number
         self._token = token
@@ -52,7 +58,7 @@ class LaMarzoccoBluetoothClient:
         assert hasattr(scanner, "discover")
         devices: list[BLEDevice] = await scanner.discover()
         for device in devices:
-            if device.name and device.name.startswith(BT_MODEL_NAMES):
+            if device.name and device.name.startswith(BT_MODEL_PREFIXES):
                 ble_devices.append(device)
 
         return ble_devices
@@ -75,6 +81,7 @@ class LaMarzoccoBluetoothClient:
 
     def update_ble_device(self, ble_device: BLEDevice) -> None:
         """Initalize a new bleak client from a BLEDevice."""
+
         self._client = BleakClient(ble_device)
 
     async def set_power(self, state: bool) -> None:
@@ -101,7 +108,7 @@ class LaMarzoccoBluetoothClient:
         }
         await self._write_bluetooth_json_message(data)
 
-    async def set_temp(self, boiler: LaMarzoccoBoilerType, temperature: int) -> None:
+    async def set_temp(self, boiler: BoilerType, temperature: int) -> None:
         """Set boiler temperature (in Celsius)"""
 
         data = {

@@ -3,8 +3,9 @@
 from typing import Any
 
 from .const import (
-    LaMarzoccoBoilerType,
-    LaMarzoccoFirmwareType,
+    BoilerType,
+    FirmwareType,
+    PhysicalKey,
     PrebrewMode,
     WeekDay,
 )
@@ -48,6 +49,7 @@ def schedule_to_request(schedule: LaMarzoccoSchedule) -> LaMarzoccoCloudSchedule
 
 def parse_schedule(schedule: dict[str, Any]) -> LaMarzoccoSchedule:
     """Parse schedule from API config object."""
+
     global_enable: bool = schedule["enabled"]
     days: dict[str, LaMarzoccoScheduleDay] = {}
     for weekday in WeekDay:
@@ -62,16 +64,15 @@ def parse_schedule(schedule: dict[str, Any]) -> LaMarzoccoSchedule:
     return LaMarzoccoSchedule(enabled=global_enable, days=days)
 
 
-def parse_boilers(
-    boilers: list[dict[str, Any]]
-) -> dict[LaMarzoccoBoilerType, LaMarzoccoBoiler]:
+def parse_boilers(boilers: list[dict[str, Any]]) -> dict[BoilerType, LaMarzoccoBoiler]:
     """Parse boiler settings from API config object."""
-    parsed_boilers: dict[LaMarzoccoBoilerType, LaMarzoccoBoiler] = {}
+
+    parsed_boilers: dict[BoilerType, LaMarzoccoBoiler] = {}
     for boiler in boilers:
         is_enabled = boiler["isEnabled"] == "Enabled"
         current_temp = boiler["current"]
         target_temp = boiler["target"]
-        parsed_boilers[LaMarzoccoBoilerType(boiler["id"])] = LaMarzoccoBoiler(
+        parsed_boilers[BoilerType(boiler["id"])] = LaMarzoccoBoiler(
             enabled=is_enabled,
             current_temperature=current_temp,
             target_temperature=target_temp,
@@ -83,6 +84,7 @@ def parse_preinfusion_settings(
     config: dict[str, Any]
 ) -> tuple[PrebrewMode, dict[int, LaMarzoccoPrebrewConfiguration]]:
     """Parse preinfusion settings from API config object."""
+
     parsed: dict[int, LaMarzoccoPrebrewConfiguration] = {}
     i = 1
     preinfusion_settings = config.get("preinfusionSettings", {})
@@ -96,16 +98,19 @@ def parse_preinfusion_settings(
     return mode, parsed
 
 
-def parse_coffee_doses(config: dict[str, Any]) -> tuple[dict[int, float], int | None]:
+def parse_coffee_doses(
+    config: dict[str, Any]
+) -> tuple[dict[PhysicalKey, float], int | None]:
     """Parse doses from API config object."""
-    parsed: dict[int, float] = {}
+
+    parsed: dict[PhysicalKey, float] = {}
     i = 1
     group_capabilities = config.get("groupCapabilities", [])
     if len(group_capabilities) == 0:
         return parsed, None
 
     for dose in group_capabilities[0].get("doses", []):
-        parsed[i] = dose.get("stopTarget", 0)
+        parsed[PhysicalKey(i)] = dose.get("stopTarget", 0)
         i += 1
     dose_hot_water = config.get("teaDoses", {}).get("DoseA", {}).get("stopTarget", 0)
     return parsed, dose_hot_water
@@ -116,7 +121,7 @@ def parse_cloud_statistics(
 ) -> LaMarzoccoCoffeeStatistics:
     """Parse statistics from API statistics object."""
 
-    drink_stats: dict[int, int] = {}
+    drink_stats: dict[PhysicalKey, int] = {}
     continuous = 0
     total_flushing = 0
 
@@ -124,7 +129,7 @@ def parse_cloud_statistics(
         coffee_type: int = stat["coffeeType"]
         count: int = stat["count"]
         if 0 <= coffee_type < 4:
-            drink_stats[coffee_type + 1] = count
+            drink_stats[PhysicalKey(coffee_type + 1)] = count
         elif coffee_type == 4:
             continuous = count
         elif coffee_type == -1:
@@ -138,12 +143,13 @@ def parse_cloud_statistics(
 
 def parse_firmware(
     raw_firmware: list[dict[str, Any]],
-    current_firmware: dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware] | None = None,
-) -> dict[LaMarzoccoFirmwareType, LaMarzoccoFirmware]:
+    current_firmware: dict[FirmwareType, LaMarzoccoFirmware] | None = None,
+) -> dict[FirmwareType, LaMarzoccoFirmware]:
     """Parse firmware from API config object."""
+
     parsed = {}
     for fw in raw_firmware:
-        fw_type = LaMarzoccoFirmwareType(fw["name"].split("_")[0])
+        fw_type = FirmwareType(fw["name"].split("_")[0])
         version = fw["fw_version"]
         latest_version = (
             version
@@ -159,13 +165,14 @@ def parse_firmware(
 
 def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStatistics:
     """Parse statistics from webhook statistics object."""
+
     group = statistics["groups"][0]
     doses = group["doses"]
-    drink_stats: dict[int, int] = {}
+    drink_stats: dict[PhysicalKey, int] = {}
     for dose in doses:
         key: str = next(iter(dose))
         if key.startswith("Dose"):
-            drink_stats[ord(key[-1]) - 64] = dose[key]
+            drink_stats[PhysicalKey(ord(key[-1]) - 64)] = dose[key]
         elif key == "ContinuousDose":
             continuous = dose[key]
     total_flushing = group["clean"]
