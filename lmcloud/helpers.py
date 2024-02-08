@@ -69,7 +69,7 @@ def parse_boilers(boilers: list[dict[str, Any]]) -> dict[BoilerType, LaMarzoccoB
 
     parsed_boilers: dict[BoilerType, LaMarzoccoBoiler] = {}
     for boiler in boilers:
-        is_enabled = boiler["isEnabled"] == "Enabled"
+        is_enabled = boiler["isEnabled"]
         current_temp = boiler["current"]
         target_temp = boiler["target"]
         parsed_boilers[BoilerType(boiler["id"])] = LaMarzoccoBoiler(

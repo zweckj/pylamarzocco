@@ -74,7 +74,6 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             dose_hot_water=0,
             doses={},
             water_contact=False,
-            auto_on_off_enabled=False,
             auto_on_off_schedule=LaMarzoccoSchedule(enabled=False, days={}),
             brew_active=False,
             brew_active_duration=0,
@@ -114,7 +113,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         """Return the steam level"""
 
         steam_boiler = self.config.boilers[BoilerType.STEAM]
-        return  min(SteamLevel, key=lambda x:abs(x - steam_boiler.target_temperature))
+        return min(SteamLevel, key=lambda x: abs(x - steam_boiler.target_temperature))
 
     @property
     def websocket_connected(self) -> bool:
@@ -131,6 +130,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self._raw_config = raw_config
         self.config.turned_on = raw_config["machineMode"] == "BrewingMode"
         self.config.plumbed_in = raw_config["isPlumbedIn"]
+        self.config.water_contact = raw_config["tankStatus"]
         self.config.doses, self.config.dose_hot_water = parse_coffee_doses(raw_config)
         self.config.boilers = parse_boilers(raw_config["boilers"])
         self.config.auto_on_off_schedule = parse_schedule(
@@ -140,12 +140,10 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             parse_preinfusion_settings(raw_config)
         )
 
-    def parse_statistics(
-        self, raw_statistics: list[dict[str, Any]]
-    ) -> LaMarzoccoCoffeeStatistics:
+    def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
         """Parse the statistics object."""
 
-        return parse_cloud_statistics(raw_statistics)
+        self.statistics = parse_cloud_statistics(raw_statistics)
 
     async def set_power(
         self,
@@ -423,15 +421,13 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
             elif "SteamBoilerEnabled" in msg:
                 value = msg["SteamBoilerEnabled"]
-                self.config.boilers[BoilerType.STEAM].enabled = value == "Enabled"
+                self.config.boilers[BoilerType.STEAM].enabled = value
 
             elif "WakeUp" in msg:
                 self.config.turned_on = True
 
             elif "MachineStatistics" in msg:
-                self.statistics = self.parse_statistics(
-                    json.loads(msg["MachineStatistics"])
-                )
+                self.parse_statistics(json.loads(msg["MachineStatistics"]))
 
             elif "BrewingUpdateGroup1Time" in msg:
                 self.config.brew_active_duration = msg["BrewingUpdateGroup1Time"]
