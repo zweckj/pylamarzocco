@@ -74,7 +74,6 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             dose_hot_water=0,
             doses={},
             water_contact=False,
-            auto_on_off_enabled=False,
             auto_on_off_schedule=LaMarzoccoSchedule(enabled=False, days={}),
             brew_active=False,
             brew_active_duration=0,
@@ -114,7 +113,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         """Return the steam level"""
 
         steam_boiler = self.config.boilers[BoilerType.STEAM]
-        return  min(SteamLevel, key=lambda x:abs(x - steam_boiler.target_temperature))
+        return min(SteamLevel, key=lambda x: abs(x - steam_boiler.target_temperature))
 
     @property
     def websocket_connected(self) -> bool:
@@ -131,6 +130,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self._raw_config = raw_config
         self.config.turned_on = raw_config["machineMode"] == "BrewingMode"
         self.config.plumbed_in = raw_config["isPlumbedIn"]
+        self.config.water_contact = raw_config["tankStatus"]
         self.config.doses, self.config.dose_hot_water = parse_coffee_doses(raw_config)
         self.config.boilers = parse_boilers(raw_config["boilers"])
         self.config.auto_on_off_schedule = parse_schedule(

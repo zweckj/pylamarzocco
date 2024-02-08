@@ -100,7 +100,6 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     prebrew_configuration: dict[int, LaMarzoccoPrebrewConfiguration]
     dose_hot_water: int
     water_contact: bool
-    auto_on_off_enabled: bool
     auto_on_off_schedule: LaMarzoccoSchedule
     brew_active: bool
     brew_active_duration: float
