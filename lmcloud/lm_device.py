@@ -69,9 +69,7 @@ class LaMarzoccoDevice:
         return self._cloud_client
 
     @abstractmethod
-    def parse_statistics(
-        self, raw_statistics: list[dict[str, Any]]
-    ) -> LaMarzoccoStatistics:
+    def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
         """Parse the statistics object."""
 
     @property
@@ -124,7 +122,7 @@ class LaMarzoccoDevice:
         """Update the statistics"""
 
         raw_statistics = await self.cloud_client.get_statistics(self.serial_number)
-        self.statistics = self.parse_statistics(raw_statistics)
+        self.parse_statistics(raw_statistics)
 
     async def get_firmware(self) -> None:
         """Update the firmware"""

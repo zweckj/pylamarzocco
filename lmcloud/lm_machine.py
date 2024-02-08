@@ -140,12 +140,10 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             parse_preinfusion_settings(raw_config)
         )
 
-    def parse_statistics(
-        self, raw_statistics: list[dict[str, Any]]
-    ) -> LaMarzoccoCoffeeStatistics:
+    def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
         """Parse the statistics object."""
 
-        return parse_cloud_statistics(raw_statistics)
+        self.statistics = parse_cloud_statistics(raw_statistics)
 
     async def set_power(
         self,
@@ -429,9 +427,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                 self.config.turned_on = True
 
             elif "MachineStatistics" in msg:
-                self.statistics = self.parse_statistics(
-                    json.loads(msg["MachineStatistics"])
-                )
+                self.parse_statistics(json.loads(msg["MachineStatistics"]))
 
             elif "BrewingUpdateGroup1Time" in msg:
                 self.config.brew_active_duration = msg["BrewingUpdateGroup1Time"]

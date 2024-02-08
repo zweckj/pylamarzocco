@@ -54,9 +54,7 @@ class LaMarzoccoGrinder(LaMarzoccoDevice):
                 "target"
             ]
 
-    def parse_statistics(
-        self, raw_statistics: list[dict[str, Any]]
-    ) -> LaMarzoccoStatistics:
+    def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
         """Parse the statistics object."""
 
         raise NotImplementedError
