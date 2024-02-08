@@ -423,7 +423,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
             elif "SteamBoilerEnabled" in msg:
                 value = msg["SteamBoilerEnabled"]
-                self.config.boilers[BoilerType.STEAM].enabled = value == "Enabled"
+                self.config.boilers[BoilerType.STEAM].enabled = value
 
             elif "WakeUp" in msg:
                 self.config.turned_on = True
