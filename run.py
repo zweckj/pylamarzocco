@@ -18,11 +18,11 @@ async def main():
     with open(f"{Path(__file__).parent}/secrets.json", encoding="utf-8") as f:
         data = json.load(f)
 
-    # cloud_client = await LaMarzoccoCloudClient.create(
-    #     username=data["username"],
-    #     password=data["password"],
-    # )
-    # fleet = await cloud_client.get_customer_fleet()
+    cloud_client = LaMarzoccoCloudClient(
+        username=data["username"],
+        password=data["password"],
+    )
+    fleet = await cloud_client.get_customer_fleet()
 
     # serial = list(fleet.keys())[0]
 

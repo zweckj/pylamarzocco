@@ -23,7 +23,7 @@ from .const import (
     FirmwareType,
     PrebrewMode,
 )
-from .exceptions import AuthFail, ClientNotInitialized, RequestNotSuccessful
+from .exceptions import AuthFail, RequestNotSuccessful
 from .models import LaMarzoccoCloudSchedule, LaMarzoccoFirmware, LaMarzoccoDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,13 +37,6 @@ class LaMarzoccoCloudClient:
         self.username = username
         self.password = password
 
-    @classmethod
-    async def create(cls, username: str, password: str) -> LaMarzoccoCloudClient:
-        """Create a new instance of the class."""
-        self = cls(username, password)
-        self._oauth_client = await self._connect()
-        return self
-
     async def _connect(self) -> AsyncOAuth2Client:
         """Establish connection by building the OAuth client and requesting the token"""
 
@@ -53,20 +46,12 @@ class LaMarzoccoCloudClient:
             token_endpoint=TOKEN_URL,
         )
 
-        headers = {
-            "client_id": DEFAULT_CLIENT_ID,
-            "client_secret": DEFAULT_CLIENT_SECRET,
-        }
-
         try:
             await client.fetch_token(
                 url=TOKEN_URL,
                 username=self.username,
                 password=self.password,
-                headers=headers,
             )
-            return client
-
         except OAuthError as exc:
             raise AuthFail(f"Authorization failure: {exc}") from exc
         except AuthlibHTTPError as exc:
@@ -74,13 +59,15 @@ class LaMarzoccoCloudClient:
                 f"Exception during token request: {exc}"
             ) from exc
 
+        return client
+
     async def _rest_api_call(
         self, url: str, method: HTTPMethod, data: dict[str, Any] | None = None
     ) -> Any:
         """Wrapper for the API call."""
 
         if self._oauth_client is None:
-            raise ClientNotInitialized("Cloud client not initialized")
+            self._oauth_client = await self._connect()
 
         # make sure oauth token is still valid
         if self._oauth_client.token.is_expired():
