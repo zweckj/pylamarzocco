@@ -19,7 +19,7 @@ You need `username` and `password` which are the credentials you're using to sig
 
 It is initialized like this
 ```python
-cloud_client = await LaMarzoccoCloudClient.create(username, password)
+cloud_client = await LaMarzoccoCloudClient(username, password)
 ```
 
 ## LaMarzoccoLocalClient
