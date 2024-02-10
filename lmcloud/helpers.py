@@ -51,7 +51,7 @@ def parse_schedule(schedule: dict[str, Any]) -> LaMarzoccoSchedule:
     """Parse schedule from API config object."""
 
     global_enable: bool = schedule["enabled"]
-    days: dict[str, LaMarzoccoScheduleDay] = {}
+    days: dict[WeekDay, LaMarzoccoScheduleDay] = {}
     for weekday in WeekDay:
         day_settings = schedule[weekday]
         days[weekday] = LaMarzoccoScheduleDay(
@@ -82,15 +82,15 @@ def parse_boilers(boilers: list[dict[str, Any]]) -> dict[BoilerType, LaMarzoccoB
 
 def parse_preinfusion_settings(
     config: dict[str, Any]
-) -> tuple[PrebrewMode, dict[int, LaMarzoccoPrebrewConfiguration]]:
+) -> tuple[PrebrewMode, dict[PhysicalKey, LaMarzoccoPrebrewConfiguration]]:
     """Parse preinfusion settings from API config object."""
 
-    parsed: dict[int, LaMarzoccoPrebrewConfiguration] = {}
+    parsed: dict[PhysicalKey, LaMarzoccoPrebrewConfiguration] = {}
     i = 1
     preinfusion_settings = config.get("preinfusionSettings", {})
     mode = PrebrewMode(preinfusion_settings.get("mode", "Disabled"))
     for group in preinfusion_settings.get("Group1", {}):
-        parsed[i] = LaMarzoccoPrebrewConfiguration(
+        parsed[PhysicalKey(i)] = LaMarzoccoPrebrewConfiguration(
             on_time=group.get("preWetTime", 0),
             off_time=group.get("preWetHoldTime", 0),
         )
