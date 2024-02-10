@@ -242,7 +242,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self,
         prebrew_on_time: float,
         prebrew_off_time: float,
-        key: int = 1,
+        key: PhysicalKey = PhysicalKey(1),
     ) -> bool:
         """Set prebrew time"""
 
@@ -257,7 +257,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     async def set_preinfusion_time(
         self,
         preinfusion_time: float,
-        key: int = 1,
+        key: PhysicalKey = PhysicalKey(1),
     ) -> bool:
         """Set preinfusion time"""
 
@@ -268,11 +268,11 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             return True
         return False
 
-    async def set_dose(self, dose: int, key: int = 1) -> bool:
+    async def set_dose(self, dose: int, key: PhysicalKey) -> bool:
         """Set dose"""
 
         if await self.cloud_client.set_dose(self.serial_number, key, dose):
-            self.config.doses[PhysicalKey(key)] = dose
+            self.config.doses[key] = dose
             return True
         return False
 

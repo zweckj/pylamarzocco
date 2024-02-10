@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from typing import TypedDict
-from .const import PhysicalKey, BoilerType, PrebrewMode
+from .const import PhysicalKey, BoilerType, PrebrewMode, WeekDay
 
 ####################################
 #### base iot device specific ######
@@ -87,7 +87,7 @@ class LaMarzoccoSchedule:
     """Class for La Marzocco schedule"""
 
     enabled: bool
-    days: dict[str, LaMarzoccoScheduleDay]
+    days: dict[WeekDay, LaMarzoccoScheduleDay]
 
 
 @dataclass(kw_only=True)
@@ -97,7 +97,7 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     boilers: dict[BoilerType, LaMarzoccoBoiler]
     prebrew_mode: PrebrewMode = PrebrewMode.DISABLED
     plumbed_in: bool
-    prebrew_configuration: dict[int, LaMarzoccoPrebrewConfiguration]
+    prebrew_configuration: dict[PhysicalKey, LaMarzoccoPrebrewConfiguration]
     dose_hot_water: int
     water_contact: bool
     auto_on_off_schedule: LaMarzoccoSchedule
