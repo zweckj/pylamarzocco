@@ -240,11 +240,17 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     async def set_prebrew_time(
         self,
-        prebrew_on_time: float,
-        prebrew_off_time: float,
+        prebrew_on_time: float | None = None,
+        prebrew_off_time: float | None = None,
         key: PhysicalKey = PhysicalKey(1),
     ) -> bool:
         """Set prebrew time"""
+
+        if prebrew_on_time is None:
+            prebrew_on_time = self.config.prebrew_configuration[key].on_time
+
+        if prebrew_off_time is None:
+            prebrew_off_time = self.config.prebrew_configuration[key].off_time
 
         if await self.cloud_client.configure_pre_brew_infusion_time(
             self.serial_number, prebrew_on_time, prebrew_off_time, key
