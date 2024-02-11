@@ -95,7 +95,7 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     """Class for La Marzocco machine configuration"""
 
     boilers: dict[BoilerType, LaMarzoccoBoiler]
-    prebrew_mode: PrebrewMode = PrebrewMode.DISABLED
+    prebrew_mode: PrebrewMode
     plumbed_in: bool
     prebrew_configuration: dict[PhysicalKey, LaMarzoccoPrebrewConfiguration]
     dose_hot_water: int
