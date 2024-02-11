@@ -94,6 +94,7 @@ def parse_preinfusion_settings(
             on_time=group.get("preWetTime", 0),
             off_time=group.get("preWetHoldTime", 0),
         )
+        i += 1
 
     return mode, parsed
 
