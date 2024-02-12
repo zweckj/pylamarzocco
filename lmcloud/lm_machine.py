@@ -367,6 +367,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         message = str(message)
 
         _LOGGER.debug("Received message from websocket, message %s", message)
+        notify = False
         try:
             notify = self._parse_websocket_message(message)
         except UnknownWebSocketMessage as exc:
@@ -410,51 +411,63 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     def _parse_list_message(self, message: list[dict[str, Any]]) -> bool:
         """Parse websocket message that is a list."""
 
+        property_updated = False
         for msg in message:
 
             if "SteamBoilerUpdateTemperature" in msg:
                 self.config.boilers[BoilerType.STEAM].current_temperature = msg[
                     "SteamBoilerUpdateTemperature"
                 ]
+                property_updated = True
 
             elif "CoffeeBoiler1UpdateTemperature" in msg:
                 self.config.boilers[BoilerType.COFFEE].current_temperature = msg[
                     "CoffeeBoiler1UpdateTemperature"
                 ]
+                property_updated = True
 
             elif "Sleep" in msg:
                 self.config.turned_on = False
+                property_updated = True
 
             elif "SteamBoilerEnabled" in msg:
                 value = msg["SteamBoilerEnabled"]
                 self.config.boilers[BoilerType.STEAM].enabled = value
+                property_updated = True
 
             elif "WakeUp" in msg:
                 self.config.turned_on = True
+                property_updated = True
 
             elif "MachineStatistics" in msg:
                 self.parse_statistics(json.loads(msg["MachineStatistics"]))
+                property_updated = True
 
             elif "BrewingUpdateGroup1Time" in msg:
                 self.config.brew_active_duration = msg["BrewingUpdateGroup1Time"]
+                property_updated = True
 
             elif "BrewingStartedGroup1StopType" in msg:
                 self.config.brew_active = True
+                property_updated = True
 
             elif (
                 "BrewingStoppedGroup1StopType" in msg or "BrewingSnapshotGroup1" in msg
             ):
                 self.config.brew_active = False
+                property_updated = True
 
             elif "SteamBoilerUpdateSetPoint" in msg:
                 self.config.boilers[BoilerType.STEAM].target_temperature = msg[
                     "SteamBoilerUpdateSetPoint"
                 ]
+                property_updated = True
 
             elif "CoffeeBoiler1UpdateSetPoint" in msg:
                 self.config.boilers[BoilerType.COFFEE].target_temperature = msg[
                     "CoffeeBoiler1UpdateSetPoint"
                 ]
+                property_updated = True
 
             elif "BoilersTargetTemperature" in msg:
                 boilers = json.loads(msg["BoilersTargetTemperature"])
@@ -463,10 +476,12 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                     self.config.boilers[BoilerType(boiler["id"])].target_temperature = (
                         value
                     )
+                property_updated = True
 
             elif "Boilers" in msg:
                 boilers = json.loads(msg["Boilers"])
                 self.config.boilers = parse_boilers(boilers)
+                property_updated = True
 
             elif "PreinfusionSettings" in msg:
                 settings: dict[str, Any] = {}
@@ -475,5 +490,8 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                 self.config.prebrew_mode, self.config.prebrew_configuration = (
                     parse_preinfusion_settings(settings)
                 )
+                property_updated = True
 
-        raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
+        if not property_updated:
+            raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
+        return True

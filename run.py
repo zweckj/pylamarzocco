@@ -22,7 +22,7 @@ async def main():
         username=data["username"],
         password=data["password"],
     )
-    fleet = await cloud_client.get_customer_fleet()
+    # fleet = await cloud_client.get_customer_fleet()
 
     # serial = list(fleet.keys())[0]
 
@@ -52,8 +52,8 @@ async def main():
         model=MachineModel(data["model"]),
         serial_number=data["serial"],
         name=data["serial"],
-        # cloud_client=cloud_client,
-        local_client=local_client,
+        cloud_client=cloud_client,
+        # local_client=local_client,
     )
 
     await machine.websocket_connect()

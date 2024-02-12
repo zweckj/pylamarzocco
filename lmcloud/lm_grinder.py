@@ -7,7 +7,7 @@ from typing import Any
 from .const import GrinderModel, PhysicalKey
 from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
-from .lm_device import LaMarzoccoDevice, LaMarzoccoStatistics
+from .lm_device import LaMarzoccoDevice
 from .models import LaMarzoccoGrinderConfig
 
 
