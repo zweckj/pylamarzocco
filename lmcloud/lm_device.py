@@ -148,7 +148,7 @@ class LaMarzoccoDevice:
                     command,
                     str(kwargs),
                 )
-                await func(kwargs)
+                await func(**kwargs)
             except (BleakError, BluetoothConnectionFailed) as exc:
                 msg = "Could not send command to bluetooth device, even though initalized."
 
