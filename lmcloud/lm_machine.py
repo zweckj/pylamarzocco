@@ -440,8 +440,12 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                 self.config.turned_on = True
                 property_updated = True
 
+            elif "MachineMode" in msg:
+                self.config.turned_on = msg["MachineMode"] == "BrewingMode"
+                property_updated = True
+
             elif "MachineStatistics" in msg:
-                continue
+                property_updated = True
 
             elif "BrewingUpdateGroup1Time" in msg:
                 self.config.brew_active_duration = msg["BrewingUpdateGroup1Time"]
