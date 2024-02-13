@@ -371,6 +371,8 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             _LOGGER.warning("Unknown websocket message received")
             _LOGGER.warning("Message: %s", message)
             _LOGGER.debug(exc)
+        except TypeError as exc:
+            _LOGGER.error("Error when parsing websocket message: %s, %s", message, exc)
 
         if notify and self._notify_callback:
             self._notify_callback()
@@ -471,12 +473,11 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                 property_updated = True
 
             elif "BoilersTargetTemperature" in msg:
-                boilers = json.loads(msg["BoilersTargetTemperature"])
-                for boiler in boilers:
-                    value = boiler["value"]
-                    self.config.boilers[BoilerType(boiler["id"])].target_temperature = (
-                        value
-                    )
+                target_temps = json.loads(msg["BoilersTargetTemperature"])
+                for boiler in BoilerType:
+                    self.config.boilers[boiler].target_temperature = target_temps[
+                        boiler
+                    ]
                 property_updated = True
 
             elif "Boilers" in msg:

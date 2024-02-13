@@ -113,4 +113,8 @@ async def test_websocket_message(
 
     message = r'[{"Boilers":"[{\"id\":\"SteamBoiler\",\"isEnabled\":true,\"target\":131,\"current\":113},{\"id\":\"CoffeeBoiler1\",\"isEnabled\":true,\"target\":94,\"current\":81}]"}]'
     machine.on_websocket_message_received(message)
-    assert str(machine.config) == snapshot
+    assert machine.config == snapshot
+
+    message = r'[{"BoilersTargetTemperature":"{\"SteamBoiler\":131,\"CoffeeBoiler1\":94}"},{"Boilers":"[{\"id\":\"SteamBoiler\",\"isEnabled\":true,\"target\":131,\"current\":50},{\"id\":\"CoffeeBoiler1\",\"isEnabled\":true,\"target\":94,\"current\":36}]"}]'
+    machine.on_websocket_message_received(message)
+    assert machine.config == snapshot
