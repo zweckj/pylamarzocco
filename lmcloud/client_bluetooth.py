@@ -23,7 +23,6 @@ from .const import (
 )
 from .exceptions import (
     BluetoothConnectionFailed,
-    ClientNotInitialized,
 )
 
 _logger = logging.getLogger(__name__)
@@ -67,16 +66,12 @@ class LaMarzoccoBluetoothClient:
     def address(self) -> str:
         """Return the BT MAC address of the machine."""
 
-        if self._address is None:
-            raise ClientNotInitialized("Bluetooth client not initialized")
         return self._address
 
     @property
     def connected(self) -> bool:
         """Return the connection status."""
 
-        if self._client is None:
-            return False
         return self._client.is_connected
 
     def update_ble_device(
@@ -130,9 +125,6 @@ class LaMarzoccoBluetoothClient:
         self, characteristic: str, message: bytes | str
     ) -> None:
         """Connect to machine and write a message."""
-
-        if self._client is None:
-            raise ClientNotInitialized("Bluetooth client not initialized")
 
         if not self._client.is_connected:
             try:
