@@ -165,7 +165,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
     async def set_steam(
         self,
-        steam_state: bool,
+        enabled: bool,
         ble_device: BLEDevice | None = None,
     ) -> bool:
         """Turn Steamboiler on or off"""
@@ -174,9 +174,9 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             command="set_steam",
             ble_device=ble_device,
             serial_number=self.serial_number,
-            enabled=steam_state,
+            enabled=enabled,
         ):
-            self.config.boilers[BoilerType.STEAM].enabled = steam_state
+            self.config.boilers[BoilerType.STEAM].enabled = enabled
             return True
         return False
 
@@ -372,6 +372,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             notify = self._parse_websocket_message(message)
         except UnknownWebSocketMessage as exc:
             _LOGGER.warning("Unknown websocket message received")
+            _LOGGER.warning("Message: %s", message)
             _LOGGER.debug(exc)
 
         if notify and self._notify_callback:
@@ -440,8 +441,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                 property_updated = True
 
             elif "MachineStatistics" in msg:
-                self.parse_statistics(json.loads(msg["MachineStatistics"]))
-                property_updated = True
+                continue
 
             elif "BrewingUpdateGroup1Time" in msg:
                 self.config.brew_active_duration = msg["BrewingUpdateGroup1Time"]

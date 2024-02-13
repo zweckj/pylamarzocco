@@ -48,7 +48,7 @@ class LaMarzoccoBluetoothClient:
 
     @staticmethod
     async def discover_devices(
-        scanner: BaseBleakScanner,
+        scanner: BaseBleakScanner | BleakScanner | None = None,
     ) -> list[BLEDevice]:
         """Find machines based on model name."""
         ble_devices: list[BLEDevice] = []
@@ -84,10 +84,10 @@ class LaMarzoccoBluetoothClient:
 
         self._client = BleakClient(ble_device)
 
-    async def set_power(self, state: bool) -> None:
+    async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""
 
-        mode = "BrewingMode" if state else "StandBy"
+        mode = "BrewingMode" if enabled else "StandBy"
         data = {
             "name": "MachineChangeMode",
             "parameter": {
@@ -96,19 +96,19 @@ class LaMarzoccoBluetoothClient:
         }
         await self._write_bluetooth_json_message(data)
 
-    async def set_steam(self, state: bool) -> None:
+    async def set_steam(self, enabled: bool) -> None:
         """Power cycle steam."""
 
         data = {
             "name": "SettingBoilerEnable",
             "parameter": {
                 "identifier": "SteamBoiler",
-                "state": state,
+                "state": enabled,
             },
         }
         await self._write_bluetooth_json_message(data)
 
-    async def set_temp(self, boiler: BoilerType, temperature: int) -> None:
+    async def set_temp(self, boiler: BoilerType, temperature: float) -> None:
         """Set boiler temperature (in Celsius)"""
 
         data = {
