@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setuptools.setup(
     name="lmcloud",
-    version="1.0.0b9",
+    version="1.0.0b10",
     description="A Python implementation of the new La Marzocco API",
     long_description=readme,
     long_description_content_type="text/markdown",
