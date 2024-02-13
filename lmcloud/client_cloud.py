@@ -137,13 +137,13 @@ class LaMarzoccoCloudClient:
     async def set_steam(
         self,
         serial_number: str,
-        steam_state: bool,
+        enabled: bool,
     ) -> bool:
         """Turn Steamboiler on or off"""
 
         data = {
             "identifier": BoilerType.STEAM,
-            "state": steam_state,
+            "state": enabled,
         }
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/enable-boiler"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
