@@ -155,7 +155,6 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         if await self._bluetooth_command_with_cloud_fallback(
             command="set_power",
             ble_device=ble_device,
-            serial_number=self.serial_number,
             enabled=enabled,
         ):
             self.config.turned_on = enabled
@@ -173,7 +172,6 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         if await self._bluetooth_command_with_cloud_fallback(
             command="set_steam",
             ble_device=ble_device,
-            serial_number=self.serial_number,
             enabled=enabled,
         ):
             self.config.boilers[BoilerType.STEAM].enabled = enabled
@@ -208,7 +206,6 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         if await self._bluetooth_command_with_cloud_fallback(
             command="set_temp",
             ble_device=ble_device,
-            serial_number=self.serial_number,
             boiler=boiler,
             temperature=temperature,
         ):
