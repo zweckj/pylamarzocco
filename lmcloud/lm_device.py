@@ -143,12 +143,14 @@ class LaMarzoccoDevice:
                 self._bluetooth_client.update_ble_device(ble_device)
             func = getattr(self._bluetooth_client, command)
             try:
+                kwargs_without_serial = kwargs.copy()
+                del kwargs_without_serial["serial_number"]
                 _LOGGER.debug(
                     "Sending command %s over bluetooth with params %s",
                     command,
-                    str(kwargs),
+                    str(kwargs_without_serial),
                 )
-                await func(kwargs.copy().pop("serial_number"))
+                await func(kwargs_without_serial)
             except (BleakError, BluetoothConnectionFailed) as exc:
                 msg = "Could not send command to bluetooth device, even though initalized."
 
