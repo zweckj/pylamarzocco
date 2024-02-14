@@ -1,6 +1,10 @@
+
 # La Marzocco Client
 This is a library to interface with La Marzocco's Home machines.
 It also has support to get information for the Pico grinder.
+
+![workflow](https://github.com/zweckj/lmcloud/actions/workflows/pypi.yaml/badge.svg)
+[![codecov](https://codecov.io/gh/zweckj/lmcloud/graph/badge.svg?token=350GPTLZXS)](https://codecov.io/gh/zweckj/lmcloud)
 
 
 
