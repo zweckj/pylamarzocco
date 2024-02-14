@@ -6,7 +6,7 @@ import json
 from collections.abc import Generator
 from http import HTTPMethod
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from bleak import BLEDevice, BleakError
@@ -55,6 +55,14 @@ def get_mock_response(*args, **kwargs) -> Response:  # pylint: disable=unused-ar
     if method == HTTPMethod.GET:
         return Response(200, json=data)
     return Response(204, json=data)
+
+
+@pytest.fixture(autouse=True)
+def mock_asyncio_sleep():
+    """Mock asyncio.sleep to speed up tests."""
+
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        yield
 
 
 def get_local_machine_mock_response(*args, **kwargs) -> Response:

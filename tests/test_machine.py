@@ -11,10 +11,9 @@ from http import HTTPMethod
 from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
 from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.client_local import LaMarzoccoLocalClient
-from lmcloud.const import BoilerType, MachineModel, PhysicalKey, WeekDay
-from lmcloud.lm_machine import LaMarzoccoMachine
+from lmcloud.const import BoilerType, PhysicalKey, WeekDay
 
-from . import init_machine, MACHINE_SERIAL
+from . import init_machine
 
 pytestmark = pytest.mark.asyncio
 
@@ -56,26 +55,6 @@ async def test_set_temp(
         )
     assert result is True
     assert machine.config.boilers[BoilerType.STEAM].target_temperature == 120
-
-
-async def test_set_prebrew_infusion(
-    cloud_client: LaMarzoccoCloudClient,
-) -> None:
-    """Test setting prebrew infusion."""
-    machine = await init_machine(cloud_client)
-
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await machine.set_prebrew_time(
-            1.0,
-            3.5,
-        )
-        assert result is True
-        assert machine.config.prebrew_configuration[PhysicalKey.A].on_time == 1.0
-        assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 3.5
-
-        result = await machine.set_preinfusion_time(4.5)
-        assert result is True
-        assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
 
 
 async def test_set_schedule(
@@ -189,9 +168,14 @@ async def test_set_prebrew_time(cloud_client: LaMarzoccoCloudClient):
         },
     )
 
+    assert machine.config.prebrew_configuration[PhysicalKey.A].on_time == 1.0
+    assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 3.5
+
     assert await machine.set_preinfusion_time(4.5)
     cloud_client._oauth_client.request.assert_any_call(  # type: ignore[union-attr]
         HTTPMethod.POST,
         "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={"button": "DoseA", "group": "Group1", "holdTimeMs": 4500, "wetTimeMs": 0},
     )
+
+    assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
