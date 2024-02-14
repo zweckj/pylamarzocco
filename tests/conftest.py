@@ -30,7 +30,7 @@ def load_fixture(device_type: str, file_name: str) -> dict:
         return json.load(f)
 
 
-def get_mock_response(*args, **kwargs) -> Response:  # pylint: disable=unused-argument
+def get_mock_response(*args, **kwargs) -> Response:
     """Get a mock response from HTTP request."""
     method: HTTPMethod = args[0]
     url: str = str(args[1])
