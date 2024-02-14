@@ -1,6 +1,8 @@
 """Test utilities"""
 
 from lmcloud import LaMarzoccoCloudClient, LaMarzoccoMachine, LaMarzoccoGrinder
+from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
+from lmcloud.client_local import LaMarzoccoLocalClient
 from lmcloud.const import MachineModel, GrinderModel
 
 MACHINE_SERIAL = "GS01234"
@@ -8,7 +10,9 @@ GRINDER_SERIAL = "G00000000000"
 
 
 async def init_machine(
-    cloud_client: LaMarzoccoCloudClient,
+    cloud_client: LaMarzoccoCloudClient | None = None,
+    bluetooth_client: LaMarzoccoBluetoothClient | None = None,
+    local_client: LaMarzoccoLocalClient | None = None,
 ) -> LaMarzoccoMachine:
     """Get an initialized machine"""
 
@@ -17,6 +21,8 @@ async def init_machine(
         serial_number=MACHINE_SERIAL,
         name="MyMachine",
         cloud_client=cloud_client,
+        local_client=local_client,
+        bluetooth_client=bluetooth_client,
     )
     return machine
 

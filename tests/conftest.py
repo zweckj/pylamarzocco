@@ -1,5 +1,7 @@
 """Fixtures for the tests."""
 
+# pylint: disable=W0212
+
 import json
 from collections.abc import Generator
 from http import HTTPMethod
@@ -7,8 +9,10 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
+from bleak import BLEDevice, BleakError
 from httpx import Response
 
+from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
 from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.client_local import LaMarzoccoLocalClient
 
@@ -69,7 +73,7 @@ def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
     oauth_client = AsyncMock()
     oauth_client.request.side_effect = get_mock_response
 
-    client._oauth_client = oauth_client  # pylint: disable=protected-access
+    client._oauth_client = oauth_client
     yield client
 
 
@@ -80,3 +84,20 @@ def local_machine_client() -> Generator[LaMarzoccoLocalClient, None, None]:
     httpx_client.get.side_effect = get_local_machine_mock_response
     client = LaMarzoccoLocalClient("192.168.1.42", "secret", client=httpx_client)
     yield client
+
+
+@pytest.fixture
+def bluetooth_client() -> Generator[LaMarzoccoBluetoothClient, None, None]:
+    """Fixture for a bluetooth client."""
+    ble_device = BLEDevice(
+        address="00:11:22:33:44:55",
+        name="MyMachine",
+        details={"path": "path/to/device"},
+        rssi=50,
+    )
+
+    bt_client = LaMarzoccoBluetoothClient("username", "serial", "token", ble_device)
+    bt_client._client = AsyncMock()
+    bt_client._client.is_connected = True
+    bt_client._client.write_gatt_char.side_effect = BleakError("Failed to write")
+    yield bt_client

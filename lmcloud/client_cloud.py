@@ -21,6 +21,7 @@ from .const import (
     TOKEN_URL,
     BoilerType,
     FirmwareType,
+    PhysicalKey,
     PrebrewMode,
 )
 from .exceptions import AuthFail, RequestNotSuccessful
@@ -142,7 +143,7 @@ class LaMarzoccoCloudClient:
         """Turn Steamboiler on or off"""
 
         data = {
-            "identifier": BoilerType.STEAM,
+            "identifier": BoilerType.STEAM.value,
             "state": enabled,
         }
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/enable-boiler"
@@ -159,7 +160,7 @@ class LaMarzoccoCloudClient:
     ) -> bool:
         """Set boiler temperature (in Celsius)."""
 
-        data = {"identifier": boiler, "value": temperature}
+        data = {"identifier": boiler.value, "value": temperature}
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/target-boiler"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
@@ -175,7 +176,7 @@ class LaMarzoccoCloudClient:
         """Enable/Disable Pre-Brew or Pre-Infusion (mutually exclusive)."""
 
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/enable-preinfusion"
-        data = {"mode": mode}
+        data = {"mode": mode.value}
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
             return True
@@ -186,20 +187,20 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         on_time: float,
         off_time: float,
-        key: int = 1,
+        key: PhysicalKey,
     ) -> bool:
         """Set Pre-Brew details. Also used for preinfusion (prebrewOnTime=0, prebrewOnTime=ms)."""
 
-        on_time = round(on_time, 1) * 100
-        off_time = round(off_time, 1) * 100
-        button = f"Dose{chr(key + 64)}"
+        on_time = round(on_time, 1) * 1000
+        off_time = round(off_time, 1) * 1000
+        button = f"Dose{key.name}"
 
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/setting-preinfusion"
         data = {
             "button": button,
             "group": "Group1",
-            "holdTimeMs": off_time,
-            "wetTimeMs": on_time,
+            "holdTimeMs": int(off_time),
+            "wetTimeMs": int(on_time),
         }
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         if await self._check_cloud_command_status(serial_number, response):
@@ -223,12 +224,12 @@ class LaMarzoccoCloudClient:
     async def set_dose(
         self,
         serial_number: str,
-        key: int,
+        key: PhysicalKey,
         value: int,
     ) -> bool:
         """Set the value for a dose"""
 
-        dose_index = f"Dose{chr(key + 64)}"
+        dose_index = f"Dose{key.name}"
 
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/dose"
         data = {
@@ -343,7 +344,7 @@ class LaMarzoccoCloudClient:
         """Update Firmware."""
 
         _LOGGER.debug("Updating firmware for component %s", component)
-        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/firmware/{component}/update"
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/firmware/{component.value}/update"
         await self._rest_api_call(url=url, method=HTTPMethod.POST, data={})
         retry_counter = 0
         while retry_counter <= 20:

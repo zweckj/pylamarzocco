@@ -239,7 +239,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self,
         prebrew_on_time: float | None = None,
         prebrew_off_time: float | None = None,
-        key: PhysicalKey = PhysicalKey(1),
+        key: PhysicalKey = PhysicalKey.A,
     ) -> bool:
         """Set prebrew time"""
 
@@ -260,7 +260,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     async def set_preinfusion_time(
         self,
         preinfusion_time: float,
-        key: PhysicalKey = PhysicalKey(1),
+        key: PhysicalKey = PhysicalKey.A,
     ) -> bool:
         """Set preinfusion time"""
 

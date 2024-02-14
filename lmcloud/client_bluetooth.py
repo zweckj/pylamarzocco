@@ -115,7 +115,7 @@ class LaMarzoccoBluetoothClient:
         data = {
             "name": "SettingBoilerTarget",
             "parameter": {
-                "identifier": boiler,
+                "identifier": boiler.value,
                 "value": temperature,
             },
         }
