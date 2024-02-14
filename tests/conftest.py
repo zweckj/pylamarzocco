@@ -1,6 +1,6 @@
 """Fixtures for the tests."""
 
-# pylint: disable=W0212
+# pylint: disable=W0212, W0613
 
 import json
 from collections.abc import Generator

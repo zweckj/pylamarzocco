@@ -4,9 +4,9 @@
 
 from unittest.mock import AsyncMock, patch
 
+from http import HTTPMethod
 import pytest
 from syrupy import SnapshotAssertion
-from http import HTTPMethod
 
 from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
 from lmcloud.client_cloud import LaMarzoccoCloudClient
