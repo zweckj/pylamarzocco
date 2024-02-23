@@ -39,6 +39,11 @@ jobs:
     - name: Report coverage
       run: |
         coverage report -m
+      
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
     
     - name: Build source and wheel distributions
       run: |
