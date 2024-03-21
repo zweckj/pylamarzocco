@@ -36,14 +36,19 @@ class LaMarzoccoBluetoothClient:
         username: str,
         serial_number: str,
         token: str,
-        ble_device: BLEDevice,
+        address_or_ble_device: BLEDevice | str,
     ) -> None:
         """Initializes a new LaMarzoccoBluetoothClient instance."""
         self._username = username
         self._serial_number = serial_number
         self._token = token
-        self._address = ble_device.address
-        self._client = BleakClient(ble_device)
+        self._address = (
+            address_or_ble_device.address
+            if isinstance(address_or_ble_device, BLEDevice)
+            else address_or_ble_device
+        )
+        self._address_or_ble_device = address_or_ble_device
+        self._client = BleakClient(address_or_ble_device)
 
     @staticmethod
     async def discover_devices(
@@ -73,17 +78,6 @@ class LaMarzoccoBluetoothClient:
         """Return the connection status."""
 
         return self._client.is_connected
-
-    def update_ble_device(
-        self,
-        ble_device: BLEDevice,
-        force: bool = False,
-    ) -> None:
-        """Initalize a new bleak client from a BLEDevice."""
-
-        # by default don't override if current client is connected
-        if not self._client.is_connected or force:
-            self._client = BleakClient(ble_device)
 
     async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""
@@ -128,6 +122,7 @@ class LaMarzoccoBluetoothClient:
 
         if not self._client.is_connected:
             try:
+                self._client = BleakClient(self._address_or_ble_device)
                 await self._client.connect()
                 await self._authenticate()
             except (BleakError, TimeoutError) as e:

@@ -132,15 +132,12 @@ class LaMarzoccoDevice:
     async def _bluetooth_command_with_cloud_fallback(
         self,
         command: str,
-        ble_device: BLEDevice | None = None,
         **kwargs,
     ) -> bool:
         """Send a command to the machine via Bluetooth, falling back to cloud if necessary."""
 
         # First, try with bluetooth
         if self._bluetooth_client is not None:
-            if ble_device is not None:
-                self._bluetooth_client.update_ble_device(ble_device)
             func = getattr(self._bluetooth_client, command)
             try:
                 _LOGGER.debug(

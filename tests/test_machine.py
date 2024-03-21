@@ -57,22 +57,22 @@ async def test_set_temp(
     assert machine.config.boilers[BoilerType.STEAM].target_temperature == 120
 
 
-async def test_set_schedule(
-    cloud_client: LaMarzoccoCloudClient,
-) -> None:
-    """Test setting prebrew infusion."""
-    machine = await init_machine(cloud_client)
+# async def test_set_schedule(
+#     cloud_client: LaMarzoccoCloudClient,
+# ) -> None:
+#     """Test setting prebrew infusion."""
+#     machine = await init_machine(cloud_client)
 
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await machine.set_schedule_day(
-            day=WeekDay.MONDAY,
-            enabled=True,
-            h_on=3,
-            m_on=0,
-            h_off=24,
-            m_off=0,
-        )
-    assert result is True
+#     with patch("asyncio.sleep", new_callable=AsyncMock):
+#         result = await machine.set_schedule_day(
+#             day=WeekDay.MONDAY,
+#             enabled=True,
+#             h_on=3,
+#             m_on=0,
+#             h_off=24,
+#             m_off=0,
+#         )
+#     assert result is True
 
 
 async def test_websocket_message(

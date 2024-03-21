@@ -22,7 +22,7 @@ async def main():
         username=data["username"],
         password=data["password"],
     )
-    # fleet = await cloud_client.get_customer_fleet()
+    fleet = await cloud_client.get_customer_fleet()
 
     # serial = list(fleet.keys())[0]
 
@@ -31,16 +31,16 @@ async def main():
         local_bearer=data["token"],
     )
 
-    bluetooth_devices = await LaMarzoccoBluetoothClient.discover_devices()
-    bluetooth_client = None
-    if bluetooth_devices:
-        print("Found bluetooth device:", bluetooth_devices[0])
-        bluetooth_client = LaMarzoccoBluetoothClient(
-            data["username"],
-            data["serial"],
-            data["token"],
-            bluetooth_devices[0],
-        )
+    # bluetooth_devices = await LaMarzoccoBluetoothClient.discover_devices()
+    # bluetooth_client = None
+    # if bluetooth_devices:
+    #     print("Found bluetooth device:", bluetooth_devices[0])
+    #     bluetooth_client = LaMarzoccoBluetoothClient(
+    #         data["username"],
+    #         data["serial"],
+    #         data["token"],
+    #         bluetooth_devices[0],
+    #     )
 
     # machine = await LaMarzoccoMachine.create(
     #     model=LaMarzoccoMachineModel(fleet[serial].model_name),
@@ -56,7 +56,7 @@ async def main():
         name=data["serial"],
         cloud_client=cloud_client,
         local_client=local_client,
-        bluetooth_client=bluetooth_client,
+        # bluetooth_client=bluetooth_client,
     )
 
     await machine.websocket_connect()

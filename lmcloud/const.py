@@ -70,6 +70,13 @@ class WeekDay(StrEnum):
     SUNDAY = "sunday"
 
 
+class SmartStandbyMode(StrEnum):
+    """Enum for smart standby mode."""
+
+    LAST_BREWING = "LastBrewing"
+    POWER_ON = "PowerOn"
+
+
 KEYS_PER_MODEL: Final = {
     MachineModel.LINEA_MICRA: 0,
     MachineModel.LINEA_MINI: 0,

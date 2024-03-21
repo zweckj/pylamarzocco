@@ -5,11 +5,9 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable
-from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
-from bleak import BLEDevice
 
 from .client_bluetooth import LaMarzoccoBluetoothClient
 from .client_cloud import LaMarzoccoCloudClient
@@ -20,8 +18,8 @@ from .const import (
     MachineModel,
     PhysicalKey,
     PrebrewMode,
+    SmartStandbyMode,
     SteamLevel,
-    WeekDay,
 )
 from .exceptions import ClientNotInitialized, UnknownWebSocketMessage
 from .helpers import (
@@ -29,15 +27,14 @@ from .helpers import (
     parse_cloud_statistics,
     parse_coffee_doses,
     parse_preinfusion_settings,
-    parse_schedule,
-    schedule_to_request,
+    parse_smart_standby,
+    parse_wakeup_sleep_entries,
 )
 from .lm_device import LaMarzoccoDevice
 from .models import (
     LaMarzoccoCoffeeStatistics,
     LaMarzoccoMachineConfig,
-    LaMarzoccoSchedule,
-    LaMarzoccoScheduleDay,
+    LaMarzoccoSmartStandby,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,9 +71,14 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             dose_hot_water=0,
             doses={},
             water_contact=False,
-            auto_on_off_schedule=LaMarzoccoSchedule(enabled=False, days={}),
             brew_active=False,
             brew_active_duration=0,
+            smart_standby=LaMarzoccoSmartStandby(
+                enabled=False,
+                minutes=10,
+                mode=SmartStandbyMode.POWER_ON,
+            ),
+            wake_up_sleep_entries=[],
         )
         self.statistics: LaMarzoccoCoffeeStatistics = LaMarzoccoCoffeeStatistics(
             drink_stats={},
@@ -133,11 +135,12 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self.config.water_contact = raw_config["tankStatus"]
         self.config.doses, self.config.dose_hot_water = parse_coffee_doses(raw_config)
         self.config.boilers = parse_boilers(raw_config["boilers"])
-        self.config.auto_on_off_schedule = parse_schedule(
-            raw_config["weeklySchedulingConfig"]
-        )
         self.config.prebrew_mode, self.config.prebrew_configuration = (
             parse_preinfusion_settings(raw_config)
+        )
+        self.config.smart_standby = parse_smart_standby(raw_config["smartStandBy"])
+        self.config.wake_up_sleep_entries = parse_wakeup_sleep_entries(
+            raw_config["wakeUpSleepEntries"]
         )
 
     def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
@@ -148,13 +151,11 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     async def set_power(
         self,
         enabled: bool,
-        ble_device: BLEDevice | None = None,
     ) -> bool:
         """Turn power of machine on or off"""
 
         if await self._bluetooth_command_with_cloud_fallback(
             command="set_power",
-            ble_device=ble_device,
             enabled=enabled,
         ):
             self.config.turned_on = enabled
@@ -165,13 +166,11 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     async def set_steam(
         self,
         enabled: bool,
-        ble_device: BLEDevice | None = None,
     ) -> bool:
         """Turn Steamboiler on or off"""
 
         if await self._bluetooth_command_with_cloud_fallback(
             command="set_steam",
-            ble_device=ble_device,
             enabled=enabled,
         ):
             self.config.boilers[BoilerType.STEAM].enabled = enabled
@@ -182,7 +181,6 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self,
         boiler: BoilerType,
         temperature: float,
-        ble_device: BLEDevice | None = None,
     ) -> bool:
         """Set target temperature for boiler"""
 
@@ -205,7 +203,6 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
         if await self._bluetooth_command_with_cloud_fallback(
             command="set_temp",
-            ble_device=ble_device,
             boiler=boiler,
             temperature=temperature,
         ):
@@ -217,10 +214,9 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     async def set_steam_level(
         self,
         level: SteamLevel,
-        ble_device: BLEDevice | None = None,
     ) -> bool:
         """Set steam level"""
-        return await self.set_temp(BoilerType.STEAM, level, ble_device)
+        return await self.set_temp(BoilerType.STEAM, level)
 
     async def set_prebrew_mode(self, mode: PrebrewMode) -> bool:
         """Set preinfusion mode"""
@@ -300,44 +296,44 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
 
         await self.cloud_client.start_backflush(self.serial_number)
 
-    async def set_schedule(self, schedule: LaMarzoccoSchedule) -> bool:
-        """Set schedule"""
+    # async def set_schedule(self, schedule: LaMarzoccoSchedule) -> bool:
+    #     """Set schedule"""
 
-        if await self.cloud_client.set_schedule(
-            self.serial_number, schedule_to_request(schedule)
-        ):
-            self.config.auto_on_off_schedule = schedule
-            return True
-        return False
+    #     if await self.cloud_client.set_schedule(
+    #         self.serial_number, schedule_to_request(schedule)
+    #     ):
+    #         self.config.auto_on_off_schedule = schedule
+    #         return True
+    #     return False
 
-    async def enable_schedule_globally(self, enabled: bool) -> bool:
-        """Enable schedule globally"""
+    # async def enable_schedule_globally(self, enabled: bool) -> bool:
+    #     """Enable schedule globally"""
 
-        schedule = deepcopy(self.config.auto_on_off_schedule)
-        schedule.enabled = enabled
-        return await self.set_schedule(schedule)
+    #     schedule = deepcopy(self.config.auto_on_off_schedule)
+    #     schedule.enabled = enabled
+    #     return await self.set_schedule(schedule)
 
-    async def set_schedule_day(
-        self,
-        day: WeekDay,
-        enabled: bool,
-        h_on: int,
-        m_on: int,
-        h_off: int,
-        m_off: int,
-    ) -> bool:
-        """Configure a single day in the schedule"""
+    # async def set_schedule_day(
+    #     self,
+    #     day: WeekDay,
+    #     enabled: bool,
+    #     h_on: int,
+    #     m_on: int,
+    #     h_off: int,
+    #     m_off: int,
+    # ) -> bool:
+    #     """Configure a single day in the schedule"""
 
-        day_settings = LaMarzoccoScheduleDay(
-            enabled=enabled,
-            h_on=h_on,
-            h_off=h_off,
-            m_on=m_on,
-            m_off=m_off,
-        )
-        schedule = deepcopy(self.config.auto_on_off_schedule)
-        schedule.days[day] = day_settings
-        return await self.set_schedule(schedule)
+    #     day_settings = LaMarzoccoScheduleDay(
+    #         enabled=enabled,
+    #         h_on=h_on,
+    #         h_off=h_off,
+    #         m_on=m_on,
+    #         m_off=m_off,
+    #     )
+    #     schedule = deepcopy(self.config.auto_on_off_schedule)
+    #     schedule.days[day] = day_settings
+    #     return await self.set_schedule(schedule)
 
     async def update_firmware(self, component: FirmwareType) -> bool:
         """Update firmware"""

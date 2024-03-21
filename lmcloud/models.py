@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from typing import TypedDict
-from .const import PhysicalKey, BoilerType, PrebrewMode, WeekDay
+from .const import PhysicalKey, BoilerType, PrebrewMode, WeekDay, SmartStandbyMode
 
 ####################################
 #### base iot device specific ######
@@ -72,22 +72,43 @@ class LaMarzoccoPrebrewConfiguration:
 
 
 @dataclass(kw_only=True)
-class LaMarzoccoScheduleDay:
-    """Class for La Marzocco schedule day"""
+class LaMarzoccoSmartStandby:
+    """Class for La Marzocco smart standby configuration"""
 
     enabled: bool
-    h_on: int
-    h_off: int
-    m_on: int
-    m_off: int
+    minutes: int
+    mode: SmartStandbyMode
 
 
 @dataclass(kw_only=True)
-class LaMarzoccoSchedule:
-    """Class for La Marzocco schedule"""
+class LaMarzoccoWakeUpSleepEntry:
+    """Class for La Marzocco wake up sleep entry"""
 
     enabled: bool
-    days: dict[WeekDay, LaMarzoccoScheduleDay]
+    days: list[WeekDay]
+    entry_id: str
+    steam: bool
+    time_on: str
+    time_off: str
+
+
+# @dataclass(kw_only=True)
+# class LaMarzoccoScheduleDay:
+#     """Class for La Marzocco schedule day"""
+
+#     enabled: bool
+#     h_on: int
+#     h_off: int
+#     m_on: int
+#     m_off: int
+
+
+# @dataclass(kw_only=True)
+# class LaMarzoccoSchedule:
+#     """Class for La Marzocco schedule"""
+
+#     enabled: bool
+#     days: dict[WeekDay, LaMarzoccoScheduleDay]
 
 
 @dataclass(kw_only=True)
@@ -100,7 +121,8 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     prebrew_configuration: dict[PhysicalKey, LaMarzoccoPrebrewConfiguration]
     dose_hot_water: int
     water_contact: bool
-    auto_on_off_schedule: LaMarzoccoSchedule
+    wake_up_sleep_entries: list[LaMarzoccoWakeUpSleepEntry]
+    smart_standby: LaMarzoccoSmartStandby
     brew_active: bool
     brew_active_duration: float
 

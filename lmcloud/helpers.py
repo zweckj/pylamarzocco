@@ -7,61 +7,61 @@ from .const import (
     FirmwareType,
     PhysicalKey,
     PrebrewMode,
+    SmartStandbyMode,
     WeekDay,
 )
 
 from .models import (
     LaMarzoccoBoiler,
-    LaMarzoccoCloudSchedule,
     LaMarzoccoCoffeeStatistics,
     LaMarzoccoFirmware,
     LaMarzoccoPrebrewConfiguration,
-    LaMarzoccoSchedule,
-    LaMarzoccoScheduleDay,
+    LaMarzoccoSmartStandby,
+    LaMarzoccoWakeUpSleepEntry,
 )
 
 
-def schedule_to_request(schedule: LaMarzoccoSchedule) -> LaMarzoccoCloudSchedule:
-    """convert schedule to API expected input format"""
+# def schedule_to_request(schedule: LaMarzoccoSchedule) -> LaMarzoccoCloudSchedule:
+#     """convert schedule to API expected input format"""
 
-    schedule_conv: LaMarzoccoCloudSchedule = {
-        "enable": schedule.enabled,
-        "days": [],
-    }
-    for day, schedule_day in schedule.days.items():
-        # requests wants 00:00, response gives 24:00
-        h_on = "00" if schedule_day.h_on == 24 else str(schedule_day.h_on).zfill(2)
-        h_off = "00" if schedule_day.h_off == 24 else str(schedule_day.h_off).zfill(2)
+#     schedule_conv: LaMarzoccoCloudSchedule = {
+#         "enable": schedule.enabled,
+#         "days": [],
+#     }
+#     for day, schedule_day in schedule.days.items():
+#         # requests wants 00:00, response gives 24:00
+#         h_on = "00" if schedule_day.h_on == 24 else str(schedule_day.h_on).zfill(2)
+#         h_off = "00" if schedule_day.h_off == 24 else str(schedule_day.h_off).zfill(2)
 
-        hh_mm_on = h_on + ":" + str(schedule_day.m_on).zfill(2)
-        hh_mm_off = h_off + ":" + str(schedule_day.m_off).zfill(2)
+#         hh_mm_on = h_on + ":" + str(schedule_day.m_on).zfill(2)
+#         hh_mm_off = h_off + ":" + str(schedule_day.m_off).zfill(2)
 
-        schedule_conv["days"].append(
-            {
-                "day": str.upper(day),
-                "enable": schedule_day.enabled,
-                "on": hh_mm_on,
-                "off": hh_mm_off,
-            }
-        )
-    return schedule_conv
+#         schedule_conv["days"].append(
+#             {
+#                 "day": str.upper(day),
+#                 "enable": schedule_day.enabled,
+#                 "on": hh_mm_on,
+#                 "off": hh_mm_off,
+#             }
+#         )
+#     return schedule_conv
 
 
-def parse_schedule(schedule: dict[str, Any]) -> LaMarzoccoSchedule:
-    """Parse schedule from API config object."""
+# def parse_schedule(schedule: dict[str, Any]) -> LaMarzoccoSchedule:
+#     """Parse schedule from API config object."""
 
-    global_enable: bool = schedule["enabled"]
-    days: dict[WeekDay, LaMarzoccoScheduleDay] = {}
-    for weekday in WeekDay:
-        day_settings = schedule[weekday]
-        days[weekday] = LaMarzoccoScheduleDay(
-            enabled=day_settings["enabled"],
-            h_on=day_settings["h_on"],
-            h_off=day_settings["h_off"],
-            m_on=day_settings["m_on"],
-            m_off=day_settings["m_off"],
-        )
-    return LaMarzoccoSchedule(enabled=global_enable, days=days)
+#     global_enable: bool = schedule["enabled"]
+#     days: dict[WeekDay, LaMarzoccoScheduleDay] = {}
+#     for weekday in WeekDay:
+#         day_settings = schedule[weekday]
+#         days[weekday] = LaMarzoccoScheduleDay(
+#             enabled=day_settings["enabled"],
+#             h_on=day_settings["h_on"],
+#             h_off=day_settings["h_off"],
+#             m_on=day_settings["m_on"],
+#             m_off=day_settings["m_off"],
+#         )
+#     return LaMarzoccoSchedule(enabled=global_enable, days=days)
 
 
 def parse_boilers(boilers: list[dict[str, Any]]) -> dict[BoilerType, LaMarzoccoBoiler]:
@@ -182,3 +182,31 @@ def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStat
         continous=continuous,
         total_flushes=total_flushing,
     )
+
+
+def parse_smart_standby(smart_standby_config: dict[str, Any]) -> LaMarzoccoSmartStandby:
+    """Parse smart standby mode from API config object."""
+    return LaMarzoccoSmartStandby(
+        enabled=smart_standby_config["enabled"],
+        minutes=smart_standby_config["minutes"],
+        mode=SmartStandbyMode(smart_standby_config["mode"]),
+    )
+
+
+def parse_wakeup_sleep_entries(
+    entries: list[dict[str, Any]]
+) -> list[LaMarzoccoWakeUpSleepEntry]:
+    """Parse wake up sleep entries from API config object."""
+    parsed = []
+    for entry in entries:
+        parsed.append(
+            LaMarzoccoWakeUpSleepEntry(
+                enabled=entry["enabled"],
+                days=[WeekDay(day) for day in entry["days"]],
+                entry_id=entry["id"],
+                steam=entry["steam"],
+                time_on=entry["timeOn"],
+                time_off=entry["timeOff"],
+            )
+        )
+    return parsed

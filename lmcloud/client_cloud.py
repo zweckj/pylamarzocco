@@ -25,7 +25,7 @@ from .const import (
     PrebrewMode,
 )
 from .exceptions import AuthFail, RequestNotSuccessful
-from .models import LaMarzoccoCloudSchedule, LaMarzoccoFirmware, LaMarzoccoDeviceInfo
+from .models import LaMarzoccoFirmware, LaMarzoccoDeviceInfo, LaMarzoccoSmartStandby
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -258,16 +258,35 @@ class LaMarzoccoCloudClient:
             return True
         return False
 
-    async def set_schedule(
-        self,
-        serial_number: str,
-        schedule: LaMarzoccoCloudSchedule,
-    ) -> bool:
-        """Set auto-on/off schedule"""
+    # async def set_schedule(
+    #     self,
+    #     serial_number: str,
+    #     schedule: LaMarzoccoCloudSchedule,
+    # ) -> bool:
+    #     """Set auto-on/off schedule"""
 
-        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/scheduling"
+    #     url = f"{GW_MACHINE_BASE_URL}/{serial_number}/scheduling"
+    #     response = await self._rest_api_call(
+    #         url=url, method=HTTPMethod.POST, data=dict(schedule)
+    #     )
+    #     if await self._check_cloud_command_status(serial_number, response):
+    #         return True
+    #     return False
+
+    async def set_smart_standby(
+        self, serial_number: str, standby_config: LaMarzoccoSmartStandby
+    ) -> bool:
+        """Set the smart standby configuration"""
+
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/smart-standby"
         response = await self._rest_api_call(
-            url=url, method=HTTPMethod.POST, data=dict(schedule)
+            url=url,
+            method=HTTPMethod.POST,
+            data={
+                "enabled": standby_config.enabled,
+                "minutes": standby_config.minutes,
+                "mode": standby_config.mode.value,
+            },
         )
         if await self._check_cloud_command_status(serial_number, response):
             return True
