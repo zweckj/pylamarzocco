@@ -138,9 +138,9 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self.config.prebrew_mode, self.config.prebrew_configuration = (
             parse_preinfusion_settings(raw_config)
         )
-        self.config.smart_standby = parse_smart_standby(raw_config["smartStandBy"])
+        self.config.smart_standby = parse_smart_standby(raw_config.get("smartStandBy", {}))
         self.config.wake_up_sleep_entries = parse_wakeup_sleep_entries(
-            raw_config["wakeUpSleepEntries"]
+            raw_config.get("wakeUpSleepEntries", [])
         )
 
     def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:

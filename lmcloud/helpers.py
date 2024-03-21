@@ -187,9 +187,9 @@ def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStat
 def parse_smart_standby(smart_standby_config: dict[str, Any]) -> LaMarzoccoSmartStandby:
     """Parse smart standby mode from API config object."""
     return LaMarzoccoSmartStandby(
-        enabled=smart_standby_config["enabled"],
-        minutes=smart_standby_config["minutes"],
-        mode=SmartStandbyMode(smart_standby_config["mode"]),
+        enabled=smart_standby_config.get("enabled", False),
+        minutes=smart_standby_config.get("minutes", 10),
+        mode=SmartStandbyMode(smart_standby_config.get("mode", "PowerOn")),
     )
 
 
