@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .const import GrinderModel, PhysicalKey
+from .const import FirmwareType, GrinderModel, PhysicalKey
 from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
 from .lm_device import LaMarzoccoDevice
@@ -57,4 +57,8 @@ class LaMarzoccoGrinder(LaMarzoccoDevice):
     def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
         """Parse the statistics object."""
 
+        raise NotImplementedError
+
+    async def update_firmware(self, component: FirmwareType) -> bool:
+        """Update firmware"""
         raise NotImplementedError

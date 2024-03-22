@@ -5,7 +5,7 @@ import logging
 from abc import abstractmethod
 from typing import Any
 
-from bleak import BleakError, BLEDevice
+from bleak import BleakError
 
 from .const import FirmwareType
 from .exceptions import (
@@ -80,6 +80,11 @@ class LaMarzoccoDevice:
             return False
         return self._bluetooth_client.connected
 
+    @property
+    def full_model_name(self) -> str:
+        """Return the full model name of the device."""
+        return self.model
+
     async def get_config(
         self,
         local_api_retry_delay: int = 3,
@@ -128,6 +133,10 @@ class LaMarzoccoDevice:
         """Update the firmware"""
 
         self.firmware = await self.cloud_client.get_firmware(self.serial_number)
+
+    @abstractmethod
+    async def update_firmware(self, component: FirmwareType) -> bool:
+        """Update firmware"""
 
     async def _bluetooth_command_with_cloud_fallback(
         self,

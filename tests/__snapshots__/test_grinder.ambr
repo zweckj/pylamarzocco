@@ -11,6 +11,7 @@
       <FirmwareType.GATEWAY: 'gateway'>: LaMarzoccoFirmware(current_version='v3.2-rc9', latest_version='v3.2-rc9'),
       <FirmwareType.MACHINE: 'machine'>: LaMarzoccoFirmware(current_version='1.17', latest_version='1.17'),
     }),
+    full_model_name=<GrinderModel.PICO: 'Pico'>,
     model=<GrinderModel.PICO: 'Pico'>,
     name='MyMachine',
     serial_number='G00000000000',
