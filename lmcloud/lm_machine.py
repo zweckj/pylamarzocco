@@ -502,6 +502,10 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                 )
                 property_updated = True
 
+            elif "SystemInfo" in message:
+                self._system_info = json.loads(msg["SystemInfo"])
+                property_updated = True
+
         if not property_updated:
             raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
         return True
