@@ -23,9 +23,10 @@ from .const import (
     FirmwareType,
     PhysicalKey,
     PrebrewMode,
+    SmartStandbyMode,
 )
 from .exceptions import AuthFail, RequestNotSuccessful
-from .models import LaMarzoccoFirmware, LaMarzoccoDeviceInfo, LaMarzoccoSmartStandby
+from .models import LaMarzoccoFirmware, LaMarzoccoDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -274,7 +275,7 @@ class LaMarzoccoCloudClient:
     #     return False
 
     async def set_smart_standby(
-        self, serial_number: str, standby_config: LaMarzoccoSmartStandby
+        self, serial_number: str, enabled: bool, minutes: int, mode: SmartStandbyMode
     ) -> bool:
         """Set the smart standby configuration"""
 
@@ -283,9 +284,9 @@ class LaMarzoccoCloudClient:
             url=url,
             method=HTTPMethod.POST,
             data={
-                "enabled": standby_config.enabled,
-                "minutes": standby_config.minutes,
-                "mode": standby_config.mode.value,
+                "enabled": enabled,
+                "minutes": minutes,
+                "mode": mode.value,
             },
         )
         if await self._check_cloud_command_status(serial_number, response):

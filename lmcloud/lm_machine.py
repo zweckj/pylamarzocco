@@ -111,13 +111,6 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         return self.model
 
     @property
-    def steam_level(self) -> SteamLevel:
-        """Return the steam level"""
-
-        steam_boiler = self.config.boilers[BoilerType.STEAM]
-        return min(SteamLevel, key=lambda x: abs(x - steam_boiler.target_temperature))
-
-    @property
     def websocket_connected(self) -> bool:
         """Return the connection status of the websocket client."""
 
@@ -138,7 +131,9 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self.config.prebrew_mode, self.config.prebrew_configuration = (
             parse_preinfusion_settings(raw_config)
         )
-        self.config.smart_standby = parse_smart_standby(raw_config.get("smartStandBy", {}))
+        self.config.smart_standby = parse_smart_standby(
+            raw_config.get("smartStandBy", {})
+        )
         self.config.wake_up_sleep_entries = parse_wakeup_sleep_entries(
             raw_config.get("wakeUpSleepEntries", [])
         )
@@ -334,6 +329,23 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     #     schedule = deepcopy(self.config.auto_on_off_schedule)
     #     schedule.days[day] = day_settings
     #     return await self.set_schedule(schedule)
+
+    async def set_smart_standby(
+        self, enabled: bool, minutes: int, mode: SmartStandbyMode
+    ) -> bool:
+        """Set smart standby"""
+
+        if await self.cloud_client.set_smart_standby(
+            serial_number=self.serial_number,
+            enabled=enabled,
+            minutes=minutes,
+            mode=mode,
+        ):
+            self.config.smart_standby = LaMarzoccoSmartStandby(
+                enabled=enabled, mode=mode, minutes=minutes
+            )
+            return True
+        return False
 
     async def update_firmware(self, component: FirmwareType) -> bool:
         """Update firmware"""

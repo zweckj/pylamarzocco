@@ -16,7 +16,6 @@
     name='MyMachine',
     serial_number='GS01234',
     statistics=LaMarzoccoCoffeeStatistics(drink_stats={<PhysicalKey.A: 1>: 167, <PhysicalKey.B: 2>: 0, <PhysicalKey.C: 3>: 0, <PhysicalKey.D: 4>: 0}, continous=0, total_flushes=228),
-    steam_level=<SteamLevel.LEVEL_1: 126>,
     websocket_connected=False,
   )
 # ---

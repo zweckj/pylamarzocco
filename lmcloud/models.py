@@ -2,7 +2,14 @@
 
 from dataclasses import dataclass
 from typing import TypedDict
-from .const import PhysicalKey, BoilerType, PrebrewMode, WeekDay, SmartStandbyMode
+from .const import (
+    PhysicalKey,
+    BoilerType,
+    PrebrewMode,
+    WeekDay,
+    SmartStandbyMode,
+    SteamLevel,
+)
 
 ####################################
 #### base iot device specific ######
@@ -125,6 +132,13 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     smart_standby: LaMarzoccoSmartStandby
     brew_active: bool
     brew_active_duration: float
+
+    @property
+    def steam_level(self) -> SteamLevel:
+        """Return the steam level"""
+
+        steam_boiler = self.boilers[BoilerType.STEAM]
+        return min(SteamLevel, key=lambda x: abs(x - steam_boiler.target_temperature))
 
 
 ####################################
