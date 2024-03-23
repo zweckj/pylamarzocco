@@ -28,7 +28,7 @@ class LaMarzoccoLocalClient:
         self._local_port = local_port
         self._local_bearer = local_bearer
 
-        self.websocket_connected = False
+        self.websocket: websockets.WebSocketClientProtocol | None = None
         self.terminating: bool = False
 
         if client is None:
@@ -92,7 +92,6 @@ class LaMarzoccoLocalClient:
     async def websocket_connect(
         self,
         callback: Callable[[str | bytes], None] | None = None,
-        use_sigterm_handler: bool = True,
     ) -> None:
         """Connect to the websocket of the machine."""
 
@@ -101,17 +100,13 @@ class LaMarzoccoLocalClient:
             f"ws://{self._host}:{self._local_port}/api/v1/streaming",
             extra_headers=headers,
         ):
+            self.websocket = websocket
             try:
-                if use_sigterm_handler:
-                    # Close the connection when receiving SIGTERM.
-                    loop = asyncio.get_running_loop()
-                    loop.add_signal_handler(
-                        signal.SIGTERM, loop.create_task, websocket.close()
-                    )
-                self.websocket_connected = True
                 # Process messages received on the connection.
                 async for message in websocket:
                     if self.terminating:
+                        if websocket.open:
+                            await websocket.close()
                         return
                     if callback is not None:
                         try:

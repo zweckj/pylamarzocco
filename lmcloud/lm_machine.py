@@ -113,10 +113,13 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     @property
     def websocket_connected(self) -> bool:
         """Return the connection status of the websocket client."""
-
-        if self._local_client is None:
-            return False
-        return self._local_client.websocket_connected
+        if (
+            self._local_client
+            and self._local_client.websocket
+            and self._local_client.websocket.open
+        ):
+            return True
+        return False
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
