@@ -275,7 +275,11 @@ class LaMarzoccoCloudClient:
     #     return False
 
     async def set_smart_standby(
-        self, serial_number: str, enabled: bool, minutes: int, mode: SmartStandbyMode
+        self,
+        serial_number: str,
+        enabled: bool,
+        minutes: int,
+        mode: SmartStandbyMode,
     ) -> bool:
         """Set the smart standby configuration"""
 
