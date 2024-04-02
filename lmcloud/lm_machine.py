@@ -35,6 +35,7 @@ from .models import (
     LaMarzoccoCoffeeStatistics,
     LaMarzoccoMachineConfig,
     LaMarzoccoSmartStandby,
+    LaMarzoccoWakeUpSleepEntry,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -332,6 +333,18 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     #     schedule = deepcopy(self.config.auto_on_off_schedule)
     #     schedule.days[day] = day_settings
     #     return await self.set_schedule(schedule)
+
+    async def set_wake_up_sleep(self, wake_up_sleep_entry: LaMarzoccoWakeUpSleepEntry):
+        """Set wake up sleep"""
+
+        if await self.cloud_client.set_wake_up_sleep(
+            self.serial_number, wake_up_sleep_entry
+        ):
+            for idx, entry in enumerate(self.config.wake_up_sleep_entries):
+                if entry.entry_id == wake_up_sleep_entry.entry_id:
+                    self.config.wake_up_sleep_entries[idx] = wake_up_sleep_entry
+                    return True
+        return False
 
     async def set_smart_standby(
         self, enabled: bool, minutes: int, mode: SmartStandbyMode

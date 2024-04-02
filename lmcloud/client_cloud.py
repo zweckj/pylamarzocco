@@ -26,7 +26,7 @@ from .const import (
     SmartStandbyMode,
 )
 from .exceptions import AuthFail, RequestNotSuccessful
-from .models import LaMarzoccoFirmware, LaMarzoccoDeviceInfo
+from .models import LaMarzoccoFirmware, LaMarzoccoDeviceInfo, LaMarzoccoWakeUpSleepEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -273,6 +273,25 @@ class LaMarzoccoCloudClient:
     #     if await self._check_cloud_command_status(serial_number, response):
     #         return True
     #     return False
+
+    async def set_wake_up_sleep(
+        self, serial_number: str, wake_up_sleep_entry: LaMarzoccoWakeUpSleepEntry
+    ) -> bool:
+        """Enable or disable wake-up sleep mode"""
+
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/wake-up-sleep/{wake_up_sleep_entry.entry_id}"
+        data = {
+            "days": [day.value for day in wake_up_sleep_entry.days],
+            "enable": wake_up_sleep_entry.enabled,
+            "id": wake_up_sleep_entry.entry_id,
+            "steam": wake_up_sleep_entry.steam,
+            "timeOff": wake_up_sleep_entry.time_off,
+            "timeOn": wake_up_sleep_entry.time_on,
+        }
+        response = await self._rest_api_call(url=url, method=HTTPMethod.PUT, data=data)
+        if await self._check_cloud_command_status(serial_number, response):
+            return True
+        return False
 
     async def set_smart_standby(
         self,
