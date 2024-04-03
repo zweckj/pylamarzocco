@@ -128,7 +128,7 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     prebrew_configuration: dict[PhysicalKey, LaMarzoccoPrebrewConfiguration]
     dose_hot_water: int
     water_contact: bool
-    wake_up_sleep_entries: list[LaMarzoccoWakeUpSleepEntry]
+    wake_up_sleep_entries: dict[str, LaMarzoccoWakeUpSleepEntry]
     smart_standby: LaMarzoccoSmartStandby
     brew_active: bool
     brew_active_duration: float

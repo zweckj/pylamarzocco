@@ -195,18 +195,17 @@ def parse_smart_standby(smart_standby_config: dict[str, Any]) -> LaMarzoccoSmart
 
 def parse_wakeup_sleep_entries(
     entries: list[dict[str, Any]]
-) -> list[LaMarzoccoWakeUpSleepEntry]:
+) -> dict[str, LaMarzoccoWakeUpSleepEntry]:
     """Parse wake up sleep entries from API config object."""
-    parsed = []
+    parsed = {}
     for entry in entries:
-        parsed.append(
-            LaMarzoccoWakeUpSleepEntry(
-                enabled=entry["enabled"],
-                days=[WeekDay(day) for day in entry["days"]],
-                entry_id=entry["id"],
-                steam=entry["steam"],
-                time_on=entry["timeOn"],
-                time_off=entry["timeOff"],
-            )
+        wake_up_sleep_entry = LaMarzoccoWakeUpSleepEntry(
+            enabled=entry["enabled"],
+            days=[WeekDay(day) for day in entry["days"]],
+            entry_id=entry["id"],
+            steam=entry["steam"],
+            time_on=entry["timeOn"],
+            time_off=entry["timeOff"],
         )
+        parsed[wake_up_sleep_entry.entry_id] = wake_up_sleep_entry
     return parsed
