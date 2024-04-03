@@ -139,7 +139,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             raw_config.get("smartStandBy", {})
         )
         self.config.wake_up_sleep_entries = parse_wakeup_sleep_entries(
-            raw_config.get("wakeUpSleepEntries", [])
+            raw_config.get("wakeUpSleepEntries", {})
         )
 
     def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
@@ -340,7 +340,9 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         if await self.cloud_client.set_wake_up_sleep(
             self.serial_number, wake_up_sleep_entry
         ):
-            self.config.wake_up_sleep_entries[wake_up_sleep_entry.entry_id] = wake_up_sleep_entry
+            self.config.wake_up_sleep_entries[wake_up_sleep_entry.entry_id] = (
+                wake_up_sleep_entry
+            )
             return True
         return False
 
