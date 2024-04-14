@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 import logging
 from http import HTTPMethod
 from typing import Any
@@ -64,7 +65,7 @@ class LaMarzoccoCloudClient:
         return client
 
     async def _rest_api_call(
-        self, url: str, method: HTTPMethod, data: dict[str, Any] | None = None
+        self, url: str, method: HTTPMethod, data: dict[str, Any] | None = None, timeout: int = 5,
     ) -> Any:
         """Wrapper for the API call."""
 
@@ -76,7 +77,7 @@ class LaMarzoccoCloudClient:
             await self._oauth_client.refresh_token(TOKEN_URL)
 
         try:
-            response = await self._oauth_client.request(method, url, json=data)
+            response = await self._oauth_client.request(method, url, json=data, timeout=timeout)
         except RequestError as ecx:
             raise RequestNotSuccessful(
                 f"Error during HTTP request. Request to endpoint {url} failed with error: {ecx}"
@@ -418,3 +419,12 @@ class LaMarzoccoCloudClient:
         url = f"{GW_MACHINE_BASE_URL}/{serial_number}/statistics/counters"
 
         return await self._rest_api_call(url=url, method=HTTPMethod.GET)
+
+    async def get_daily_statistics(self, serial_number: str, start_date: datetime, end_date: datetime, timezone_offset: int, timezone: str) -> list[dict[str, Any]]:
+        """Get daily statistics from cloud."""
+
+        _LOGGER.debug("Getting daily statistics from cloud")
+
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/statistics/daily?startDate={start_date.isoformat()}&endDate={end_date.isoformat()}&timezoneOffset={timezone_offset}&timezone={timezone}"
+
+        return await self._rest_api_call(url=url, method=HTTPMethod.GET, timeout=60)
