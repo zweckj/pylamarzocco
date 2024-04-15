@@ -282,6 +282,29 @@
 }
 ```
 
+## Daily Counters
+`GET https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/statistics/daily?startDate=2024-04-04T00:00:00.000000&endDate=2024-04-05T00:00:00.000000&timezoneOffset=-4&timezone=America/New_York`
+
+```json
+{
+    "data": [
+        {
+            "count": 10,
+            "doseA": 0,
+            "doseB": 0,
+            "doseC": 1,
+            "doseD": 6,
+            "doseTea": 0,
+            "doseContinous": 1,
+            "flush": 3,
+            "date": "2024-04-04T00:00:00.000Z",
+            "timestamp": 1712178000000
+        }
+    ],
+    "status": true
+}
+```
+
 ## Preinfusion Settings
 `POST https://gw-lmz.lamarzocco.io/v1/home/machines/<SN>/setting-preinfusion`
 
