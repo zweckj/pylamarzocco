@@ -108,6 +108,7 @@ async def test_set_power(
         HTTPMethod.POST,
         "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
         json={"status": "BrewingMode"},
+        timeout=5,
     )
 
 
@@ -127,6 +128,7 @@ async def test_set_steam(
         HTTPMethod.POST,
         "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
         json={"identifier": "SteamBoiler", "state": True},
+        timeout=5,
     )
 
 
@@ -146,6 +148,7 @@ async def test_set_temperature(
         HTTPMethod.POST,
         "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
         json={"identifier": "SteamBoiler", "value": 131},
+        timeout=5,
     )
 
 
@@ -166,6 +169,7 @@ async def test_set_prebrew_time(cloud_client: LaMarzoccoCloudClient):
             "holdTimeMs": 3500,
             "wetTimeMs": 1000,
         },
+        timeout=5,
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].on_time == 1.0
@@ -176,6 +180,7 @@ async def test_set_prebrew_time(cloud_client: LaMarzoccoCloudClient):
         HTTPMethod.POST,
         "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={"button": "DoseA", "group": "Group1", "holdTimeMs": 4500, "wetTimeMs": 0},
+        timeout=5,
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
