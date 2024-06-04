@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import signal
 from typing import Any, Callable
 
 from httpx import AsyncClient, RequestError
@@ -96,30 +95,36 @@ class LaMarzoccoLocalClient:
         """Connect to the websocket of the machine."""
 
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
-        async for websocket in websockets.connect(
-            f"ws://{self._host}:{self._local_port}/api/v1/streaming",
-            extra_headers=headers,
-        ):
-            self.websocket = websocket
-            try:
-                # Process messages received on the connection.
-                async for message in websocket:
+        try:
+            async for websocket in websockets.connect(
+                f"ws://{self._host}:{self._local_port}/api/v1/streaming",
+                extra_headers=headers,
+            ):
+                self.websocket = websocket
+                try:
+                    # Process messages received on the connection.
+                    async for message in websocket:
+                        if self.terminating:
+                            if websocket.open:
+                                await websocket.close()
+                            return
+                        if callback is not None:
+                            try:
+                                callback(message)
+                            except Exception as exc:  # pylint: disable=broad-except
+                                _LOGGER.exception("Error during callback: %s", exc)
+                except websockets.ConnectionClosed:
                     if self.terminating:
-                        if websocket.open:
-                            await websocket.close()
                         return
-                    if callback is not None:
-                        try:
-                            callback(message)
-                        except Exception as exc:  # pylint: disable=broad-except
-                            _LOGGER.exception("Error during callback: %s", exc)
-            except websockets.ConnectionClosed:
-                if self.terminating:
-                    return
-                _LOGGER.debug(
-                    "Websocket disconnected, reconnecting in %s", WEBSOCKET_RETRY_DELAY
-                )
-                await asyncio.sleep(WEBSOCKET_RETRY_DELAY)
-                continue
-            except websockets.WebSocketException as ex:
-                _LOGGER.warning("Exception during websocket connection: %s", ex)
+                    _LOGGER.debug(
+                        "Websocket disconnected, reconnecting in %s",
+                        WEBSOCKET_RETRY_DELAY,
+                    )
+                    await asyncio.sleep(WEBSOCKET_RETRY_DELAY)
+                    continue
+                except websockets.WebSocketException as exc:
+                    _LOGGER.warning("Exception during websocket connection: %s", exc)
+        except (TimeoutError, OSError, websockets.InvalidHandshake) as exc:
+            _LOGGER.error("Error establishing the webosocket connection: %s", exc)
+        except websockets.InvalidURI:
+            _LOGGER.error("Invalid URI passed to websocket connection: %s", self._host)
