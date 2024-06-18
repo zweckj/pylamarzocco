@@ -296,6 +296,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         """Start backflush"""
 
         await self.cloud_client.start_backflush(self.serial_number)
+        self.config.backflush_enabled = True
 
     # async def set_schedule(self, schedule: LaMarzoccoSchedule) -> bool:
     #     """Set schedule"""
