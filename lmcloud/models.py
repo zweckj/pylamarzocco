@@ -132,6 +132,7 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     smart_standby: LaMarzoccoSmartStandby
     brew_active: bool
     brew_active_duration: float
+    backflush_enabled: bool
 
     @property
     def steam_level(self) -> SteamLevel:

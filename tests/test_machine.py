@@ -5,13 +5,14 @@
 from unittest.mock import AsyncMock, patch
 
 from http import HTTPMethod
+from dataclasses import asdict
 import pytest
 from syrupy import SnapshotAssertion
 
 from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
 from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.client_local import LaMarzoccoLocalClient
-from lmcloud.const import BoilerType, PhysicalKey, WeekDay
+from lmcloud.const import BoilerType, PhysicalKey
 
 from . import init_machine
 
@@ -25,7 +26,9 @@ async def test_create(
     """Test creation of a cloud client."""
 
     machine = await init_machine(cloud_client)
-    assert machine == snapshot
+    assert asdict(machine.config) == snapshot(name="config")
+    assert machine.firmware == snapshot(name="firmware")
+    assert machine.statistics == snapshot(name="statistics")
 
 
 async def test_local_client(
@@ -85,11 +88,11 @@ async def test_websocket_message(
 
     message = r'[{"Boilers":"[{\"id\":\"SteamBoiler\",\"isEnabled\":true,\"target\":131,\"current\":113},{\"id\":\"CoffeeBoiler1\",\"isEnabled\":true,\"target\":94,\"current\":81}]"}]'
     machine.on_websocket_message_received(message)
-    assert machine.config == snapshot
+    assert asdict(machine.config) == snapshot
 
     message = r'[{"BoilersTargetTemperature":"{\"SteamBoiler\":131,\"CoffeeBoiler1\":94}"},{"Boilers":"[{\"id\":\"SteamBoiler\",\"isEnabled\":true,\"target\":131,\"current\":50},{\"id\":\"CoffeeBoiler1\",\"isEnabled\":true,\"target\":94,\"current\":36}]"}]'
     machine.on_websocket_message_received(message)
-    assert machine.config == snapshot
+    assert asdict(machine.config) == snapshot
 
 
 async def test_set_power(

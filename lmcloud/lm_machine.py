@@ -73,6 +73,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             doses={},
             water_contact=False,
             brew_active=False,
+            backflush_enabled=False,
             brew_active_duration=0,
             smart_standby=LaMarzoccoSmartStandby(
                 enabled=False,
@@ -130,6 +131,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         self.config.turned_on = raw_config["machineMode"] == "BrewingMode"
         self.config.plumbed_in = raw_config["isPlumbedIn"]
         self.config.water_contact = raw_config["tankStatus"]
+        self.config.backflush_enabled = raw_config["isBackFlushEnabled"]
         self.config.doses, self.config.dose_hot_water = parse_coffee_doses(raw_config)
         self.config.boilers = parse_boilers(raw_config["boilers"])
         self.config.prebrew_mode, self.config.prebrew_configuration = (
