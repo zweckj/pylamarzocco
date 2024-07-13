@@ -1,5 +1,5 @@
 
-# La Marzocco Client
+# La Marzocco Python Client
 This is a library to interface with La Marzocco's Home machines.
 It also has support to get information for the Pico grinder.
 
