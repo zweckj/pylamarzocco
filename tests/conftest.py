@@ -22,6 +22,13 @@ from . import (
 )
 
 
+class ImplementedLaMarzoccoCloudClient(LaMarzoccoCloudClient):
+    """Implemented La Marzocco Cloud Client."""
+
+    async def async_get_access_token(self) -> str:
+        return "token"
+
+
 def load_fixture(device_type: str, file_name: str) -> dict:
     """Load a fixture."""
     with open(
@@ -32,8 +39,8 @@ def load_fixture(device_type: str, file_name: str) -> dict:
 
 def get_mock_response(*args, **kwargs) -> Response:
     """Get a mock response from HTTP request."""
-    method: HTTPMethod = args[0]
-    url: str = str(args[1])
+    method: HTTPMethod = kwargs["method"]
+    url: str = str(kwargs["url"])
 
     if MACHINE_SERIAL in url:
         device_type = "machine"
@@ -76,13 +83,11 @@ def get_local_machine_mock_response(*args, **kwargs) -> Response:
 def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
     """Fixture for a cloud client."""
 
-    client = LaMarzoccoCloudClient("username", "password")
+    client = AsyncMock()
+    client.request.side_effect = get_mock_response
+    _cloud_client = ImplementedLaMarzoccoCloudClient(client=client)
 
-    oauth_client = AsyncMock()
-    oauth_client.request.side_effect = get_mock_response
-
-    client._oauth_client = oauth_client
-    yield client
+    yield _cloud_client
 
 
 @pytest.fixture

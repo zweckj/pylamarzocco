@@ -2,15 +2,16 @@
 
 import json
 import asyncio
-
 from pathlib import Path
 
-from lmcloud.client_cloud import LaMarzoccoCloudClient
+
 from lmcloud.lm_device import LaMarzoccoDevice
 from lmcloud.lm_machine import LaMarzoccoMachine
 from lmcloud.const import MachineModel
 from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
 from lmcloud.client_local import LaMarzoccoLocalClient
+
+from authlib_cloud_client import LaMarzoccoAuthlibCloudClient
 
 
 async def main():
@@ -18,7 +19,7 @@ async def main():
     with open(f"{Path(__file__).parent}/secrets.json", encoding="utf-8") as f:
         data = json.load(f)
 
-    cloud_client = LaMarzoccoCloudClient(
+    cloud_client = LaMarzoccoAuthlibCloudClient(
         username=data["username"],
         password=data["password"],
     )
@@ -26,10 +27,10 @@ async def main():
 
     # serial = list(fleet.keys())[0]
 
-    local_client = LaMarzoccoLocalClient(
-        host=data["host"],
-        local_bearer=data["token"],
-    )
+    # local_client = LaMarzoccoLocalClient(
+    #     host=data["host"],
+    #     local_bearer=data["token"],
+    # )
 
     # bluetooth_devices = await LaMarzoccoBluetoothClient.discover_devices()
     # bluetooth_client = None
@@ -55,11 +56,13 @@ async def main():
         serial_number=data["serial"],
         name=data["serial"],
         cloud_client=cloud_client,
-        local_client=local_client,
+        # local_client=local_client,
         # bluetooth_client=bluetooth_client,
     )
 
-    await machine.websocket_connect()
+    await machine.get_config()
+
+    # await machine.websocket_connect()
     # await asyncio.sleep(300)
 
     # lmcloud = await LMCloud.create_with_local_api(creds, data["host"], data["port"])
@@ -89,9 +92,9 @@ async def main():
     #         print("Brewing")
     #     await asyncio.sleep(1)
 
-    await machine.set_power(True)
-    await asyncio.sleep(5)
-    await machine.set_power(False)
+    # await machine.set_power(True)
+    # await asyncio.sleep(5)
+    # await machine.set_power(False)
 
     # while True:
     #     print("waiting...")

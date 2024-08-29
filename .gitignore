@@ -130,6 +130,7 @@ dmypy.json
 
 #local config
 secrets.json
+examples/secrets.json
 bleak_device_info.py
 bleak_discover.py
 .gitignore

@@ -3,30 +3,25 @@
 from __future__ import annotations
 
 import asyncio
+from abc import abstractmethod
 from datetime import datetime
 import logging
 from http import HTTPMethod
 from typing import Any
 
-from authlib.common.errors import AuthlibHTTPError  # type: ignore[import]
-from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
-from authlib.integrations.httpx_client import AsyncOAuth2Client  # type: ignore[import]
-from httpx import RequestError
+from httpx import AsyncClient, RequestError
 
 from .const import (
     CUSTOMER_URL,
-    DEFAULT_CLIENT_ID,
-    DEFAULT_CLIENT_SECRET,
     GW_AWS_PROXY_BASE_URL,
     GW_MACHINE_BASE_URL,
-    TOKEN_URL,
     BoilerType,
     FirmwareType,
     PhysicalKey,
     PrebrewMode,
     SmartStandbyMode,
 )
-from .exceptions import AuthFail, RequestNotSuccessful
+from .exceptions import RequestNotSuccessful
 from .models import LaMarzoccoFirmware, LaMarzoccoDeviceInfo, LaMarzoccoWakeUpSleepEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,49 +30,31 @@ _LOGGER = logging.getLogger(__name__)
 class LaMarzoccoCloudClient:
     """La Marzocco Cloud Client."""
 
-    def __init__(self, username: str, password: str):
-        self._oauth_client: AsyncOAuth2Client | None = None
-        self.username = username
-        self.password = password
+    _client: AsyncClient
 
-    async def _connect(self) -> AsyncOAuth2Client:
-        """Establish connection by building the OAuth client and requesting the token"""
+    def __init__(self, client: AsyncClient) -> None:
+        self._client = client
 
-        client = AsyncOAuth2Client(
-            client_id=DEFAULT_CLIENT_ID,
-            client_secret=DEFAULT_CLIENT_SECRET,
-            token_endpoint=TOKEN_URL,
-        )
-
-        try:
-            await client.fetch_token(
-                url=TOKEN_URL,
-                username=self.username,
-                password=self.password,
-            )
-        except OAuthError as exc:
-            raise AuthFail(f"Authorization failure: {exc}") from exc
-        except AuthlibHTTPError as exc:
-            raise RequestNotSuccessful(
-                f"Exception during token request: {exc}"
-            ) from exc
-
-        return client
+    @abstractmethod
+    async def async_get_access_token(self) -> str:
+        """Return a valid access token."""
 
     async def _rest_api_call(
-        self, url: str, method: HTTPMethod, data: dict[str, Any] | None = None, timeout: int = 5,
+        self,
+        url: str,
+        method: HTTPMethod,
+        data: dict[str, Any] | None = None,
+        timeout: int = 5,
     ) -> Any:
         """Wrapper for the API call."""
 
-        if self._oauth_client is None:
-            self._oauth_client = await self._connect()
-
-        # make sure oauth token is still valid
-        if self._oauth_client.token.is_expired():
-            await self._oauth_client.refresh_token(TOKEN_URL)
+        access_token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
 
         try:
-            response = await self._oauth_client.request(method, url, json=data, timeout=timeout)
+            response = await self._client.request(
+                method=method, url=url, json=data, timeout=timeout, headers=headers
+            )
         except RequestError as ecx:
             raise RequestNotSuccessful(
                 f"Error during HTTP request. Request to endpoint {url} failed with error: {ecx}"
@@ -420,7 +397,14 @@ class LaMarzoccoCloudClient:
 
         return await self._rest_api_call(url=url, method=HTTPMethod.GET)
 
-    async def get_daily_statistics(self, serial_number: str, start_date: datetime, end_date: datetime, timezone_offset: int, timezone: str) -> list[dict[str, Any]]:
+    async def get_daily_statistics(
+        self,
+        serial_number: str,
+        start_date: datetime,
+        end_date: datetime,
+        timezone_offset: int,
+        timezone: str,
+    ) -> list[dict[str, Any]]:
         """Get daily statistics from cloud."""
 
         _LOGGER.debug("Getting daily statistics from cloud")

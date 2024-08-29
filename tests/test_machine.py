@@ -107,11 +107,12 @@ async def test_set_power(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"MachineChangeMode","parameter":{"mode":"BrewingMode"}}\x00',
     )
-    cloud_client._oauth_client.request.assert_any_call(  # type: ignore[union-attr]
-        HTTPMethod.POST,
-        "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
+    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+        method=HTTPMethod.POST,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
         json={"status": "BrewingMode"},
         timeout=5,
+        headers={"Authorization": "Bearer token"},
     )
 
 
@@ -127,11 +128,12 @@ async def test_set_steam(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"SettingBoilerEnable","parameter":{"identifier":"SteamBoiler","state":true}}\x00',
     )
-    cloud_client._oauth_client.request.assert_any_call(  # type: ignore[union-attr]
-        HTTPMethod.POST,
-        "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
+    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+        method=HTTPMethod.POST,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
         json={"identifier": "SteamBoiler", "state": True},
         timeout=5,
+        headers={"Authorization": "Bearer token"},
     )
 
 
@@ -147,11 +149,12 @@ async def test_set_temperature(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"SettingBoilerTarget","parameter":{"identifier":"SteamBoiler","value":131}}\x00',
     )
-    cloud_client._oauth_client.request.assert_any_call(  # type: ignore[union-attr]
-        HTTPMethod.POST,
-        "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
+    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+        method=HTTPMethod.POST,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
         json={"identifier": "SteamBoiler", "value": 131},
         timeout=5,
+        headers={"Authorization": "Bearer token"},
     )
 
 
@@ -163,9 +166,9 @@ async def test_set_prebrew_time(cloud_client: LaMarzoccoCloudClient):
 
     assert await machine.set_prebrew_time(1.0, 3.5)
 
-    cloud_client._oauth_client.request.assert_any_call(  # type: ignore[union-attr]
-        HTTPMethod.POST,
-        "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
+    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+        method=HTTPMethod.POST,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={
             "button": "DoseA",
             "group": "Group1",
@@ -173,17 +176,19 @@ async def test_set_prebrew_time(cloud_client: LaMarzoccoCloudClient):
             "wetTimeMs": 1000,
         },
         timeout=5,
+        headers={"Authorization": "Bearer token"},
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].on_time == 1.0
     assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 3.5
 
     assert await machine.set_preinfusion_time(4.5)
-    cloud_client._oauth_client.request.assert_any_call(  # type: ignore[union-attr]
-        HTTPMethod.POST,
-        "https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
+    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+        method=HTTPMethod.POST,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={"button": "DoseA", "group": "Group1", "holdTimeMs": 4500, "wetTimeMs": 0},
         timeout=5,
+        headers={"Authorization": "Bearer token"},
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
