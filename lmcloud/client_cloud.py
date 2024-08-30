@@ -54,7 +54,7 @@ class LaMarzoccoCloudClient:
 
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
-        if self._access_token is None:
+        if self._access_token is None or self._access_token.expires_in < time.time():
             return await self._async_get_access_token()
         if self._access_token.expires_in < time.time() + 300:
             return await self._async_refresh_token()
