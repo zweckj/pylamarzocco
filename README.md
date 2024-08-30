@@ -16,12 +16,7 @@ It also has support to get information for the Pico grinder.
 
 ## LaMarzoccoCloudClient
 
-The LaMarzoccoCloudCllient is abstract and needs to be implemented with `async_async_get_access_token`, which returns a token to be used for the cloud API.
-
-### LaMarzoccoAuthlibCloudClient
-
-A sample implementation is provided in [authlib_cloud_client.py](./authlib_cloud_client.py). This is a simple implementation that uses the `authlib` library to authenticate.
-You need `username` and `password` which are the credentials you're using to sign into the La Marzocco Home app.
+You need `username` and `password`, which are the credentials you're using to sign into the La Marzocco Home app.
 
 It is initialized like this
 

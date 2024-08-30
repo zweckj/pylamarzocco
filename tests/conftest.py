@@ -22,13 +22,6 @@ from . import (
 )
 
 
-class ImplementedLaMarzoccoCloudClient(LaMarzoccoCloudClient):
-    """Implemented La Marzocco Cloud Client."""
-
-    async def async_get_access_token(self) -> str:
-        return "token"
-
-
 def load_fixture(device_type: str, file_name: str) -> dict:
     """Load a fixture."""
     with open(
@@ -85,9 +78,15 @@ def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
 
     client = AsyncMock()
     client.request.side_effect = get_mock_response
-    _cloud_client = ImplementedLaMarzoccoCloudClient(client=client)
+    _cloud_client = LaMarzoccoCloudClient(
+        username="user", password="pass", client=client
+    )
 
-    yield _cloud_client
+    with patch.object(
+        _cloud_client, "async_get_access_token", new_callable=AsyncMock
+    ) as mock_async_get_access_token:
+        mock_async_get_access_token.return_value = "token"
+        yield _cloud_client
 
 
 @pytest.fixture

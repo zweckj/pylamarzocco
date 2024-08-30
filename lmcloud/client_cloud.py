@@ -3,26 +3,35 @@
 from __future__ import annotations
 
 import asyncio
-from abc import abstractmethod
+
 from datetime import datetime
 import logging
 from http import HTTPMethod
+import time
 from typing import Any
 
 from httpx import AsyncClient, RequestError
 
 from .const import (
     CUSTOMER_URL,
+    DEFAULT_CLIENT_ID,
+    DEFAULT_CLIENT_SECRET,
     GW_AWS_PROXY_BASE_URL,
     GW_MACHINE_BASE_URL,
+    TOKEN_URL,
     BoilerType,
     FirmwareType,
     PhysicalKey,
     PrebrewMode,
     SmartStandbyMode,
 )
-from .exceptions import RequestNotSuccessful
-from .models import LaMarzoccoFirmware, LaMarzoccoDeviceInfo, LaMarzoccoWakeUpSleepEntry
+from .exceptions import AuthFail, RequestNotSuccessful
+from .models import (
+    AccessToken,
+    LaMarzoccoFirmware,
+    LaMarzoccoDeviceInfo,
+    LaMarzoccoWakeUpSleepEntry,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,12 +41,70 @@ class LaMarzoccoCloudClient:
 
     _client: AsyncClient
 
-    def __init__(self, client: AsyncClient) -> None:
-        self._client = client
+    def __init__(
+        self, username: str, password: str, client: AsyncClient | None = None
+    ) -> None:
+        if client is None:
+            self._client = AsyncClient()
+        else:
+            self._client = client
+        self._username = username
+        self._password = password
+        self._access_token: AccessToken | None = None
 
-    @abstractmethod
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
+        if self._access_token is None:
+            return await self._async_get_access_token()
+        if self._access_token.expires_in < time.time() + 300:
+            return await self._async_refresh_token()
+        return self._access_token.access_token
+
+    async def _async_get_access_token(self) -> str:
+        """Get a new access token."""
+        data = {
+            "username": self._username,
+            "password": self._password,
+            "grant_type": "password",
+            "client_id": DEFAULT_CLIENT_ID,
+            "client_secret": DEFAULT_CLIENT_SECRET,
+        }
+        return await self.__async_get_token(data)
+
+    async def _async_refresh_token(self) -> str:
+        """Refresh the access token."""
+        assert self._access_token is not None
+        data = {
+            "refresh_token": self._access_token.refresh_token,
+            "grant_type": "refresh_token",
+            "client_id": DEFAULT_CLIENT_ID,
+            "client_secret": DEFAULT_CLIENT_SECRET,
+        }
+        return await self.__async_get_token(data)
+
+    async def __async_get_token(self, data: dict[str, Any]) -> str:
+        """Wrapper for a token request."""
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        try:
+            response = await self._client.post(TOKEN_URL, data=data, headers=headers)
+        except RequestError as exc:
+            raise RequestNotSuccessful(
+                f"Error during HTTP request. Request to endpoint {TOKEN_URL} failed with error: {exc}"
+            ) from exc
+        if response.is_success:
+            json_response = response.json()
+            self._access_token = AccessToken(
+                access_token=json_response["access_token"],
+                refresh_token=json_response["refresh_token"],
+                expires_in=time.time() + json_response["expires_in"],
+            )
+            return json_response["access_token"]
+
+        if response.status_code == 401:
+            raise AuthFail("Invalid username or password")
+        raise RequestNotSuccessful(
+            f"Request to endpoint {TOKEN_URL} failed with status code {response.status_code}"
+        )
 
     async def _rest_api_call(
         self,

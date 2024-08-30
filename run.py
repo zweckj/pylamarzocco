@@ -9,9 +9,8 @@ from lmcloud.lm_device import LaMarzoccoDevice
 from lmcloud.lm_machine import LaMarzoccoMachine
 from lmcloud.const import MachineModel
 from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
+from lmcloud.client_cloud import LaMarzoccoCloudClient
 from lmcloud.client_local import LaMarzoccoLocalClient
-
-from authlib_cloud_client import LaMarzoccoAuthlibCloudClient
 
 
 async def main():
@@ -19,7 +18,7 @@ async def main():
     with open(f"{Path(__file__).parent}/secrets.json", encoding="utf-8") as f:
         data = json.load(f)
 
-    cloud_client = LaMarzoccoAuthlibCloudClient(
+    cloud_client = LaMarzoccoCloudClient(
         username=data["username"],
         password=data["password"],
     )

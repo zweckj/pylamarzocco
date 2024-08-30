@@ -1,6 +1,7 @@
 """Models for La Marzocco API"""
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TypedDict
 from .const import (
     PhysicalKey,
@@ -169,6 +170,15 @@ class LaMarzoccoCloudSchedule(TypedDict):
 
     enable: bool
     days: list[LaMarzoccoCloudScheduleDay]
+
+
+@dataclass
+class AccessToken:
+    """Class for OAuth access token"""
+
+    access_token: str
+    expires_in: float
+    refresh_token: str
 
 
 ####################################
