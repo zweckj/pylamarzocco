@@ -54,6 +54,7 @@ class LaMarzoccoDevice:
         self._bluetooth_client = bluetooth_client
         self._local_client = local_client
         self._update_lock = asyncio.Lock()
+        self._local_connection_down = False
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
         """Parse the config object."""
@@ -102,6 +103,7 @@ class LaMarzoccoDevice:
                     _LOGGER.debug(
                         "Got 403 from local API, sending token request to cloud"
                     )
+                    # for some machines (GS3) we need to send a token request before local API works
                     if self._cloud_client is not None:
                         await self._cloud_client.token_command(self.serial_number)
                         await asyncio.sleep(local_api_retry_delay)
@@ -109,13 +111,21 @@ class LaMarzoccoDevice:
                     else:
                         raise exc
                 except RequestNotSuccessful as exc:
-                    _LOGGER.warning(
+                    msg = (
                         "Could not connect to local API although initialized, "
-                        + "falling back to cloud."
+                        "falling back to cloud."
                     )
+                    if not self._local_connection_down:
+                        _LOGGER.warning(msg)
+                        self._local_connection_down = True
+                    _LOGGER.debug(msg)
                     _LOGGER.debug(exc)
                     if self._cloud_client is None:
                         raise exc
+                else:
+                    if self._local_connection_down:
+                        _LOGGER.warning("Local API connection restored.")
+                        self._local_connection_down = False
 
             # if local update failed, try to update from cloud
             if self._cloud_client is not None and not raw_config:
