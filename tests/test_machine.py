@@ -9,10 +9,10 @@ from dataclasses import asdict
 import pytest
 from syrupy import SnapshotAssertion
 
-from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
-from lmcloud.client_cloud import LaMarzoccoCloudClient
-from lmcloud.client_local import LaMarzoccoLocalClient
-from lmcloud.const import BoilerType, PhysicalKey
+from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.client_cloud import LaMarzoccoCloudClient
+from pylamarzocco.client_local import LaMarzoccoLocalClient
+from pylamarzocco.const import BoilerType, PhysicalKey
 
 from . import init_machine
 

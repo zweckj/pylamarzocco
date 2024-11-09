@@ -1,4 +1,4 @@
-""" Helper functions for lmcloud. """
+""" Helper functions for pylamarzocco. """
 
 from typing import Any
 

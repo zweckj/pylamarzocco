@@ -1,9 +1,9 @@
 """Test utilities"""
 
-from lmcloud import LaMarzoccoCloudClient, LaMarzoccoMachine, LaMarzoccoGrinder
-from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
-from lmcloud.client_local import LaMarzoccoLocalClient
-from lmcloud.const import MachineModel, GrinderModel
+from pylamarzocco import LaMarzoccoCloudClient, LaMarzoccoMachine, LaMarzoccoGrinder
+from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.client_local import LaMarzoccoLocalClient
+from pylamarzocco.const import MachineModel, GrinderModel
 
 MACHINE_SERIAL = "GS01234"
 GRINDER_SERIAL = "G00000000000"

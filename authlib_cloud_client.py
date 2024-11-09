@@ -4,9 +4,9 @@ from authlib.common.errors import AuthlibHTTPError  # type: ignore[import]
 from authlib.integrations.base_client.errors import OAuthError  # type: ignore[import]
 from authlib.integrations.httpx_client import AsyncOAuth2Client  # type: ignore[import]
 
-from lmcloud.client_cloud import LaMarzoccoCloudClient
-from lmcloud.const import DEFAULT_CLIENT_ID, DEFAULT_CLIENT_SECRET, TOKEN_URL
-from lmcloud.exceptions import AuthFail, RequestNotSuccessful
+from pylamarzocco.client_cloud import LaMarzoccoCloudClient
+from pylamarzocco.const import DEFAULT_CLIENT_ID, DEFAULT_CLIENT_SECRET, TOKEN_URL
+from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 
 
 class LaMarzoccoAuthlibCloudClient(LaMarzoccoCloudClient):

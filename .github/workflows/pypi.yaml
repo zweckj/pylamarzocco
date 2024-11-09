@@ -34,7 +34,7 @@ jobs:
 
     - name: Run Tests
       run: |
-        coverage run --source=lmcloud -m pytest tests/
+        coverage run --source=pylamarzocco -m pytest tests/
 
     - name: Report coverage
       run: |

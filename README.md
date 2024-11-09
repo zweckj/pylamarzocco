@@ -3,13 +3,13 @@
 This is a library to interface with La Marzocco's Home machines.
 It also has support to get information for the Pico grinder.
 
-![workflow](https://github.com/zweckj/lmcloud/actions/workflows/pypi.yaml/badge.svg)
-[![codecov](https://codecov.io/gh/zweckj/lmcloud/graph/badge.svg?token=350GPTLZXS)](https://codecov.io/gh/zweckj/lmcloud)
+![workflow](https://github.com/zweckj/pylamarzocco/actions/workflows/pypi.yaml/badge.svg)
+[![codecov](https://codecov.io/gh/zweckj/pylamarzocco/graph/badge.svg?token=350GPTLZXS)](https://codecov.io/gh/zweckj/pylamarzocco)
 
 # Libraries in this project
 
 - `LaMarzoccoLocalClient` calls the new local API the Micra exposes, using the Bearer token from the customer cloud endpoint. However, this API currently only supports getting the config, and some status objects (like shottimer) over websockets, but does not support setting anything (to my knowledge). Local settings appear to only happen through [Bluetooth connections](#lmbluetooth).
-- `LaMarzoccoCloudClient` interacts with `gw-lmz.lamarzocco.com` to send commands. lmcloud can be initialized to only issue remote commands, or to initialize an instance of `lmlocalapi` for getting the current machine settings. This helps to avoid flooding the cloud API and is faster overall.
+- `LaMarzoccoCloudClient` interacts with `gw-lmz.lamarzocco.com` to send commands. pylamarzocco can be initialized to only issue remote commands, or to initialize an instance of `lmlocalapi` for getting the current machine settings. This helps to avoid flooding the cloud API and is faster overall.
 - `LaMarzoccoBluetoothClient` provides a bluetooth client to send settings to the machine via bluetooth
 
 # Setup
@@ -40,7 +40,7 @@ local_client = LaMarzoccoLocalClient(ip, local_token)
 Some commands, like turning the machine on and off are always sent through bluetooth whenever possible. The available bluetooth characteristics are described in [bluetooth_characteristics](docs/bluetooth_characteristics.md).
 The class `LaMarzoccoBluetoothClient` discovers any bluetooth devices connects to it. Then we can send local bluetooth commands.
 
-To use Bluetooth you can either init LMCloud with
+To use Bluetooth you can either init pylamarzocco with
 
 ```python
     if bluetooth_devices := LaMarzoccoBluetoothClient.discover_devices():

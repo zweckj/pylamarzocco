@@ -5,12 +5,12 @@ import asyncio
 from pathlib import Path
 
 
-from lmcloud.lm_device import LaMarzoccoDevice
-from lmcloud.lm_machine import LaMarzoccoMachine
-from lmcloud.const import MachineModel
-from lmcloud.client_bluetooth import LaMarzoccoBluetoothClient
-from lmcloud.client_cloud import LaMarzoccoCloudClient
-from lmcloud.client_local import LaMarzoccoLocalClient
+from pylamarzocco.lm_device import LaMarzoccoDevice
+from pylamarzocco.lm_machine import LaMarzoccoMachine
+from pylamarzocco.const import MachineModel
+from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.client_cloud import LaMarzoccoCloudClient
+from pylamarzocco.client_local import LaMarzoccoLocalClient
 
 
 async def main():

@@ -1,4 +1,4 @@
-"""Exceptions for the lmcloud package."""
+"""Exceptions for the pylamarzocco package."""
 
 
 class AuthFail(Exception):

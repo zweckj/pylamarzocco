@@ -6,12 +6,12 @@ with open("README.md", "r", encoding="utf-8") as f:
     readme = f.read()
 
 setuptools.setup(
-    name="lmcloud",
+    name="pylamarzocco",
     version="1.2.3",
     description="A Python implementation of the new La Marzocco API",
     long_description=readme,
     long_description_content_type="text/markdown",
-    url="https://github.com/zweckj/lmcloud",
+    url="https://github.com/zweckj/pylamarzocco",
     author="Josef Zweck",
     author_email="24647999+zweckj@users.noreply.github.com",
     license="MIT",
@@ -31,6 +31,6 @@ setuptools.setup(
         "bleak>=0.20.2",
     ],
     package_data={
-        "lmcloud": ["py.typed"],
+        "pylamarzocco": ["py.typed"],
     },
 )
