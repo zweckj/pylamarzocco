@@ -6,6 +6,13 @@ It also has support to get information for the Pico grinder.
 ![workflow](https://github.com/zweckj/pylamarzocco/actions/workflows/pypi.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/zweckj/pylamarzocco/graph/badge.svg?token=350GPTLZXS)](https://codecov.io/gh/zweckj/pylamarzocco)
 
+# Installing this libary
+This project is on pypi and can be installed using pip
+
+```bash
+pip install pylamarzocco
+```
+
 # Libraries in this project
 
 - `LaMarzoccoLocalClient` calls the new local API the Micra exposes, using the Bearer token from the customer cloud endpoint. However, this API currently only supports getting the config, and some status objects (like shottimer) over websockets, but does not support setting anything (to my knowledge). Local settings appear to only happen through [Bluetooth connections](#lmbluetooth).
