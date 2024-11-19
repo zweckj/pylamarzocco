@@ -1,0 +1,33 @@
+[project]
+name        = "pylamarzocco"
+version     = "1.2.3"
+
+[tool.poetry]
+name        = "pylamarzocco"
+version     = "1.2.3"
+license     = "MIT"
+description = "A Python implementation of the new La Marzocco API"
+readme      = "README.md"
+authors     = ["Josef Zweck <24647999+zweckj@users.noreply.github.com>"]
+maintainers = ["Josef Zweck <24647999+zweckj@users.noreply.github.com>"]
+homepage = "https://github.com/zweckj/pylamarzocco"
+repository = "https://github.com/zweckj/pylamarzocco"
+documentation = "https://github.com/zweckj/pylamarzocco"
+keywords = ["La Marzocco", "lamarzocco", "api", "async", "client"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+]
+packages = [{include = "pylamarzocco"}]
+
+
+[tool.poetry.dependencies]
+python = "^3.12"
+httpx>="0.16.1",
+websockets>="11.0.2",
+bleak>="0.20.2",
