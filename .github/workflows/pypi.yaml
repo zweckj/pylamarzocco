@@ -1,8 +1,10 @@
 on:
   workflow_dispatch:
-  release:
-    types:
-      - published
+  push:
+    branches:
+    - 'main'
+    paths:
+      - 'pyproject.toml'
 
 env:
   DEFAULT_PYTHON: "3.12"
