@@ -42,6 +42,11 @@ jobs:
 
     - name: Run pytest
       run: poetry run pytest --cov pylamarzocco tests
+
+    - name: 🚀 Process coverage results
+      run: |
+        poetry run coverage combine .coverage*
+        poetry run coverage xml -i
       
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
