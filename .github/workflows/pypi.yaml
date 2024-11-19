@@ -33,8 +33,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv venv
-        uv pip install -r pyproject.toml --extra dev
+        uv pip install --system -r pyproject.toml --extra dev
 
     - name: Run Tests
       run: |
