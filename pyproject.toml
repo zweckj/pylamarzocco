@@ -33,6 +33,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
+covdefaults = "2.3.0"
 coverage = {version = "7.6.7", extras = ["toml"]}
 pytest = "8.3.3"
 pytest-asyncio = "0.24.0"
