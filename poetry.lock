@@ -461,6 +461,20 @@ files = [
 ]
 
 [[package]]
+name = "syrupy"
+version = "4.7.2"
+description = "Pytest Snapshot Test Utility"
+optional = false
+python-versions = ">=3.8.1"
+files = [
+    {file = "syrupy-4.7.2-py3-none-any.whl", hash = "sha256:eae7ba6be5aed190237caa93be288e97ca1eec5ca58760e4818972a10c4acc64"},
+    {file = "syrupy-4.7.2.tar.gz", hash = "sha256:ea45e099f242de1bb53018c238f408a5bb6c82007bc687aefcbeaa0e1c2e935a"},
+]
+
+[package.dependencies]
+pytest = ">=7.0.0,<9.0.0"
+
+[[package]]
 name = "websockets"
 version = "14.1"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
@@ -541,4 +555,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "93de5252311fc74f1b98b4f2cc86807424fbdf7fb1146ca8ace141b011e1e09c"
+content-hash = "1f22138407f73f1dc7ab02034c18059c607cc2041d2681bc4792de76c46ff687"
