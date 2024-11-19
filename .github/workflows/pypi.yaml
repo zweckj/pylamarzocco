@@ -41,7 +41,7 @@ jobs:
       run: poetry install --no-interaction
 
     - name: Run pytest
-      run: poetry run coverage run --source=pylamarzocco -m pytest tests/
+      run: poetry run pytest --cov pylamarzocco tests
       
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
