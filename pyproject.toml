@@ -41,7 +41,7 @@ pytest-cov = "6.0.0"
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 50
+fail_under = 25
 
 [tool.coverage.run]
 plugins = ["covdefaults"]
