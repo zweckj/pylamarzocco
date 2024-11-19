@@ -36,8 +36,10 @@ jobs:
         uv venv
         uv pip install -r pyproject.toml --extra dev
 
-    - name: Run pytest
-      run: uv run pytest --cov pylamarzocco tests
+    - name: Run Tests
+      run: |
+        coverage run --source=pylamarzocco -m pytest tests/
+        coverage report -m
       
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
