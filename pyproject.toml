@@ -28,6 +28,10 @@ packages = [{include = "pylamarzocco"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-httpx>="0.16.1",
-websockets>="11.0.2",
-bleak>="0.20.2",
+httpx>="0.16.1"
+websockets>="11.0.2"
+bleak>="0.20.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
