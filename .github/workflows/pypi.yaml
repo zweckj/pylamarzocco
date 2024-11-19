@@ -41,18 +41,14 @@ jobs:
       run: poetry install --no-interaction
 
     - name: Run pytest
-      run: poetry run pytest --cov pylamarzocco tests
-
-    - name: 🚀 Process coverage results
-      run: |
-        poetry run coverage combine .coverage*
-        poetry run coverage xml -i
+      run: poetry run coverage run --source=pylamarzocco -m pytest tests/
       
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
       with:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
     
     - name: Set package version
       run: |
