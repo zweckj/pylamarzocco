@@ -6,9 +6,6 @@ description = "A Python implementation of the new La Marzocco API"
 readme = "README.md"
 authors = [{name = "Josef Zweck", email = "24647999+zweckj@users.noreply.github.com"}]
 maintainers = [{name = "Josef Zweck", email = "24647999+zweckj@users.noreply.github.com"}]
-homepage = "https://github.com/zweckj/pylamarzocco"
-repository = "https://github.com/zweckj/pylamarzocco"
-documentation = "https://github.com/zweckj/pylamarzocco"
 keywords = ["La Marzocco", "lamarzocco", "api", "async", "client"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,13 +16,17 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.12",
 ]
-packages = [{include = "pylamarzocco"}]
 dependencies = [
     "bleak == 0.20.2",
     "httpx == 0.27.2",
     "websockets == 14.1",
 ]
 requires-python = "~= 3.12"
+
+[project.urls]
+Homepage = "https://github.com/zweckj/pylamarzocco"
+Repository = "https://github.com/zweckj/pylamarzocco"
+Documentation = "https://github.com/zweckj/pylamarzocco"
 
 [project.optional-dependencies]
 dev = [

@@ -47,7 +47,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Build package
-      run: uv build --no-interaction
+      run: uv build
     
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
