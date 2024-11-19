@@ -1,10 +1,8 @@
 on:
   workflow_dispatch:
-  push:
-    branches:
-    - 'main'
-    paths:
-      - 'pyproject.toml'
+  release:
+    types:
+      - published
 
 env:
   DEFAULT_PYTHON: "3.12"
@@ -53,3 +51,9 @@ jobs:
     
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+
+    - name: ✍️ Sign published artifacts
+      uses: sigstore/gh-action-sigstore-python@v3
+      with:
+        inputs: ./dist/*.tar.gz ./dist/*.whl
+        release-signing-artifacts: true
