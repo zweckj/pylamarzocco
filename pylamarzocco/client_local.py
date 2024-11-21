@@ -54,11 +54,8 @@ class LaMarzoccoLocalClient:
         """Validate the connection details to the local API."""
         try:
             await LaMarzoccoLocalClient._get_config(client, host, token, port)
-        except AuthFail as exc:
-            _LOGGER.error(exc)
-            return False
-        except RequestNotSuccessful as exc:
-            _LOGGER.error(exc)
+        except (AuthFail, RequestNotSuccessful) as ex:
+            _LOGGER.error(ex)
             return False
         return True
 
