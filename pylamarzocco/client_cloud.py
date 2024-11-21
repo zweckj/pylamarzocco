@@ -18,6 +18,7 @@ from .const import (
     DEFAULT_CLIENT_SECRET,
     GW_AWS_PROXY_BASE_URL,
     GW_MACHINE_BASE_URL,
+    LOGOUT_URL,
     TOKEN_URL,
     BoilerType,
     FirmwareType,
@@ -87,10 +88,11 @@ class LaMarzoccoCloudClient:
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         try:
             response = await self._client.post(TOKEN_URL, data=data, headers=headers)
-        except RequestError as exc:
+        except RequestError as ex:
             raise RequestNotSuccessful(
-                f"Error during HTTP request. Request to endpoint {TOKEN_URL} failed with error: {exc}"
-            ) from exc
+                "Error during HTTP request."
+                + f"Request to endpoint {TOKEN_URL} failed with error: {ex}"
+            ) from ex
         if response.is_success:
             json_response = response.json()
             self._access_token = AccessToken(
@@ -105,6 +107,24 @@ class LaMarzoccoCloudClient:
         raise RequestNotSuccessful(
             f"Request to endpoint {TOKEN_URL} failed with status code {response.status_code}"
         )
+
+    async def async_logout(self) -> None:
+        """Logout from the cloud."""
+        if self._access_token is None:
+            return
+        try:
+            response = await self._client.post(LOGOUT_URL, data={})
+        except RequestError as ex:
+            raise RequestNotSuccessful(
+                "Error during HTTP request."
+                + f"Request to endpoint {LOGOUT_URL} failed with error: {ex}"
+            ) from ex
+        if not response.is_success:
+            raise RequestNotSuccessful(
+                f"Request to endpoint {LOGOUT_URL} failed with status code {response.status_code},"
+                + "response: {response.text}"
+            )
+        self._access_token = None
 
     async def _rest_api_call(
         self,
@@ -122,10 +142,10 @@ class LaMarzoccoCloudClient:
             response = await self._client.request(
                 method=method, url=url, json=data, timeout=timeout, headers=headers
             )
-        except RequestError as ecx:
+        except RequestError as ex:
             raise RequestNotSuccessful(
-                f"Error during HTTP request. Request to endpoint {url} failed with error: {ecx}"
-            ) from ecx
+                f"Error during HTTP request. Request to endpoint {url} failed with error: {ex}"
+            ) from ex
 
         # ensure status code indicates success
         if response.is_success:
@@ -476,6 +496,12 @@ class LaMarzoccoCloudClient:
 
         _LOGGER.debug("Getting daily statistics from cloud")
 
-        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/statistics/daily?startDate={start_date.isoformat()}&endDate={end_date.isoformat()}&timezoneOffset={timezone_offset}&timezone={timezone}"
+        url = (
+            f"{GW_MACHINE_BASE_URL}/{serial_number}/statistics/daily"
+            + f"?startDate={start_date.isoformat()}"
+            + f"&endDate={end_date.isoformat()}"
+            + f"&timezoneOffset={timezone_offset}"
+            + f"&timezone={timezone}"
+        )
 
         return await self._rest_api_call(url=url, method=HTTPMethod.GET, timeout=60)
