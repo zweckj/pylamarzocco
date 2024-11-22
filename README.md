@@ -28,7 +28,12 @@ You need `username` and `password`, which are the credentials you're using to si
 It is initialized like this
 
 ```python
-cloud_client = await LaMarzoccoCloudClient(username, password)
+cloud_client = LaMarzoccoCloudClient(username, password)
+```
+
+and you get your config
+```python
+await cloud_client.get_config(serial_number)
 ```
 
 ## LaMarzoccoLocalClient
