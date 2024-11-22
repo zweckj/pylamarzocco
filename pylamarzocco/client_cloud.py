@@ -58,7 +58,7 @@ class LaMarzoccoCloudClient:
         if self._access_token is None or self._access_token.expires_in < time.time():
             return await self._async_get_access_token()
         if self._access_token.expires_in < time.time() + 300:
-            return await self._async_refresh_token()
+            return await self._async_get_refresh_token()
         return self._access_token.access_token
 
     async def _async_get_access_token(self) -> str:
@@ -72,7 +72,7 @@ class LaMarzoccoCloudClient:
         }
         return await self.__async_get_token(data)
 
-    async def _async_refresh_token(self) -> str:
+    async def _async_get_refresh_token(self) -> str:
         """Refresh the access token."""
         assert self._access_token is not None
         data = {
@@ -104,8 +104,10 @@ class LaMarzoccoCloudClient:
 
         if response.status_code == 401:
             raise AuthFail("Invalid username or password")
+
         raise RequestNotSuccessful(
             f"Request to endpoint {TOKEN_URL} failed with status code {response.status_code}"
+            + f"response: {response.text}"
         )
 
     async def async_logout(self) -> None:
@@ -153,6 +155,7 @@ class LaMarzoccoCloudClient:
 
         raise RequestNotSuccessful(
             f"Request to endpoint {response.url} failed with status code {response.status_code}"
+            + f"response: {response.text}"
         )
 
     async def get_customer_fleet(self) -> dict[str, LaMarzoccoDeviceInfo]:
