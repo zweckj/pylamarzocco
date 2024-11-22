@@ -7,6 +7,7 @@ from typing import Any, Callable
 from httpx import AsyncClient, RequestError
 import websockets
 
+from .client_cloud import LaMarzoccoCloudClient
 from .const import DEFAULT_PORT, WEBSOCKET_RETRY_DELAY
 from .exceptions import AuthFail, RequestNotSuccessful
 
@@ -50,11 +51,22 @@ class LaMarzoccoLocalClient:
         host: str,
         token: str,
         port: int = DEFAULT_PORT,
+        cloud_details: tuple[LaMarzoccoCloudClient, str] | None = None,
     ) -> bool:
         """Validate the connection details to the local API."""
         try:
             await LaMarzoccoLocalClient._get_config(client, host, token, port)
-        except (AuthFail, RequestNotSuccessful) as ex:
+        except AuthFail:
+            # try to activate the local API
+            if cloud_details is not None:
+                cloud_client, serial = cloud_details
+                try:
+                    await cloud_client.token_command(serial)
+                    await LaMarzoccoLocalClient._get_config(client, host, token, port)
+                except (AuthFail, RequestNotSuccessful) as ex:
+                    _LOGGER.error(ex)
+                    return False
+        except RequestNotSuccessful as ex:
             _LOGGER.error(ex)
             return False
         return True
