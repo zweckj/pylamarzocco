@@ -7,6 +7,7 @@ import logging
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
+from websockets.protocol import State
 
 
 from .client_bluetooth import LaMarzoccoBluetoothClient
@@ -118,7 +119,7 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
         if (
             self._local_client
             and self._local_client.websocket
-            and self._local_client.websocket.open
+            and self._local_client.websocket.state is State.OPEN
         ):
             return True
         return False
