@@ -70,6 +70,7 @@ class LaMarzoccoCloudClient:
             "client_id": DEFAULT_CLIENT_ID,
             "client_secret": DEFAULT_CLIENT_SECRET,
         }
+        _LOGGER.debug("Getting new access token, data: %s", data)
         return await self.__async_get_token(data)
 
     async def _async_get_refresh_token(self) -> str:
@@ -81,6 +82,7 @@ class LaMarzoccoCloudClient:
             "client_id": DEFAULT_CLIENT_ID,
             "client_secret": DEFAULT_CLIENT_SECRET,
         }
+        _LOGGER.debug("Refreshing access token, data: %s", data)
         return await self.__async_get_token(data)
 
     async def __async_get_token(self, data: dict[str, Any]) -> str:
@@ -100,6 +102,7 @@ class LaMarzoccoCloudClient:
                 refresh_token=json_response["refresh_token"],
                 expires_in=time.time() + json_response["expires_in"],
             )
+            _LOGGER.debug("Got new access token: %s", json_response)
             return json_response["access_token"]
 
         if response.status_code == 401:
@@ -151,7 +154,9 @@ class LaMarzoccoCloudClient:
 
         # ensure status code indicates success
         if response.is_success:
-            return response.json()["data"]
+            json_response = response.json()
+            _LOGGER.debug("Request to %s successful", json_response)
+            return json_response["data"]
 
         raise RequestNotSuccessful(
             f"Request to endpoint {response.url} failed with status code {response.status_code}"
