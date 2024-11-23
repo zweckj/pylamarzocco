@@ -1,11 +1,15 @@
 [project]
 name = "pylamarzocco"
-version = "1.2.9"
-license = {text = "MIT License"}
+version = "1.2.10"
+license = { text = "MIT License" }
 description = "A Python implementation of the new La Marzocco API"
 readme = "README.md"
-authors = [{name = "Josef Zweck", email = "24647999+zweckj@users.noreply.github.com"}]
-maintainers = [{name = "Josef Zweck", email = "24647999+zweckj@users.noreply.github.com"}]
+authors = [
+    { name = "Josef Zweck", email = "24647999+zweckj@users.noreply.github.com" },
+]
+maintainers = [
+    { name = "Josef Zweck", email = "24647999+zweckj@users.noreply.github.com" },
+]
 keywords = ["La Marzocco", "lamarzocco", "api", "async", "client"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -16,11 +20,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = [
-    "bleak >= 0.20.0",
-    "httpx >= 0.16.0",
-    "websockets >= 14.0",
-]
+dependencies = ["bleak >= 0.20.0", "httpx >= 0.16.0", "websockets >= 13.1"]
 requires-python = ">= 3.12"
 
 [project.urls]
