@@ -114,7 +114,7 @@ class LaMarzoccoLocalClient:
         try:
             async for websocket in connect(
                 f"ws://{self._host}:{self._local_port}/api/v1/streaming",
-                extra_headers=headers,
+                additional_headers=headers,
             ):
                 self.websocket = websocket
                 try:
