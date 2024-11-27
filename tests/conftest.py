@@ -8,9 +8,10 @@ from http import HTTPMethod
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
+from aiohttp import ClientResponse
+from aioresponses import aioresponses
 import pytest
 from bleak import BLEDevice, BleakError
-from httpx import Response
 
 from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.client_cloud import LaMarzoccoCloudClient
@@ -30,7 +31,7 @@ def load_fixture(device_type: str, file_name: str) -> dict:
         return json.load(f)
 
 
-def get_mock_response(*args, **kwargs) -> Response:
+def get_mock_response(*args, **kwargs) -> ClientResponse:
     """Get a mock response from HTTP request."""
     method: HTTPMethod = kwargs["method"]
     url: str = str(kwargs["url"])
@@ -53,8 +54,8 @@ def get_mock_response(*args, **kwargs) -> Response:
         data["data"] = {"status": "COMPLETED", "responsePayload": {"status": "success"}}
 
     if method == HTTPMethod.GET:
-        return Response(200, json=data)
-    return Response(204, json=data)
+        return aioresponses().get(url=url, status=200, payload=data)
+    return ClientResponse(status=204, content=data)
 
 
 @pytest.fixture(autouse=True)
@@ -79,7 +80,7 @@ def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
     client = AsyncMock()
     client.request.side_effect = get_mock_response
     _cloud_client = LaMarzoccoCloudClient(
-        username="user", password="pass", client=client
+        username="user", password="pass", session=client
     )
 
     with patch.object(
@@ -92,9 +93,9 @@ def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
 @pytest.fixture
 def local_machine_client() -> Generator[LaMarzoccoLocalClient, None, None]:
     """Fixure for a local client"""
-    httpx_client = AsyncMock()
-    httpx_client.get.side_effect = get_local_machine_mock_response
-    client = LaMarzoccoLocalClient("192.168.1.42", "secret", client=httpx_client)
+    client_session = AsyncMock()
+    client_session.get.side_effect = get_local_machine_mock_response
+    client = LaMarzoccoLocalClient("192.168.1.42", "secret", session=client_session)
     yield client
 
 
