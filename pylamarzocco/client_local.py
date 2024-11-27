@@ -1,20 +1,13 @@
 """Interact with the local API of La Marzocco machines."""
 
-import asyncio
 import logging
 from typing import Any, Callable
 
-from httpx import AsyncClient, RequestError
-from websockets.asyncio.client import connect, ClientConnection
-from websockets.exceptions import (
-    ConnectionClosed,
-    InvalidHandshake,
-    InvalidURI,
-    WebSocketException,
-)
+from aiohttp import ClientSession, ClientWebSocketResponse
+from aiohttp.client_exceptions import InvalidURL, ClientError
 
 from .client_cloud import LaMarzoccoCloudClient
-from .const import DEFAULT_PORT, WEBSOCKET_RETRY_DELAY
+from .const import DEFAULT_PORT
 from .exceptions import AuthFail, RequestNotSuccessful
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,24 +21,24 @@ class LaMarzoccoLocalClient:
         host: str,
         local_bearer: str,
         local_port: int = DEFAULT_PORT,
-        client: AsyncClient | None = None,
+        session: ClientSession | None = None,
     ) -> None:
         self._host = host
         self._local_port = local_port
         self._local_bearer = local_bearer
 
-        self.websocket: ClientConnection | None = None
         self.terminating: bool = False
+        self.websocket: ClientWebSocketResponse | None = None
 
-        if client is None:
-            self._client = AsyncClient()
+        if session is None:
+            self._session = ClientSession()
         else:
-            self._client = client
+            self._session = session
 
     async def get_config(self) -> dict[str, Any]:
         """Get current config of machine from local API."""
         return await self._get_config(
-            self._client,
+            self._session,
             self._host,
             self._local_bearer,
             self._local_port,
@@ -53,7 +46,7 @@ class LaMarzoccoLocalClient:
 
     @staticmethod
     async def validate_connection(
-        client: AsyncClient,
+        session: ClientSession,
         host: str,
         token: str,
         port: int = DEFAULT_PORT,
@@ -61,14 +54,14 @@ class LaMarzoccoLocalClient:
     ) -> bool:
         """Validate the connection details to the local API."""
         try:
-            await LaMarzoccoLocalClient._get_config(client, host, token, port)
+            await LaMarzoccoLocalClient._get_config(session, host, token, port)
         except AuthFail:
             # try to activate the local API
             if cloud_details is not None:
                 cloud_client, serial = cloud_details
                 try:
                     await cloud_client.token_command(serial)
-                    await LaMarzoccoLocalClient._get_config(client, host, token, port)
+                    await LaMarzoccoLocalClient._get_config(session, host, token, port)
                 except (AuthFail, RequestNotSuccessful) as ex:
                     _LOGGER.error(ex)
                     return False
@@ -79,7 +72,7 @@ class LaMarzoccoLocalClient:
 
     @staticmethod
     async def _get_config(
-        client: AsyncClient,
+        session: ClientSession,
         host: str,
         token: str,
         port: int = DEFAULT_PORT,
@@ -88,20 +81,20 @@ class LaMarzoccoLocalClient:
         headers = {"Authorization": f"Bearer {token}"}
 
         try:
-            response = await client.get(
+            response = await session.get(
                 f"http://{host}:{port}/api/v1/config", headers=headers
             )
-        except RequestError as ex:
+        except ClientError as ex:
             raise RequestNotSuccessful(
                 f"Requesting local API failed with exception: {ex}"
             ) from ex
-        if response.is_success:
-            return response.json()
-        if response.status_code == 403:
+        if 200 <= response.status < 300:
+            return await response.json()
+        if response.status == 403:
             raise AuthFail("Local API returned 403.")
         raise RequestNotSuccessful(
-            f"Querying local API failed with statuscode: {response.status_code}"
-            + f"response: {response.text}"
+            f"Querying local API failed with statuscode: {response.status}"
+            + f"response: {await response.text()}"
         )
 
     async def websocket_connect(
@@ -112,33 +105,21 @@ class LaMarzoccoLocalClient:
 
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         try:
-            async for websocket in connect(
+            async with await self._session.ws_connect(
                 f"ws://{self._host}:{self._local_port}/api/v1/streaming",
-                extra_headers=headers,
-            ):
-                self.websocket = websocket
-                try:
+                headers=headers,
+            ) as ws:
+                self.websocket = ws
+                async for msg in ws:
                     # Process messages received on the connection.
-                    async for message in websocket:
-                        if self.terminating:
-                            return
-                        if callback is not None:
-                            try:
-                                callback(message)
-                            except Exception as ex:  # pylint: disable=broad-except
-                                _LOGGER.exception("Error during callback: %s", ex)
-                except ConnectionClosed:
                     if self.terminating:
                         return
-                    _LOGGER.debug(
-                        "Websocket disconnected, reconnecting in %s",
-                        WEBSOCKET_RETRY_DELAY,
-                    )
-                    await asyncio.sleep(WEBSOCKET_RETRY_DELAY)
-                    continue
-                except WebSocketException as ex:
-                    _LOGGER.warning("Exception during websocket connection: %s", ex)
-        except (TimeoutError, OSError, InvalidHandshake) as ex:
-            _LOGGER.error("Error establishing the websocket connection: %s", ex)
-        except InvalidURI:
+                    if callback is not None:
+                        try:
+                            callback(msg.data)
+                        except Exception as ex:  # pylint: disable=broad-except
+                            _LOGGER.exception("Error during callback: %s", ex)
+        except InvalidURL:
             _LOGGER.error("Invalid URI passed to websocket connection: %s", self._host)
+        except (TimeoutError, OSError, ClientError) as ex:
+            _LOGGER.error("Error establishing the websocket connection: %s", ex)

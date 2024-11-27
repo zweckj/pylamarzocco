@@ -7,7 +7,6 @@ import logging
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
-from websockets.protocol import State
 
 
 from .client_bluetooth import LaMarzoccoBluetoothClient
@@ -116,12 +115,8 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
     @property
     def websocket_connected(self) -> bool:
         """Return the connection status of the websocket client."""
-        if (
-            self._local_client
-            and self._local_client.websocket
-            and self._local_client.websocket.state is State.OPEN
-        ):
-            return True
+        if self._local_client and self._local_client.websocket:
+            return not self._local_client.websocket.closed
         return False
 
     def parse_config(self, raw_config: dict[str, Any]) -> None:
