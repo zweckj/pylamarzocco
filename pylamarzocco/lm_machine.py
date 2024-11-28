@@ -379,6 +379,14 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
             callback=self.on_websocket_message_received
         )
 
+    async def websocket_disconnect(self) -> None:
+        """Disconnect from the websocket of the machine."""
+
+        if self._local_client is None or self._local_client.websocket is None:
+            return
+
+        await self._local_client.websocket.close()
+
     def on_websocket_message_received(self, message: str | bytes) -> None:
         """Websocket message received"""
 

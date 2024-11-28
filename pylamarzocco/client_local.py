@@ -27,7 +27,6 @@ class LaMarzoccoLocalClient:
         self._local_port = local_port
         self._local_bearer = local_bearer
 
-        self.terminating: bool = False
         self.websocket: ClientWebSocketResponse | None = None
 
         if session is None:
@@ -111,9 +110,7 @@ class LaMarzoccoLocalClient:
             ) as ws:
                 self.websocket = ws
                 async for msg in ws:
-                    # Process messages received on the connection.
-                    if self.terminating:
-                        return
+                    _LOGGER.debug("Received websocket message: %s", msg)
                     if callback is not None:
                         try:
                             callback(msg.data)
