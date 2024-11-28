@@ -10,7 +10,6 @@ from .const import (
     SmartStandbyMode,
     WeekDay,
 )
-
 from .models import (
     LaMarzoccoBoiler,
     LaMarzoccoCoffeeStatistics,
@@ -19,7 +18,6 @@ from .models import (
     LaMarzoccoSmartStandby,
     LaMarzoccoWakeUpSleepEntry,
 )
-
 
 # def schedule_to_request(schedule: LaMarzoccoSchedule) -> LaMarzoccoCloudSchedule:
 #     """convert schedule to API expected input format"""
@@ -167,6 +165,7 @@ def parse_firmware(
 def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStatistics:
     """Parse statistics from webhook statistics object."""
 
+    continuous = 0
     group = statistics["groups"][0]
     doses = group["doses"]
     drink_stats: dict[PhysicalKey, int] = {}

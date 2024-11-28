@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-
-from datetime import datetime
 import logging
-from http import HTTPMethod
 import time
+from datetime import datetime
+from http import HTTPMethod
 from typing import Any
 
 from aiohttp import ClientSession, ClientTimeout
@@ -30,8 +29,8 @@ from .const import (
 from .exceptions import AuthFail, RequestNotSuccessful
 from .models import (
     AccessToken,
-    LaMarzoccoFirmware,
     LaMarzoccoDeviceInfo,
+    LaMarzoccoFirmware,
     LaMarzoccoWakeUpSleepEntry,
 )
 

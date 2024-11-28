@@ -4,7 +4,7 @@ import logging
 from typing import Any, Callable
 
 from aiohttp import ClientSession, ClientWebSocketResponse
-from aiohttp.client_exceptions import InvalidURL, ClientError
+from aiohttp.client_exceptions import ClientError, InvalidURL
 
 from .client_cloud import LaMarzoccoCloudClient
 from .const import DEFAULT_PORT

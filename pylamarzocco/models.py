@@ -1,15 +1,15 @@
 """Models for La Marzocco API"""
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import TypedDict
+
 from .const import (
-    PhysicalKey,
     BoilerType,
+    PhysicalKey,
     PrebrewMode,
-    WeekDay,
     SmartStandbyMode,
     SteamLevel,
+    WeekDay,
 )
 
 ####################################

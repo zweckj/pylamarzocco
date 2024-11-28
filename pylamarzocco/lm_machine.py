@@ -8,7 +8,6 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-
 from .client_bluetooth import LaMarzoccoBluetoothClient
 from .client_cloud import LaMarzoccoCloudClient
 from .client_local import LaMarzoccoLocalClient
