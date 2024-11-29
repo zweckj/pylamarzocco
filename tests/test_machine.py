@@ -57,11 +57,10 @@ async def test_set_temp(
     """Test setting boiler temperature."""
     machine = await init_machine(cloud_client)
 
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await machine.set_temp(
-            BoilerType.STEAM,
-            120,
-        )
+    result = await machine.set_temp(
+        BoilerType.STEAM,
+        120,
+    )
     assert result is True
     assert machine.config.boilers[BoilerType.STEAM].target_temperature == 120
 

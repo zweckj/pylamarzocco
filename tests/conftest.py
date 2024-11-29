@@ -17,7 +17,7 @@ from bleak import BleakError, BLEDevice
 from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.client_cloud import LaMarzoccoCloudClient
 from pylamarzocco.client_local import LaMarzoccoLocalClient
-from pylamarzocco.const import GW_AWS_PROXY_BASE_URL, GW_MACHINE_BASE_URL
+from pylamarzocco.const import GW_AWS_PROXY_BASE_URL, GW_MACHINE_BASE_URL, TOKEN_URL
 
 from . import GRINDER_SERIAL, MACHINE_SERIAL
 
@@ -31,9 +31,15 @@ def load_fixture(device_type: str, file_name: str) -> dict:
 
 
 @pytest.fixture(autouse=True)
-def get_mock_response(mock_aioresponse: aioresponses) -> None:
+def mock_response(mock_aioresponse: aioresponses) -> None:
     """Get a mock response from HTTP request."""
 
+    # tokken
+    mock_aioresponse.post(
+        url=TOKEN_URL,
+        status=200,
+        payload={"access_token": "123", "refresh_token": "456", "expires_in": 3600},
+    )
     # load config
     mock_aioresponse.get(
         url=f"{GW_MACHINE_BASE_URL}/{MACHINE_SERIAL}/configuration",
@@ -93,12 +99,12 @@ def get_mock_response(mock_aioresponse: aioresponses) -> None:
 def mock_asyncio_sleep() -> Generator[None, None, None]:
     """Mock asyncio.sleep to speed up tests."""
 
-    with patch("asyncio.sleep", new_callable=AsyncMock):
+    with patch("pylamarzocco.client_cloud.asyncio.sleep", new_callable=AsyncMock):
         yield
 
 
-@pytest.fixture
-def mock_aioresponse() -> Generator[aioresponses, None, None]:
+@pytest.fixture(name="mock_aioresponse")
+def fixture_mock_aioresponse() -> Generator[aioresponses, None, None]:
     """Fixture for aioresponses."""
     with aioresponses() as m:
         yield m
@@ -112,12 +118,7 @@ async def cloud_client() -> AsyncGenerator[LaMarzoccoCloudClient, None]:
         _cloud_client = LaMarzoccoCloudClient(
             username="user", password="pass", client=session
         )
-
-        with patch.object(
-            _cloud_client, "async_get_access_token", new_callable=AsyncMock
-        ) as mock_async_get_access_token:
-            mock_async_get_access_token.return_value = "token"
-            yield _cloud_client
+        yield _cloud_client
 
 
 @pytest.fixture
