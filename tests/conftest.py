@@ -110,7 +110,7 @@ async def cloud_client() -> AsyncGenerator[LaMarzoccoCloudClient, None]:
 
     async with ClientSession() as session:
         _cloud_client = LaMarzoccoCloudClient(
-            username="user", password="pass", session=session
+            username="user", password="pass", client=session
         )
 
         with patch.object(
@@ -124,7 +124,7 @@ async def cloud_client() -> AsyncGenerator[LaMarzoccoCloudClient, None]:
 async def local_machine_client() -> AsyncGenerator[LaMarzoccoLocalClient, None]:
     """Fixure for a local client"""
     async with ClientSession() as session:
-        client = LaMarzoccoLocalClient("192.168.1.42", "secret", session=session)
+        client = LaMarzoccoLocalClient("192.168.1.42", "secret", client=session)
         yield client
 
 

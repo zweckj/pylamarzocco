@@ -21,7 +21,7 @@ class LaMarzoccoLocalClient:
         host: str,
         local_bearer: str,
         local_port: int = DEFAULT_PORT,
-        session: ClientSession | None = None,
+        client: ClientSession | None = None,
     ) -> None:
         self._host = host
         self._local_port = local_port
@@ -29,15 +29,15 @@ class LaMarzoccoLocalClient:
 
         self.websocket: ClientWebSocketResponse | None = None
 
-        if session is None:
-            self._session = ClientSession()
+        if client is None:
+            self._client = ClientSession()
         else:
-            self._session = session
+            self._client = client
 
     async def get_config(self) -> dict[str, Any]:
         """Get current config of machine from local API."""
         return await self._get_config(
-            self._session,
+            self._client,
             self._host,
             self._local_bearer,
             self._local_port,
@@ -45,7 +45,7 @@ class LaMarzoccoLocalClient:
 
     @staticmethod
     async def validate_connection(
-        session: ClientSession,
+        client: ClientSession,
         host: str,
         token: str,
         port: int = DEFAULT_PORT,
@@ -53,14 +53,14 @@ class LaMarzoccoLocalClient:
     ) -> bool:
         """Validate the connection details to the local API."""
         try:
-            await LaMarzoccoLocalClient._get_config(session, host, token, port)
+            await LaMarzoccoLocalClient._get_config(client, host, token, port)
         except AuthFail:
             # try to activate the local API
             if cloud_details is not None:
                 cloud_client, serial = cloud_details
                 try:
                     await cloud_client.token_command(serial)
-                    await LaMarzoccoLocalClient._get_config(session, host, token, port)
+                    await LaMarzoccoLocalClient._get_config(client, host, token, port)
                 except (AuthFail, RequestNotSuccessful) as ex:
                     _LOGGER.error(ex)
                     return False
@@ -71,7 +71,7 @@ class LaMarzoccoLocalClient:
 
     @staticmethod
     async def _get_config(
-        session: ClientSession,
+        client: ClientSession,
         host: str,
         token: str,
         port: int = DEFAULT_PORT,
@@ -80,7 +80,7 @@ class LaMarzoccoLocalClient:
         headers = {"Authorization": f"Bearer {token}"}
 
         try:
-            response = await session.get(
+            response = await client.get(
                 f"http://{host}:{port}/api/v1/config", headers=headers
             )
         except ClientError as ex:
@@ -104,7 +104,7 @@ class LaMarzoccoLocalClient:
 
         headers = {"Authorization": f"Bearer {self._local_bearer}"}
         try:
-            async with await self._session.ws_connect(
+            async with await self._client.ws_connect(
                 f"ws://{self._host}:{self._local_port}/api/v1/streaming",
                 headers=headers,
             ) as ws:

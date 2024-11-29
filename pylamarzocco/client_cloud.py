@@ -40,15 +40,15 @@ _LOGGER = logging.getLogger(__name__)
 class LaMarzoccoCloudClient:
     """La Marzocco Cloud Client."""
 
-    _session: ClientSession
+    _client: ClientSession
 
     def __init__(
-        self, username: str, password: str, session: ClientSession | None = None
+        self, username: str, password: str, client: ClientSession | None = None
     ) -> None:
-        if session is None:
-            self._session = ClientSession()
+        if client is None:
+            self._client = ClientSession()
         else:
-            self._session = session
+            self._client = client
         self._username = username
         self._password = password
         self._access_token: AccessToken | None = None
@@ -89,7 +89,7 @@ class LaMarzoccoCloudClient:
         """Wrapper for a token request."""
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         try:
-            response = await self._session.post(TOKEN_URL, data=data, headers=headers)
+            response = await self._client.post(TOKEN_URL, data=data, headers=headers)
         except ClientError as ex:
             raise RequestNotSuccessful(
                 "Error during HTTP request."
@@ -118,7 +118,7 @@ class LaMarzoccoCloudClient:
         if self._access_token is None:
             return
         try:
-            response = await self._session.post(LOGOUT_URL, data={})
+            response = await self._client.post(LOGOUT_URL, data={})
         except ClientError as ex:
             raise RequestNotSuccessful(
                 "Error during HTTP request."
@@ -144,7 +144,7 @@ class LaMarzoccoCloudClient:
         headers = {"Authorization": f"Bearer {access_token}"}
 
         try:
-            response = await self._session.request(
+            response = await self._client.request(
                 method=method,
                 url=url,
                 json=data,
