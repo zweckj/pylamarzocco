@@ -528,6 +528,10 @@ class LaMarzoccoMachine(LaMarzoccoDevice):
                 self._system_info = json.loads(msg["SystemInfo"])
                 property_updated = True
 
+            elif "TankStatus" in msg:
+                self.config.water_contact = msg["TankStatus"] == "full"  # or "empty"
+                property_updated = True
+
         if not property_updated:
             raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
         return True
