@@ -2,11 +2,11 @@
 
 # pylint: disable=W0212
 
+from dataclasses import asdict
+from http import HTTPMethod
 from unittest.mock import AsyncMock, patch
 
-from http import HTTPMethod
-from dataclasses import asdict
-import pytest
+from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
 
 from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
@@ -15,8 +15,7 @@ from pylamarzocco.client_local import LaMarzoccoLocalClient
 from pylamarzocco.const import BoilerType, PhysicalKey
 
 from . import init_machine
-
-pytestmark = pytest.mark.asyncio
+from .conftest import load_fixture
 
 
 async def test_create(
@@ -34,8 +33,15 @@ async def test_create(
 async def test_local_client(
     local_machine_client: LaMarzoccoLocalClient,
     cloud_client: LaMarzoccoCloudClient,
+    mock_aioresponse: aioresponses,
 ) -> None:
     """Ensure that the local client delivers same result"""
+    # load config
+    mock_aioresponse.get(
+        url="http://192.168.1.42:8081/api/v1/config",
+        status=200,
+        payload=load_fixture("machine", "config.json")["data"],
+    )
 
     machine = await init_machine(local_client=local_machine_client)
 
@@ -51,11 +57,10 @@ async def test_set_temp(
     """Test setting boiler temperature."""
     machine = await init_machine(cloud_client)
 
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await machine.set_temp(
-            BoilerType.STEAM,
-            120,
-        )
+    result = await machine.set_temp(
+        BoilerType.STEAM,
+        120,
+    )
     assert result is True
     assert machine.config.boilers[BoilerType.STEAM].target_temperature == 120
 
@@ -96,7 +101,9 @@ async def test_websocket_message(
 
 
 async def test_set_power(
-    cloud_client: LaMarzoccoCloudClient, bluetooth_client: LaMarzoccoBluetoothClient
+    cloud_client: LaMarzoccoCloudClient,
+    bluetooth_client: LaMarzoccoBluetoothClient,
+    mock_aioresponse: aioresponses,
 ):
     """Test setting the power."""
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
@@ -107,7 +114,7 @@ async def test_set_power(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"MachineChangeMode","parameter":{"mode":"BrewingMode"}}\x00',
     )
-    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
         json={"status": "BrewingMode"},
@@ -117,7 +124,9 @@ async def test_set_power(
 
 
 async def test_set_steam(
-    cloud_client: LaMarzoccoCloudClient, bluetooth_client: LaMarzoccoBluetoothClient
+    cloud_client: LaMarzoccoCloudClient,
+    bluetooth_client: LaMarzoccoBluetoothClient,
+    mock_aioresponse: aioresponses,
 ):
     """Test setting the steam."""
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
@@ -128,7 +137,7 @@ async def test_set_steam(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"SettingBoilerEnable","parameter":{"identifier":"SteamBoiler","state":true}}\x00',
     )
-    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
         json={"identifier": "SteamBoiler", "state": True},
@@ -138,7 +147,9 @@ async def test_set_steam(
 
 
 async def test_set_temperature(
-    cloud_client: LaMarzoccoCloudClient, bluetooth_client: LaMarzoccoBluetoothClient
+    cloud_client: LaMarzoccoCloudClient,
+    bluetooth_client: LaMarzoccoBluetoothClient,
+    mock_aioresponse: aioresponses,
 ):
     """Test setting temperature."""
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
@@ -149,7 +160,7 @@ async def test_set_temperature(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"SettingBoilerTarget","parameter":{"identifier":"SteamBoiler","value":131}}\x00',
     )
-    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
         json={"identifier": "SteamBoiler", "value": 131},
@@ -158,7 +169,10 @@ async def test_set_temperature(
     )
 
 
-async def test_set_prebrew_time(cloud_client: LaMarzoccoCloudClient):
+async def test_set_prebrew_time(
+    cloud_client: LaMarzoccoCloudClient,
+    mock_aioresponse: aioresponses,
+):
     """Test setting prebrew time."""
     machine = await init_machine(
         cloud_client,
@@ -166,7 +180,7 @@ async def test_set_prebrew_time(cloud_client: LaMarzoccoCloudClient):
 
     assert await machine.set_prebrew_time(1.0, 3.5)
 
-    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={
@@ -182,8 +196,17 @@ async def test_set_prebrew_time(cloud_client: LaMarzoccoCloudClient):
     assert machine.config.prebrew_configuration[PhysicalKey.A].on_time == 1.0
     assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 3.5
 
+
+async def test_set_preinfusion_time(
+    cloud_client: LaMarzoccoCloudClient,
+    mock_aioresponse: aioresponses,
+):
+    """Test setting prebrew time."""
+    machine = await init_machine(
+        cloud_client,
+    )
     assert await machine.set_preinfusion_time(4.5)
-    cloud_client._client.request.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={"button": "DoseA", "group": "Group1", "holdTimeMs": 4500, "wetTimeMs": 0},

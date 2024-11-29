@@ -21,9 +21,7 @@ from .const import (
     SETTINGS_CHARACTERISTIC,
     BoilerType,
 )
-from .exceptions import (
-    BluetoothConnectionFailed,
-)
+from .exceptions import BluetoothConnectionFailed
 
 _logger = logging.getLogger(__name__)
 

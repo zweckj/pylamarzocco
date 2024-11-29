@@ -3,23 +3,23 @@
 # pylint: disable=W0212, W0613
 
 import json
+import re
 from collections.abc import Generator
-from http import HTTPMethod
 from pathlib import Path
+from typing import AsyncGenerator
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from bleak import BLEDevice, BleakError
-from httpx import Response
+from aiohttp import ClientSession
+from aioresponses import aioresponses
+from bleak import BleakError, BLEDevice
 
 from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.client_cloud import LaMarzoccoCloudClient
 from pylamarzocco.client_local import LaMarzoccoLocalClient
+from pylamarzocco.const import GW_AWS_PROXY_BASE_URL, GW_MACHINE_BASE_URL, TOKEN_URL
 
-from . import (
-    MACHINE_SERIAL,
-    GRINDER_SERIAL,
-)
+from . import GRINDER_SERIAL, MACHINE_SERIAL
 
 
 def load_fixture(device_type: str, file_name: str) -> dict:
@@ -30,72 +30,103 @@ def load_fixture(device_type: str, file_name: str) -> dict:
         return json.load(f)
 
 
-def get_mock_response(*args, **kwargs) -> Response:
+@pytest.fixture(autouse=True)
+def mock_response(mock_aioresponse: aioresponses) -> None:
     """Get a mock response from HTTP request."""
-    method: HTTPMethod = kwargs["method"]
-    url: str = str(kwargs["url"])
 
-    if MACHINE_SERIAL in url:
-        device_type = "machine"
-    elif GRINDER_SERIAL in url:
-        device_type = "grinder"
-    else:
-        raise ValueError(f"Unknown device in URL: {url}")
+    # tokken
+    mock_aioresponse.post(
+        url=TOKEN_URL,
+        status=200,
+        payload={"access_token": "123", "refresh_token": "456", "expires_in": 3600},
+    )
+    # load config
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{MACHINE_SERIAL}/configuration",
+        status=200,
+        payload=load_fixture("machine", "config.json"),
+    )
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{GRINDER_SERIAL}/configuration",
+        status=200,
+        payload=load_fixture("grinder", "config.json"),
+    )
 
-    data: dict = {"data": {"commandId": "123456"}}
-    if "configuration" in url:
-        data = load_fixture(device_type, "config.json")
-    elif "firmware" in url:
-        data = load_fixture(device_type, "firmware.json")
-    elif "counters" in url:
-        data = load_fixture(device_type, "counters.json")
-    elif "/commands/" in url:
-        data["data"] = {"status": "COMPLETED", "responsePayload": {"status": "success"}}
+    # load firmware
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{MACHINE_SERIAL}/firmware/",
+        status=200,
+        payload=load_fixture("machine", "firmware.json"),
+    )
+    # mock_aioresponse.get(
+    #     url=f"{GW_MACHINE_BASE_URL}/{GRINDER_SERIAL}/firmware/",
+    #     status=200,
+    #     payload=load_fixture("grinder", "firmware.json"),
+    # )
 
-    if method == HTTPMethod.GET:
-        return Response(200, json=data)
-    return Response(204, json=data)
+    # load statistics
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{MACHINE_SERIAL}/statistics/counters",
+        status=200,
+        payload=load_fixture("machine", "counters.json"),
+    )
+    # mock_aioresponse.get(
+    #     url=f"{GW_MACHINE_BASE_URL}/{GRINDER_SERIAL}/statistics/counters",
+    #     status=200,
+    #     payload=load_fixture("grinder", "firmware.json"),
+    # )
+
+    # post
+    pattern = re.compile(rf"{GW_MACHINE_BASE_URL}/{MACHINE_SERIAL}/.*")
+    mock_aioresponse.post(
+        url=pattern,
+        status=200,
+        payload={"data": {"commandId": "123456"}},
+    )
+
+    # commands
+    pattern = re.compile(rf"{GW_AWS_PROXY_BASE_URL}/{MACHINE_SERIAL}/commands/.*")
+    mock_aioresponse.get(
+        url=pattern,
+        status=200,
+        payload={
+            "data": {"status": "COMPLETED", "responsePayload": {"status": "success"}}
+        },
+    )
 
 
 @pytest.fixture(autouse=True)
-def mock_asyncio_sleep():
+def mock_asyncio_sleep() -> Generator[None, None, None]:
     """Mock asyncio.sleep to speed up tests."""
 
-    with patch("asyncio.sleep", new_callable=AsyncMock):
+    with patch("pylamarzocco.client_cloud.asyncio.sleep", new_callable=AsyncMock):
         yield
 
 
-def get_local_machine_mock_response(*args, **kwargs) -> Response:
-    """Get a mock response from local API."""
-
-    data = load_fixture("machine", "config.json")["data"]
-    return Response(200, json=data)
+@pytest.fixture(name="mock_aioresponse")
+def fixture_mock_aioresponse() -> Generator[aioresponses, None, None]:
+    """Fixture for aioresponses."""
+    with aioresponses() as m:
+        yield m
 
 
 @pytest.fixture
-def cloud_client() -> Generator[LaMarzoccoCloudClient, None, None]:
+async def cloud_client() -> AsyncGenerator[LaMarzoccoCloudClient, None]:
     """Fixture for a cloud client."""
 
-    client = AsyncMock()
-    client.request.side_effect = get_mock_response
-    _cloud_client = LaMarzoccoCloudClient(
-        username="user", password="pass", client=client
-    )
-
-    with patch.object(
-        _cloud_client, "async_get_access_token", new_callable=AsyncMock
-    ) as mock_async_get_access_token:
-        mock_async_get_access_token.return_value = "token"
+    async with ClientSession() as session:
+        _cloud_client = LaMarzoccoCloudClient(
+            username="user", password="pass", client=session
+        )
         yield _cloud_client
 
 
 @pytest.fixture
-def local_machine_client() -> Generator[LaMarzoccoLocalClient, None, None]:
+async def local_machine_client() -> AsyncGenerator[LaMarzoccoLocalClient, None]:
     """Fixure for a local client"""
-    httpx_client = AsyncMock()
-    httpx_client.get.side_effect = get_local_machine_mock_response
-    client = LaMarzoccoLocalClient("192.168.1.42", "secret", client=httpx_client)
-    yield client
+    async with ClientSession() as session:
+        client = LaMarzoccoLocalClient("192.168.1.42", "secret", client=session)
+        yield client
 
 
 @pytest.fixture

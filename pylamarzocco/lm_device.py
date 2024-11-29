@@ -7,6 +7,9 @@ from typing import Any
 
 from bleak import BleakError
 
+from .client_bluetooth import LaMarzoccoBluetoothClient
+from .client_cloud import LaMarzoccoCloudClient
+from .client_local import LaMarzoccoLocalClient
 from .const import FirmwareType
 from .exceptions import (
     AuthFail,
@@ -15,9 +18,6 @@ from .exceptions import (
     RequestNotSuccessful,
 )
 from .helpers import parse_firmware
-from .client_bluetooth import LaMarzoccoBluetoothClient
-from .client_cloud import LaMarzoccoCloudClient
-from .client_local import LaMarzoccoLocalClient
 from .models import LaMarzoccoDeviceConfig, LaMarzoccoFirmware, LaMarzoccoStatistics
 
 _LOGGER = logging.getLogger(__name__)

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-
-from datetime import datetime
 import logging
-from http import HTTPMethod
 import time
+from datetime import datetime
+from http import HTTPMethod
 from typing import Any
 
-from httpx import AsyncClient, RequestError
+from aiohttp import ClientSession, ClientTimeout
+from aiohttp.client_exceptions import ClientError
 
 from .const import (
     CUSTOMER_URL,
@@ -26,11 +26,12 @@ from .const import (
     PrebrewMode,
     SmartStandbyMode,
 )
+from .helpers import is_success
 from .exceptions import AuthFail, RequestNotSuccessful
 from .models import (
     AccessToken,
-    LaMarzoccoFirmware,
     LaMarzoccoDeviceInfo,
+    LaMarzoccoFirmware,
     LaMarzoccoWakeUpSleepEntry,
 )
 
@@ -40,13 +41,13 @@ _LOGGER = logging.getLogger(__name__)
 class LaMarzoccoCloudClient:
     """La Marzocco Cloud Client."""
 
-    _client: AsyncClient
+    _client: ClientSession
 
     def __init__(
-        self, username: str, password: str, client: AsyncClient | None = None
+        self, username: str, password: str, client: ClientSession | None = None
     ) -> None:
         if client is None:
-            self._client = AsyncClient()
+            self._client = ClientSession()
         else:
             self._client = client
         self._username = username
@@ -90,13 +91,13 @@ class LaMarzoccoCloudClient:
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         try:
             response = await self._client.post(TOKEN_URL, data=data, headers=headers)
-        except RequestError as ex:
+        except ClientError as ex:
             raise RequestNotSuccessful(
                 "Error during HTTP request."
                 + f"Request to endpoint {TOKEN_URL} failed with error: {ex}"
             ) from ex
-        if response.is_success:
-            json_response = response.json()
+        if is_success(response):
+            json_response = await response.json()
             self._access_token = AccessToken(
                 access_token=json_response["access_token"],
                 refresh_token=json_response["refresh_token"],
@@ -105,12 +106,12 @@ class LaMarzoccoCloudClient:
             _LOGGER.debug("Got new access token: %s", json_response)
             return json_response["access_token"]
 
-        if response.status_code == 401:
+        if response.status == 401:
             raise AuthFail("Invalid username or password")
 
         raise RequestNotSuccessful(
-            f"Request to endpoint {TOKEN_URL} failed with status code {response.status_code}"
-            + f"response: {response.text}"
+            f"Request to endpoint {TOKEN_URL} failed with status code {response.status}"
+            + f"response: {await response.text()}"
         )
 
     async def async_logout(self) -> None:
@@ -119,15 +120,15 @@ class LaMarzoccoCloudClient:
             return
         try:
             response = await self._client.post(LOGOUT_URL, data={})
-        except RequestError as ex:
+        except ClientError as ex:
             raise RequestNotSuccessful(
                 "Error during HTTP request."
                 + f"Request to endpoint {LOGOUT_URL} failed with error: {ex}"
             ) from ex
-        if not response.is_success:
+        if not is_success(response):
             raise RequestNotSuccessful(
-                f"Request to endpoint {LOGOUT_URL} failed with status code {response.status_code},"
-                + "response: {response.text}"
+                f"Request to endpoint {LOGOUT_URL} failed with status code {response.status},"
+                + "response: {await response.text()}"
             )
         self._access_token = None
 
@@ -145,22 +146,26 @@ class LaMarzoccoCloudClient:
 
         try:
             response = await self._client.request(
-                method=method, url=url, json=data, timeout=timeout, headers=headers
+                method=method,
+                url=url,
+                json=data,
+                timeout=ClientTimeout(total=timeout),
+                headers=headers,
             )
-        except RequestError as ex:
+        except ClientError as ex:
             raise RequestNotSuccessful(
                 f"Error during HTTP request. Request to endpoint {url} failed with error: {ex}"
             ) from ex
 
         # ensure status code indicates success
-        if response.is_success:
-            json_response = response.json()
+        if is_success(response):
+            json_response = await response.json()
             _LOGGER.debug("Request to %s successful", json_response)
             return json_response["data"]
 
         raise RequestNotSuccessful(
-            f"Request to endpoint {response.url} failed with status code {response.status_code}"
-            + f"response: {response.text}"
+            f"Request to endpoint {response.url} failed with status code {response.status}"
+            + f"response: {await response.text()}"
         )
 
     async def get_customer_fleet(self) -> dict[str, LaMarzoccoDeviceInfo]:

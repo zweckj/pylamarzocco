@@ -1,6 +1,7 @@
 """ Helper functions for pylamarzocco. """
 
 from typing import Any
+from aiohttp import ClientResponse
 
 from .const import (
     BoilerType,
@@ -10,7 +11,6 @@ from .const import (
     SmartStandbyMode,
     WeekDay,
 )
-
 from .models import (
     LaMarzoccoBoiler,
     LaMarzoccoCoffeeStatistics,
@@ -19,7 +19,6 @@ from .models import (
     LaMarzoccoSmartStandby,
     LaMarzoccoWakeUpSleepEntry,
 )
-
 
 # def schedule_to_request(schedule: LaMarzoccoSchedule) -> LaMarzoccoCloudSchedule:
 #     """convert schedule to API expected input format"""
@@ -167,6 +166,7 @@ def parse_firmware(
 def parse_webhook_statistics(statistics: dict[str, Any]) -> LaMarzoccoCoffeeStatistics:
     """Parse statistics from webhook statistics object."""
 
+    continuous = 0
     group = statistics["groups"][0]
     doses = group["doses"]
     drink_stats: dict[PhysicalKey, int] = {}
@@ -209,3 +209,8 @@ def parse_wakeup_sleep_entries(
         )
         parsed[wake_up_sleep_entry.entry_id] = wake_up_sleep_entry
     return parsed
+
+
+def is_success(response: ClientResponse) -> bool:
+    """Check if response is successful."""
+    return 200 <= response.status < 300
