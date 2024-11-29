@@ -26,6 +26,7 @@ from .const import (
     PrebrewMode,
     SmartStandbyMode,
 )
+from .helpers import is_success
 from .exceptions import AuthFail, RequestNotSuccessful
 from .models import (
     AccessToken,
@@ -95,7 +96,7 @@ class LaMarzoccoCloudClient:
                 "Error during HTTP request."
                 + f"Request to endpoint {TOKEN_URL} failed with error: {ex}"
             ) from ex
-        if 200 <= response.status < 300:
+        if is_success(response):
             json_response = await response.json()
             self._access_token = AccessToken(
                 access_token=json_response["access_token"],
@@ -124,7 +125,7 @@ class LaMarzoccoCloudClient:
                 "Error during HTTP request."
                 + f"Request to endpoint {LOGOUT_URL} failed with error: {ex}"
             ) from ex
-        if not 200 <= response.status < 300:
+        if not is_success(response):
             raise RequestNotSuccessful(
                 f"Request to endpoint {LOGOUT_URL} failed with status code {response.status},"
                 + "response: {await response.text()}"
@@ -157,7 +158,7 @@ class LaMarzoccoCloudClient:
             ) from ex
 
         # ensure status code indicates success
-        if 200 <= response.status < 300:
+        if is_success(response):
             json_response = await response.json()
             _LOGGER.debug("Request to %s successful", json_response)
             return json_response["data"]

@@ -9,6 +9,7 @@ from aiohttp.client_exceptions import ClientError, InvalidURL
 from .client_cloud import LaMarzoccoCloudClient
 from .const import DEFAULT_PORT
 from .exceptions import AuthFail, RequestNotSuccessful
+from .helpers import is_success
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class LaMarzoccoLocalClient:
             raise RequestNotSuccessful(
                 f"Requesting local API failed with exception: {ex}"
             ) from ex
-        if 200 <= response.status < 300:
+        if is_success(response):
             return await response.json()
         if response.status == 403:
             raise AuthFail("Local API returned 403.")

@@ -1,6 +1,7 @@
 """ Helper functions for pylamarzocco. """
 
 from typing import Any
+from aiohttp import ClientResponse
 
 from .const import (
     BoilerType,
@@ -208,3 +209,8 @@ def parse_wakeup_sleep_entries(
         )
         parsed[wake_up_sleep_entry.entry_id] = wake_up_sleep_entry
     return parsed
+
+
+def is_success(response: ClientResponse) -> bool:
+    """Check if response is successful."""
+    return 200 <= response.status < 300
