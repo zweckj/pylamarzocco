@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from .client_cloud import LaMarzoccoCloudClient
-from .client_local import LaMarzoccoLocalClient
-from .const import FirmwareType, GrinderModel, PhysicalKey
-from .lm_device import LaMarzoccoDevice
-from .models import LaMarzoccoGrinderConfig
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.const import FirmwareType, GrinderModel, PhysicalKey
+from pylamarzocco.devices.base import LaMarzoccoBaseDevice
+from pylamarzocco.models import LaMarzoccoGrinderConfig
 
 
-class LaMarzoccoGrinder(LaMarzoccoDevice):
+class LaMarzoccoGrinder(LaMarzoccoBaseDevice):
     """Class for La Marzocco grinder"""
 
     def __init__(

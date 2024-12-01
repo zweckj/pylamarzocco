@@ -6,10 +6,10 @@ from typing import Any, Callable
 from aiohttp import ClientSession, ClientWebSocketResponse
 from aiohttp.client_exceptions import ClientError, InvalidURL
 
-from .client_cloud import LaMarzoccoCloudClient
-from .const import DEFAULT_PORT
-from .exceptions import AuthFail, RequestNotSuccessful
-from .helpers import is_success
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.const import DEFAULT_PORT
+from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
+from pylamarzocco.helpers import is_success
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -7,23 +7,27 @@ from typing import Any
 
 from bleak import BleakError
 
-from .client_bluetooth import LaMarzoccoBluetoothClient
-from .client_cloud import LaMarzoccoCloudClient
-from .client_local import LaMarzoccoLocalClient
-from .const import FirmwareType
-from .exceptions import (
+from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.const import FirmwareType
+from pylamarzocco.exceptions import (
     AuthFail,
     BluetoothConnectionFailed,
     ClientNotInitialized,
     RequestNotSuccessful,
 )
-from .helpers import parse_firmware
-from .models import LaMarzoccoDeviceConfig, LaMarzoccoFirmware, LaMarzoccoStatistics
+from pylamarzocco.helpers import parse_firmware
+from pylamarzocco.models import (
+    LaMarzoccoDeviceConfig,
+    LaMarzoccoFirmware,
+    LaMarzoccoStatistics,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class LaMarzoccoDevice:
+class LaMarzoccoBaseDevice:
     """Base class for all La Marzocco devices"""
 
     _cloud_client: LaMarzoccoCloudClient | None
