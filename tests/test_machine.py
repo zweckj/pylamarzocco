@@ -4,14 +4,13 @@
 
 from dataclasses import asdict
 from http import HTTPMethod
-from unittest.mock import AsyncMock, patch
 
 from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.client_cloud import LaMarzoccoCloudClient
-from pylamarzocco.client_local import LaMarzoccoLocalClient
+from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.clients.local import LaMarzoccoLocalClient
 from pylamarzocco.const import BoilerType, PhysicalKey
 
 from . import init_machine

@@ -8,10 +8,10 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from .client_bluetooth import LaMarzoccoBluetoothClient
-from .client_cloud import LaMarzoccoCloudClient
-from .client_local import LaMarzoccoLocalClient
-from .const import (
+from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.const import (
     BoilerType,
     FirmwareType,
     MachineModel,
@@ -20,8 +20,8 @@ from .const import (
     SmartStandbyMode,
     SteamLevel,
 )
-from .exceptions import ClientNotInitialized, UnknownWebSocketMessage
-from .helpers import (
+from pylamarzocco.exceptions import ClientNotInitialized, UnknownWebSocketMessage
+from pylamarzocco.helpers import (
     parse_boilers,
     parse_cloud_statistics,
     parse_coffee_doses,
@@ -29,8 +29,8 @@ from .helpers import (
     parse_smart_standby,
     parse_wakeup_sleep_entries,
 )
-from .lm_device import LaMarzoccoDevice
-from .models import (
+from pylamarzocco.devices.base import LaMarzoccoBaseDevice
+from pylamarzocco.models import (
     LaMarzoccoCoffeeStatistics,
     LaMarzoccoMachineConfig,
     LaMarzoccoSmartStandby,
@@ -40,7 +40,7 @@ from .models import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class LaMarzoccoMachine(LaMarzoccoDevice):
+class LaMarzoccoMachine(LaMarzoccoBaseDevice):
     """Class for La Marzocco coffee machine"""
 
     def __init__(

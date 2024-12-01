@@ -2,9 +2,9 @@
 
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.client_cloud import LaMarzoccoCloudClient
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
 from pylamarzocco.const import GrinderModel
-from pylamarzocco.lm_grinder import LaMarzoccoGrinder
+from pylamarzocco.devices.grinder import LaMarzoccoGrinder
 
 from . import GRINDER_SERIAL
 

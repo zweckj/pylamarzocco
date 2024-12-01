@@ -1,7 +1,7 @@
 """Import for ease of use."""
 
-from .client_bluetooth import LaMarzoccoBluetoothClient
-from .client_cloud import LaMarzoccoCloudClient
-from .client_local import LaMarzoccoLocalClient
-from .lm_grinder import LaMarzoccoGrinder
-from .lm_machine import LaMarzoccoMachine
+from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.devices.grinder import LaMarzoccoGrinder
+from pylamarzocco.devices.machine import LaMarzoccoMachine

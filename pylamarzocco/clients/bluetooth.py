@@ -15,13 +15,13 @@ from bleak import (
     BLEDevice,
 )
 
-from .const import (
+from pylamarzocco.const import (
     AUTH_CHARACTERISTIC,
     BT_MODEL_PREFIXES,
     SETTINGS_CHARACTERISTIC,
     BoilerType,
 )
-from .exceptions import BluetoothConnectionFailed
+from pylamarzocco.exceptions import BluetoothConnectionFailed
 
 _logger = logging.getLogger(__name__)
 

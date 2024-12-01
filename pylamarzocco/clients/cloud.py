@@ -12,7 +12,7 @@ from typing import Any
 from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientError
 
-from .const import (
+from pylamarzocco.const import (
     CUSTOMER_URL,
     DEFAULT_CLIENT_ID,
     DEFAULT_CLIENT_SECRET,
@@ -26,9 +26,9 @@ from .const import (
     PrebrewMode,
     SmartStandbyMode,
 )
-from .helpers import is_success
-from .exceptions import AuthFail, RequestNotSuccessful
-from .models import (
+from pylamarzocco.helpers import is_success
+from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
+from pylamarzocco.models import (
     AccessToken,
     LaMarzoccoDeviceInfo,
     LaMarzoccoFirmware,

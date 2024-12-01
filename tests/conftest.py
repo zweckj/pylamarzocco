@@ -14,9 +14,9 @@ from aiohttp import ClientSession
 from aioresponses import aioresponses
 from bleak import BleakError, BLEDevice
 
-from pylamarzocco.client_bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.client_cloud import LaMarzoccoCloudClient
-from pylamarzocco.client_local import LaMarzoccoLocalClient
+from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.clients.local import LaMarzoccoLocalClient
 from pylamarzocco.const import GW_AWS_PROXY_BASE_URL, GW_MACHINE_BASE_URL, TOKEN_URL
 
 from . import GRINDER_SERIAL, MACHINE_SERIAL
@@ -99,7 +99,7 @@ def mock_response(mock_aioresponse: aioresponses) -> None:
 def mock_asyncio_sleep() -> Generator[None, None, None]:
     """Mock asyncio.sleep to speed up tests."""
 
-    with patch("pylamarzocco.client_cloud.asyncio.sleep", new_callable=AsyncMock):
+    with patch("pylamarzocco.clients.cloud.asyncio.sleep", new_callable=AsyncMock):
         yield
 
 
