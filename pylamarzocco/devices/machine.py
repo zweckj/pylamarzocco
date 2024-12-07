@@ -485,9 +485,16 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
                 property_updated = True
 
             elif (
-                "BrewingStoppedGroup1StopType" in msg or "BrewingSnapshotGroup1" in msg
+                "BrewingStoppedGroup1StopType" in msg
+                or "BrewingSnapshotGroup1" in msg
+                or "FlushSnapshotGroup1" in msg
             ):
                 self.config.brew_active = False
+                property_updated = True
+
+            elif "FlushStoppedGroup1Time" in msg:
+                self.config.brew_active = False
+                self.config.brew_active_duration = msg["FlushStoppedGroup1Time"]
                 property_updated = True
 
             elif "SteamBoilerUpdateSetPoint" in msg:
