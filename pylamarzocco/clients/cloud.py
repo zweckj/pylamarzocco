@@ -518,3 +518,25 @@ class LaMarzoccoCloudClient:
         )
 
         return await self._rest_api_call(url=url, method=HTTPMethod.GET, timeout=60)
+
+    async def set_scale_target(
+        self,
+        serial_number: str,
+        key: PhysicalKey,
+        target: int,
+    ) -> bool:
+        """Set the scale target."""
+
+        dose_index = f"Dose{key.name}"
+
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/scale/target-dose"
+        data = {
+            "group": "Group1",
+            "dose_index": dose_index,
+            "dose_type": "MassType",
+            "value": target,
+        }
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        if await self._check_cloud_command_status(serial_number, response):
+            return True
+        return False

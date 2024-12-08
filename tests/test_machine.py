@@ -11,7 +11,13 @@ from syrupy import SnapshotAssertion
 from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
 from pylamarzocco.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.const import BoilerType, PhysicalKey
+from pylamarzocco.const import (
+    BoilerType,
+    PhysicalKey,
+    MachineModel,
+    GW_MACHINE_BASE_URL,
+)
+from pylamarzocco.devices.machine import LaMarzoccoMachine
 
 from . import init_machine
 from .conftest import load_fixture
@@ -27,6 +33,38 @@ async def test_create(
     assert asdict(machine.config) == snapshot(name="config")
     assert machine.firmware == snapshot(name="firmware")
     assert machine.statistics == snapshot(name="statistics")
+
+
+async def test_mini(
+    cloud_client: LaMarzoccoCloudClient,
+    mock_aioresponse: aioresponses,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test creation of a cloud client."""
+    serial = "LM01234"
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{serial}/configuration",
+        status=200,
+        payload=load_fixture("machine", "config-mini.json"),
+    )
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{serial}/statistics/counters",
+        status=200,
+        payload=load_fixture("machine", "counters.json"),
+    )
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{serial}/firmware/",
+        status=200,
+        payload=load_fixture("machine", "firmware.json"),
+    )
+    machine = await LaMarzoccoMachine.create(
+        model=MachineModel.LINEA_MINI,
+        serial_number=serial,
+        name="MyMachine",
+        cloud_client=cloud_client,
+    )
+
+    assert asdict(machine.config) == snapshot
 
 
 async def test_local_client(

@@ -23,9 +23,11 @@ from pylamarzocco.const import (
 from pylamarzocco.exceptions import ClientNotInitialized, UnknownWebSocketMessage
 from pylamarzocco.helpers import (
     parse_boilers,
+    parse_brew_by_weight_settings,
     parse_cloud_statistics,
     parse_coffee_doses,
     parse_preinfusion_settings,
+    parse_scale,
     parse_smart_standby,
     parse_wakeup_sleep_entries,
 )
@@ -138,6 +140,8 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
         self.config.wake_up_sleep_entries = parse_wakeup_sleep_entries(
             raw_config.get("wakeUpSleepEntries", {})
         )
+        self.config.scale = parse_scale(raw_config)
+        self.config.bbw_settings = parse_brew_by_weight_settings(raw_config)
 
     def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
         """Parse the statistics object."""
@@ -276,6 +280,18 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
         if await self.cloud_client.set_dose_hot_water(self.serial_number, dose):
             self.config.dose_hot_water = dose
+            return True
+        return False
+
+    async def set_scale_target(self, key: PhysicalKey, target: int) -> bool:
+        """Set scale target"""
+        if not self.model == MachineModel.LINEA_MINI:
+            raise ValueError("Scale is only supported on Linea Mini")
+
+        assert self.config.bbw_settings
+
+        if await self.cloud_client.set_scale_target(self.serial_number, key, target):
+            self.config.bbw_settings.doses[key] = target
             return True
         return False
 

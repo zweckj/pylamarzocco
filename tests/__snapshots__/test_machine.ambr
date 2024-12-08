@@ -2,6 +2,7 @@
 # name: test_create[config]
   dict({
     'backflush_enabled': False,
+    'bbw_settings': None,
     'boilers': dict({
       <BoilerType.COFFEE: 'CoffeeBoiler1'>: dict({
         'current_temperature': 96.5,
@@ -43,6 +44,7 @@
       }),
     }),
     'prebrew_mode': <PrebrewMode.PREINFUSION: 'TypeB'>,
+    'scale': None,
     'smart_standby': dict({
       'enabled': True,
       'minutes': 10,
@@ -79,9 +81,79 @@
 # name: test_create[statistics]
   LaMarzoccoCoffeeStatistics(drink_stats={<PhysicalKey.A: 1>: 167, <PhysicalKey.B: 2>: 0, <PhysicalKey.C: 3>: 0, <PhysicalKey.D: 4>: 0}, continous=0, total_flushes=228)
 # ---
+# name: test_mini
+  dict({
+    'backflush_enabled': False,
+    'bbw_settings': dict({
+      'active_dose': <PhysicalKey.A: 1>,
+      'doses': dict({
+        <PhysicalKey.A: 1>: 32,
+        <PhysicalKey.B: 2>: 45,
+      }),
+    }),
+    'boilers': dict({
+      <BoilerType.COFFEE: 'CoffeeBoiler1'>: dict({
+        'current_temperature': 42,
+        'enabled': True,
+        'target_temperature': 89,
+      }),
+      <BoilerType.STEAM: 'SteamBoiler'>: dict({
+        'current_temperature': 0,
+        'enabled': False,
+        'target_temperature': 0,
+      }),
+    }),
+    'brew_active': False,
+    'brew_active_duration': 0,
+    'dose_hot_water': 0,
+    'doses': dict({
+      <PhysicalKey.A: 1>: 32,
+    }),
+    'plumbed_in': False,
+    'prebrew_configuration': dict({
+      <PhysicalKey.A: 1>: dict({
+        'off_time': 3,
+        'on_time': 2,
+      }),
+    }),
+    'prebrew_mode': <PrebrewMode.PREBREW: 'Enabled'>,
+    'scale': dict({
+      'address': '44:b7:d0:74:5f:90',
+      'battery': 64,
+      'connected': False,
+      'name': 'LMZ-123A45',
+    }),
+    'smart_standby': dict({
+      'enabled': True,
+      'minutes': 10,
+      'mode': <SmartStandbyMode.LAST_BREWING: 'LastBrewing'>,
+    }),
+    'turned_on': False,
+    'wake_up_sleep_entries': dict({
+      'T6aLl42': dict({
+        'days': list([
+          <WeekDay.MONDAY: 'monday'>,
+          <WeekDay.TUESDAY: 'tuesday'>,
+          <WeekDay.WEDNESDAY: 'wednesday'>,
+          <WeekDay.THURSDAY: 'thursday'>,
+          <WeekDay.FRIDAY: 'friday'>,
+          <WeekDay.SATURDAY: 'saturday'>,
+          <WeekDay.SUNDAY: 'sunday'>,
+        ]),
+        'enabled': False,
+        'entry_id': 'T6aLl42',
+        'steam': False,
+        'time_off': '24:0',
+        'time_on': '24:0',
+      }),
+    }),
+    'water_contact': True,
+  })
+# ---
 # name: test_websocket_message
   dict({
     'backflush_enabled': False,
+    'bbw_settings': None,
     'boilers': dict({
       <BoilerType.COFFEE: 'CoffeeBoiler1'>: dict({
         'current_temperature': 81,
@@ -123,6 +195,7 @@
       }),
     }),
     'prebrew_mode': <PrebrewMode.PREINFUSION: 'TypeB'>,
+    'scale': None,
     'smart_standby': dict({
       'enabled': True,
       'minutes': 10,
@@ -153,6 +226,7 @@
 # name: test_websocket_message.1
   dict({
     'backflush_enabled': False,
+    'bbw_settings': None,
     'boilers': dict({
       <BoilerType.COFFEE: 'CoffeeBoiler1'>: dict({
         'current_temperature': 36,
@@ -194,6 +268,7 @@
       }),
     }),
     'prebrew_mode': <PrebrewMode.PREINFUSION: 'TypeB'>,
+    'scale': None,
     'smart_standby': dict({
       'enabled': True,
       'minutes': 10,
