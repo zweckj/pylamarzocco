@@ -103,3 +103,13 @@ ws://IP:8081/api/v1/streaming -H "Authorization: Bearer <Token>"
   { "FlushStoppedGroup1Volume": 0 }
 ]
 ```
+
+# Dose snapshot
+
+```json
+[
+  {
+    "GroupCapabilities": "[{\"capabilities\":{\"groupType\":\"AV_Group\",\"groupNumber\":\"Group1\",\"boilerId\":\"CoffeeBoiler1\",\"hasScale\":false,\"hasFlowmeter\":true,\"numberOfDoses\":4},\"doses\":[{\"groupNumber\":\"Group1\",\"doseIndex\":\"DoseA\",\"doseType\":\"PulsesType\",\"stopTarget\":126},{\"groupNumber\":\"Group1\",\"doseIndex\":\"DoseB\",\"doseType\":\"PulsesType\",\"stopTarget\":130},{\"groupNumber\":\"Group1\",\"doseIndex\":\"DoseC\",\"doseType\":\"PulsesType\",\"stopTarget\":140},{\"groupNumber\":\"Group1\",\"doseIndex\":\"DoseD\",\"doseType\":\"PulsesType\",\"stopTarget\":77}],\"doseMode\":{\"groupNumber\":\"Group1\",\"brewingType\":\"PulsesType\"}}]"
+  }
+]
+```
