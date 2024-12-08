@@ -214,3 +214,16 @@ async def test_set_preinfusion_time(
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
+
+
+async def test_group_capabilities_websocket_message(
+    cloud_client: LaMarzoccoCloudClient,
+):
+    """Test parsing of group capabilities websocket message."""
+    machine = await init_machine(cloud_client)
+    msg = '[{"GroupCapabilities": "[{\\"capabilities\\":{\\"groupType\\":\\"AV_Group\\",\\"groupNumber\\":\\"Group1\\",\\"boilerId\\":\\"CoffeeBoiler1\\",\\"hasScale\\":false,\\"hasFlowmeter\\":true,\\"numberOfDoses\\":4},\\"doses\\":[{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseA\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":126},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseB\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":130},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseC\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":140},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseD\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":77}],\\"doseMode\\":{\\"groupNumber\\":\\"Group1\\",\\"brewingType\\":\\"PulsesType\\"}}]"}]'
+    machine.on_websocket_message_received(msg)
+    assert machine.config.doses[PhysicalKey(1)] == 126
+    assert machine.config.doses[PhysicalKey(2)] == 130
+    assert machine.config.doses[PhysicalKey(3)] == 140
+    assert machine.config.doses[PhysicalKey(4)] == 77

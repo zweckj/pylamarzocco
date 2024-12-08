@@ -539,6 +539,12 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
                 self.config.water_contact = msg["TankStatus"] == "full"  # or "empty"
                 property_updated = True
 
+            elif "GroupCapabilities" in msg:
+                doses = json.loads(msg["GroupCapabilities"])[0]["doses"]
+                for dose in doses:
+                    key = PhysicalKey[dose["doseIndex"][-1]]
+                    self.config.doses[key] = dose["stopTarget"]
+
         if not property_updated:
             raise UnknownWebSocketMessage(f"Unknown websocket message: {message}")
         return True
