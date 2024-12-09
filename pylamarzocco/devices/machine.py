@@ -502,7 +502,8 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
             elif (
                 "BrewingStoppedGroup1StopType" in msg
-                or "BrewingSnapshotGroup1" in msg
+                or "BrewingSnapshotGroup1"
+                in msg  # deprecated message (from GW 3.7-rc7)
                 or "FlushSnapshotGroup1" in msg
             ):
                 self.config.brew_active = False
