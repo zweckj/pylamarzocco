@@ -1,18 +1,18 @@
 # serializer version: 1
-# name: test_create[config]
+# name: test_websocket_message
   dict({
     'backflush_enabled': False,
     'bbw_settings': None,
     'boilers': dict({
       <BoilerType.COFFEE: 'CoffeeBoiler1'>: dict({
-        'current_temperature': 96.5,
+        'current_temperature': 81,
         'enabled': True,
-        'target_temperature': 95,
+        'target_temperature': 94,
       }),
       <BoilerType.STEAM: 'SteamBoiler'>: dict({
-        'current_temperature': 123.80000305175781,
+        'current_temperature': 113,
         'enabled': True,
-        'target_temperature': 123.9000015258789,
+        'target_temperature': 131,
       }),
     }),
     'brew_active': False,
@@ -72,65 +72,60 @@
     'water_contact': True,
   })
 # ---
-# name: test_create[firmware]
-  dict({
-    <FirmwareType.GATEWAY: 'gateway'>: LaMarzoccoFirmware(current_version='v2.2-rc0', latest_version='v2.2-rc0'),
-    <FirmwareType.MACHINE: 'machine'>: LaMarzoccoFirmware(current_version='1.11', latest_version='1.12'),
-  })
-# ---
-# name: test_create[statistics]
-  LaMarzoccoCoffeeStatistics(drink_stats={<PhysicalKey.A: 1>: 167, <PhysicalKey.B: 2>: 0, <PhysicalKey.C: 3>: 0, <PhysicalKey.D: 4>: 0}, continous=0, total_flushes=228)
-# ---
-# name: test_mini
+# name: test_websocket_message.1
   dict({
     'backflush_enabled': False,
-    'bbw_settings': dict({
-      'active_dose': <PhysicalKey.A: 1>,
-      'doses': dict({
-        <PhysicalKey.A: 1>: 32,
-        <PhysicalKey.B: 2>: 45,
-      }),
-    }),
+    'bbw_settings': None,
     'boilers': dict({
       <BoilerType.COFFEE: 'CoffeeBoiler1'>: dict({
-        'current_temperature': 42,
+        'current_temperature': 36,
         'enabled': True,
-        'target_temperature': 89,
+        'target_temperature': 94,
       }),
       <BoilerType.STEAM: 'SteamBoiler'>: dict({
-        'current_temperature': 0,
-        'enabled': False,
-        'target_temperature': 0,
+        'current_temperature': 50,
+        'enabled': True,
+        'target_temperature': 131,
       }),
     }),
     'brew_active': False,
     'brew_active_duration': 0,
-    'dose_hot_water': 0,
+    'dose_hot_water': 8,
     'doses': dict({
-      <PhysicalKey.A: 1>: 32,
+      <PhysicalKey.A: 1>: 135,
+      <PhysicalKey.B: 2>: 97,
+      <PhysicalKey.C: 3>: 108,
+      <PhysicalKey.D: 4>: 121,
     }),
-    'plumbed_in': False,
+    'plumbed_in': True,
     'prebrew_configuration': dict({
       <PhysicalKey.A: 1>: dict({
-        'off_time': 3,
+        'off_time': 1,
+        'on_time': 0.5,
+      }),
+      <PhysicalKey.B: 2>: dict({
+        'off_time': 1,
+        'on_time': 0.5,
+      }),
+      <PhysicalKey.C: 3>: dict({
+        'off_time': 3.299999952316284,
+        'on_time': 3.299999952316284,
+      }),
+      <PhysicalKey.D: 4>: dict({
+        'off_time': 2,
         'on_time': 2,
       }),
     }),
-    'prebrew_mode': <PrebrewMode.PREBREW: 'Enabled'>,
-    'scale': dict({
-      'address': '44:b7:d0:74:5f:90',
-      'battery': 64,
-      'connected': False,
-      'name': 'LMZ-123A45',
-    }),
+    'prebrew_mode': <PrebrewMode.PREINFUSION: 'TypeB'>,
+    'scale': None,
     'smart_standby': dict({
       'enabled': True,
       'minutes': 10,
       'mode': <SmartStandbyMode.LAST_BREWING: 'LastBrewing'>,
     }),
-    'turned_on': False,
+    'turned_on': True,
     'wake_up_sleep_entries': dict({
-      'T6aLl42': dict({
+      'Os2OswX': dict({
         'days': list([
           <WeekDay.MONDAY: 'monday'>,
           <WeekDay.TUESDAY: 'tuesday'>,
@@ -141,8 +136,8 @@
           <WeekDay.SUNDAY: 'sunday'>,
         ]),
         'enabled': False,
-        'entry_id': 'T6aLl42',
-        'steam': False,
+        'entry_id': 'Os2OswX',
+        'steam': True,
         'time_off': '24:0',
         'time_on': '24:0',
       }),

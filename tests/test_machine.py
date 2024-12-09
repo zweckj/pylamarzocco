@@ -68,8 +68,8 @@ async def test_mini(
 
 
 async def test_local_client(
+    machine: LaMarzoccoMachine,
     local_machine_client: LaMarzoccoLocalClient,
-    cloud_client: LaMarzoccoCloudClient,
     mock_aioresponse: aioresponses,
 ) -> None:
     """Ensure that the local client delivers same result"""
@@ -80,19 +80,14 @@ async def test_local_client(
         payload=load_fixture("machine", "config.json")["data"],
     )
 
-    machine = await init_machine(local_client=local_machine_client)
+    machine_local = await init_machine(local_client=local_machine_client)
 
-    machine2 = await init_machine(cloud_client)
-
-    assert machine
-    assert str(machine.config) == str(machine2.config)
+    assert machine_local
+    assert str(machine.config) == str(machine_local.config)
 
 
-async def test_set_temp(
-    cloud_client: LaMarzoccoCloudClient,
-) -> None:
+async def test_set_temp(machine: LaMarzoccoMachine) -> None:
     """Test setting boiler temperature."""
-    machine = await init_machine(cloud_client)
 
     result = await machine.set_temp(
         BoilerType.STEAM,
@@ -118,23 +113,6 @@ async def test_set_temp(
 #             m_off=0,
 #         )
 #     assert result is True
-
-
-async def test_websocket_message(
-    cloud_client: LaMarzoccoCloudClient,
-    local_machine_client: LaMarzoccoLocalClient,
-    snapshot: SnapshotAssertion,
-):
-    """Test parsing of websocket messages."""
-    machine = await init_machine(cloud_client, local_client=local_machine_client)
-
-    message = r'[{"Boilers":"[{\"id\":\"SteamBoiler\",\"isEnabled\":true,\"target\":131,\"current\":113},{\"id\":\"CoffeeBoiler1\",\"isEnabled\":true,\"target\":94,\"current\":81}]"}]'
-    machine.on_websocket_message_received(message)
-    assert asdict(machine.config) == snapshot
-
-    message = r'[{"BoilersTargetTemperature":"{\"SteamBoiler\":131,\"CoffeeBoiler1\":94}"},{"Boilers":"[{\"id\":\"SteamBoiler\",\"isEnabled\":true,\"target\":131,\"current\":50},{\"id\":\"CoffeeBoiler1\",\"isEnabled\":true,\"target\":94,\"current\":36}]"}]'
-    machine.on_websocket_message_received(message)
-    assert asdict(machine.config) == snapshot
 
 
 async def test_set_power(
@@ -207,13 +185,10 @@ async def test_set_temperature(
 
 
 async def test_set_prebrew_time(
-    cloud_client: LaMarzoccoCloudClient,
+    machine: LaMarzoccoMachine,
     mock_aioresponse: aioresponses,
 ):
     """Test setting prebrew time."""
-    machine = await init_machine(
-        cloud_client,
-    )
 
     assert await machine.set_prebrew_time(1.0, 3.5)
 
@@ -235,13 +210,10 @@ async def test_set_prebrew_time(
 
 
 async def test_set_preinfusion_time(
-    cloud_client: LaMarzoccoCloudClient,
+    machine: LaMarzoccoMachine,
     mock_aioresponse: aioresponses,
 ):
     """Test setting prebrew time."""
-    machine = await init_machine(
-        cloud_client,
-    )
     assert await machine.set_preinfusion_time(4.5)
     mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
@@ -252,16 +224,3 @@ async def test_set_preinfusion_time(
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
-
-
-async def test_group_capabilities_websocket_message(
-    cloud_client: LaMarzoccoCloudClient,
-):
-    """Test parsing of group capabilities websocket message."""
-    machine = await init_machine(cloud_client)
-    msg = '[{"GroupCapabilities": "[{\\"capabilities\\":{\\"groupType\\":\\"AV_Group\\",\\"groupNumber\\":\\"Group1\\",\\"boilerId\\":\\"CoffeeBoiler1\\",\\"hasScale\\":false,\\"hasFlowmeter\\":true,\\"numberOfDoses\\":4},\\"doses\\":[{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseA\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":126},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseB\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":130},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseC\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":140},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseD\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":77}],\\"doseMode\\":{\\"groupNumber\\":\\"Group1\\",\\"brewingType\\":\\"PulsesType\\"}}]"}]'
-    machine.on_websocket_message_received(msg)
-    assert machine.config.doses[PhysicalKey(1)] == 126
-    assert machine.config.doses[PhysicalKey(2)] == 130
-    assert machine.config.doses[PhysicalKey(3)] == 140
-    assert machine.config.doses[PhysicalKey(4)] == 77
