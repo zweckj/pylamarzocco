@@ -13,9 +13,11 @@ from .const import (
 )
 from .models import (
     LaMarzoccoBoiler,
+    LaMarzoccoBrewByWeightSettings,
     LaMarzoccoCoffeeStatistics,
     LaMarzoccoFirmware,
     LaMarzoccoPrebrewConfiguration,
+    LaMarzoccoScale,
     LaMarzoccoSmartStandby,
     LaMarzoccoWakeUpSleepEntry,
 )
@@ -209,6 +211,36 @@ def parse_wakeup_sleep_entries(
         )
         parsed[wake_up_sleep_entry.entry_id] = wake_up_sleep_entry
     return parsed
+
+
+def parse_brew_by_weight_settings(
+    config: dict[str, Any]
+) -> LaMarzoccoBrewByWeightSettings | None:
+    """Parse brew by weight settings from API config object."""
+    if "recipes" not in config:
+        return None
+    doses: dict[PhysicalKey, int] = {}
+    recipes = config["recipes"]
+    for recipe in recipes:
+        for dose in recipe["recipe_doses"]:
+            doses[PhysicalKey[dose["id"]]] = dose["target"]
+    recipe_assignments = config["recipeAssignment"]
+    active_dose = PhysicalKey.A
+    for recipe_assignment in recipe_assignments:
+        active_dose = PhysicalKey[recipe_assignment["recipe_dose"]]
+    return LaMarzoccoBrewByWeightSettings(doses=doses, active_dose=active_dose)
+
+
+def parse_scale(config: dict[str, Any]) -> LaMarzoccoScale | None:
+    """Parse scale settings from API config object."""
+    if scale := config.get("scale", None):
+        return LaMarzoccoScale(
+            connected=scale["connected"],
+            name=scale["name"],
+            battery=scale["battery"],
+            address=scale["address"],
+        )
+    return None
 
 
 def is_success(response: ClientResponse) -> bool:

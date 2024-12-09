@@ -1,5 +1,7 @@
 """Models for La Marzocco API"""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import TypedDict
 
@@ -134,6 +136,8 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     brew_active: bool
     brew_active_duration: float
     backflush_enabled: bool
+    scale: LaMarzoccoScale | None = None
+    bbw_settings: LaMarzoccoBrewByWeightSettings | None = None
 
     @property
     def steam_level(self) -> SteamLevel:
@@ -192,3 +196,26 @@ class LaMarzoccoGrinderConfig(LaMarzoccoDeviceConfig):
     led_enabled: bool
     bell_opened: bool
     stand_by_time: int
+
+
+####################################
+######## brew by weight ############
+####################################
+
+
+@dataclass(kw_only=True)
+class LaMarzoccoScale:
+    """Class for La Marzocco scale"""
+
+    connected: bool
+    name: str
+    address: str
+    battery: int
+
+
+@dataclass(kw_only=True)
+class LaMarzoccoBrewByWeightSettings:
+    """Class for La Marzocco brew by weight settings"""
+
+    doses: dict[PhysicalKey, int]
+    active_dose: PhysicalKey
