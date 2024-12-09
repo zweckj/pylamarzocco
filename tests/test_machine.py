@@ -2,8 +2,10 @@
 
 # pylint: disable=W0212
 
+from aiohttp import ClientTimeout
 from dataclasses import asdict
 from http import HTTPMethod
+import pytest
 
 from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
@@ -18,9 +20,14 @@ from pylamarzocco.const import (
     GW_MACHINE_BASE_URL,
 )
 from pylamarzocco.devices.machine import LaMarzoccoMachine
+from pylamarzocco.models import LaMarzoccoBrewByWeightSettings
 
 from . import init_machine
 from .conftest import load_fixture
+
+CLIENT_TIMEOUT = ClientTimeout(
+    total=5, connect=None, sock_read=None, sock_connect=None, ceil_threshold=5
+)
 
 
 async def test_create(
@@ -129,12 +136,14 @@ async def test_set_power(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"MachineChangeMode","parameter":{"mode":"BrewingMode"}}\x00',
     )
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
         json={"status": "BrewingMode"},
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
 
@@ -152,12 +161,14 @@ async def test_set_steam(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"SettingBoilerEnable","parameter":{"identifier":"SteamBoiler","state":true}}\x00',
     )
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
         json={"identifier": "SteamBoiler", "state": True},
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
 
@@ -175,12 +186,14 @@ async def test_set_temperature(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"SettingBoilerTarget","parameter":{"identifier":"SteamBoiler","value":131}}\x00',
     )
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
         json={"identifier": "SteamBoiler", "value": 131},
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
 
@@ -192,7 +205,7 @@ async def test_set_prebrew_time(
 
     assert await machine.set_prebrew_time(1.0, 3.5)
 
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={
@@ -201,8 +214,10 @@ async def test_set_prebrew_time(
             "holdTimeMs": 3500,
             "wetTimeMs": 1000,
         },
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].on_time == 1.0
@@ -215,12 +230,48 @@ async def test_set_preinfusion_time(
 ):
     """Test setting prebrew time."""
     assert await machine.set_preinfusion_time(4.5)
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={"button": "DoseA", "group": "Group1", "holdTimeMs": 4500, "wetTimeMs": 0},
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
+
+
+async def test_set_scale_target(
+    machine: LaMarzoccoMachine,
+    mock_aioresponse: aioresponses,
+):
+    """Test setting scale target."""
+    # fails with not Linea Mini
+    with pytest.raises(ValueError):
+        await machine.set_scale_target(PhysicalKey.B, 42)
+
+    # set to Linea Mini
+    machine.model = MachineModel.LINEA_MINI
+    machine.config.bbw_settings = LaMarzoccoBrewByWeightSettings(
+        doses={}, active_dose=PhysicalKey.A
+    )
+
+    assert await machine.set_scale_target(PhysicalKey.B, 42)
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
+        method=HTTPMethod.POST,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/scale/target-dose",
+        json={
+            "group": "Group1",
+            "dose_index": "DoseB",
+            "dose_type": "MassType",
+            "value": 42,
+        },
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
+    )
+
+    assert machine.config.bbw_settings.doses[PhysicalKey.B] == 42
