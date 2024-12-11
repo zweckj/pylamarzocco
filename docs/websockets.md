@@ -26,7 +26,7 @@ ws://IP:8081/api/v1/streaming -H "Authorization: Bearer <Token>"
 }
 ```
 
-## Brewing Snapshot
+## Brewing Snapshot (deprecated)
 
 ```json
 [

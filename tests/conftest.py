@@ -18,8 +18,9 @@ from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
 from pylamarzocco.clients.local import LaMarzoccoLocalClient
 from pylamarzocco.const import GW_AWS_PROXY_BASE_URL, GW_MACHINE_BASE_URL, TOKEN_URL
+from pylamarzocco.devices.machine import LaMarzoccoMachine
 
-from . import GRINDER_SERIAL, MACHINE_SERIAL
+from . import GRINDER_SERIAL, MACHINE_SERIAL, init_machine
 
 
 def load_fixture(device_type: str, file_name: str) -> dict:
@@ -110,8 +111,8 @@ def fixture_mock_aioresponse() -> Generator[aioresponses, None, None]:
         yield m
 
 
-@pytest.fixture
-async def cloud_client() -> AsyncGenerator[LaMarzoccoCloudClient, None]:
+@pytest.fixture(name="cloud_client")
+async def fixture_cloud_client() -> AsyncGenerator[LaMarzoccoCloudClient, None]:
     """Fixture for a cloud client."""
 
     async with ClientSession() as session:
@@ -144,3 +145,9 @@ def bluetooth_client() -> Generator[LaMarzoccoBluetoothClient, None, None]:
     bt_client._client.is_connected = True
     bt_client._client.write_gatt_char.side_effect = BleakError("Failed to write")
     yield bt_client
+
+
+@pytest.fixture
+async def machine(cloud_client: LaMarzoccoCloudClient) -> LaMarzoccoMachine:
+    """Get a lamarzocco machine"""
+    return await init_machine(cloud_client)

@@ -2,8 +2,10 @@
 
 # pylint: disable=W0212
 
+from aiohttp import ClientTimeout
 from dataclasses import asdict
 from http import HTTPMethod
+import pytest
 
 from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
@@ -11,10 +13,21 @@ from syrupy import SnapshotAssertion
 from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
 from pylamarzocco.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.const import BoilerType, PhysicalKey
+from pylamarzocco.const import (
+    BoilerType,
+    PhysicalKey,
+    MachineModel,
+    GW_MACHINE_BASE_URL,
+)
+from pylamarzocco.devices.machine import LaMarzoccoMachine
+from pylamarzocco.models import LaMarzoccoBrewByWeightSettings
 
 from . import init_machine
 from .conftest import load_fixture
+
+CLIENT_TIMEOUT = ClientTimeout(
+    total=5, connect=None, sock_read=None, sock_connect=None, ceil_threshold=5
+)
 
 
 async def test_create(
@@ -29,9 +42,41 @@ async def test_create(
     assert machine.statistics == snapshot(name="statistics")
 
 
-async def test_local_client(
-    local_machine_client: LaMarzoccoLocalClient,
+async def test_mini(
     cloud_client: LaMarzoccoCloudClient,
+    mock_aioresponse: aioresponses,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test creation of a cloud client."""
+    serial = "LM01234"
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{serial}/configuration",
+        status=200,
+        payload=load_fixture("machine", "config-mini.json"),
+    )
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{serial}/statistics/counters",
+        status=200,
+        payload=load_fixture("machine", "counters.json"),
+    )
+    mock_aioresponse.get(
+        url=f"{GW_MACHINE_BASE_URL}/{serial}/firmware/",
+        status=200,
+        payload=load_fixture("machine", "firmware.json"),
+    )
+    machine = await LaMarzoccoMachine.create(
+        model=MachineModel.LINEA_MINI,
+        serial_number=serial,
+        name="MyMachine",
+        cloud_client=cloud_client,
+    )
+
+    assert asdict(machine.config) == snapshot
+
+
+async def test_local_client(
+    machine: LaMarzoccoMachine,
+    local_machine_client: LaMarzoccoLocalClient,
     mock_aioresponse: aioresponses,
 ) -> None:
     """Ensure that the local client delivers same result"""
@@ -42,19 +87,14 @@ async def test_local_client(
         payload=load_fixture("machine", "config.json")["data"],
     )
 
-    machine = await init_machine(local_client=local_machine_client)
+    machine_local = await init_machine(local_client=local_machine_client)
 
-    machine2 = await init_machine(cloud_client)
-
-    assert machine
-    assert str(machine.config) == str(machine2.config)
+    assert machine_local
+    assert str(machine.config) == str(machine_local.config)
 
 
-async def test_set_temp(
-    cloud_client: LaMarzoccoCloudClient,
-) -> None:
+async def test_set_temp(machine: LaMarzoccoMachine) -> None:
     """Test setting boiler temperature."""
-    machine = await init_machine(cloud_client)
 
     result = await machine.set_temp(
         BoilerType.STEAM,
@@ -82,23 +122,6 @@ async def test_set_temp(
 #     assert result is True
 
 
-async def test_websocket_message(
-    cloud_client: LaMarzoccoCloudClient,
-    local_machine_client: LaMarzoccoLocalClient,
-    snapshot: SnapshotAssertion,
-):
-    """Test parsing of websocket messages."""
-    machine = await init_machine(cloud_client, local_client=local_machine_client)
-
-    message = r'[{"Boilers":"[{\"id\":\"SteamBoiler\",\"isEnabled\":true,\"target\":131,\"current\":113},{\"id\":\"CoffeeBoiler1\",\"isEnabled\":true,\"target\":94,\"current\":81}]"}]'
-    machine.on_websocket_message_received(message)
-    assert asdict(machine.config) == snapshot
-
-    message = r'[{"BoilersTargetTemperature":"{\"SteamBoiler\":131,\"CoffeeBoiler1\":94}"},{"Boilers":"[{\"id\":\"SteamBoiler\",\"isEnabled\":true,\"target\":131,\"current\":50},{\"id\":\"CoffeeBoiler1\",\"isEnabled\":true,\"target\":94,\"current\":36}]"}]'
-    machine.on_websocket_message_received(message)
-    assert asdict(machine.config) == snapshot
-
-
 async def test_set_power(
     cloud_client: LaMarzoccoCloudClient,
     bluetooth_client: LaMarzoccoBluetoothClient,
@@ -113,12 +136,14 @@ async def test_set_power(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"MachineChangeMode","parameter":{"mode":"BrewingMode"}}\x00',
     )
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
         json={"status": "BrewingMode"},
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
 
@@ -136,12 +161,14 @@ async def test_set_steam(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"SettingBoilerEnable","parameter":{"identifier":"SteamBoiler","state":true}}\x00',
     )
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
         json={"identifier": "SteamBoiler", "state": True},
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
 
@@ -159,27 +186,26 @@ async def test_set_temperature(
         "050b7847-e12b-09a8-b04b-8e0922a9abab",
         b'{"name":"SettingBoilerTarget","parameter":{"identifier":"SteamBoiler","value":131}}\x00',
     )
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
         json={"identifier": "SteamBoiler", "value": 131},
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
 
 async def test_set_prebrew_time(
-    cloud_client: LaMarzoccoCloudClient,
+    machine: LaMarzoccoMachine,
     mock_aioresponse: aioresponses,
 ):
     """Test setting prebrew time."""
-    machine = await init_machine(
-        cloud_client,
-    )
 
     assert await machine.set_prebrew_time(1.0, 3.5)
 
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={
@@ -188,8 +214,10 @@ async def test_set_prebrew_time(
             "holdTimeMs": 3500,
             "wetTimeMs": 1000,
         },
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].on_time == 1.0
@@ -197,33 +225,53 @@ async def test_set_prebrew_time(
 
 
 async def test_set_preinfusion_time(
-    cloud_client: LaMarzoccoCloudClient,
+    machine: LaMarzoccoMachine,
     mock_aioresponse: aioresponses,
 ):
     """Test setting prebrew time."""
-    machine = await init_machine(
-        cloud_client,
-    )
     assert await machine.set_preinfusion_time(4.5)
-    mock_aioresponse.assert_any_call(  # type: ignore[attr-defined]
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
         method=HTTPMethod.POST,
         url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
         json={"button": "DoseA", "group": "Group1", "holdTimeMs": 4500, "wetTimeMs": 0},
-        timeout=5,
-        headers={"Authorization": "Bearer token"},
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
     )
 
     assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
 
 
-async def test_group_capabilities_websocket_message(
-    cloud_client: LaMarzoccoCloudClient,
+async def test_set_scale_target(
+    machine: LaMarzoccoMachine,
+    mock_aioresponse: aioresponses,
 ):
-    """Test parsing of group capabilities websocket message."""
-    machine = await init_machine(cloud_client)
-    msg = '[{"GroupCapabilities": "[{\\"capabilities\\":{\\"groupType\\":\\"AV_Group\\",\\"groupNumber\\":\\"Group1\\",\\"boilerId\\":\\"CoffeeBoiler1\\",\\"hasScale\\":false,\\"hasFlowmeter\\":true,\\"numberOfDoses\\":4},\\"doses\\":[{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseA\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":126},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseB\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":130},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseC\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":140},{\\"groupNumber\\":\\"Group1\\",\\"doseIndex\\":\\"DoseD\\",\\"doseType\\":\\"PulsesType\\",\\"stopTarget\\":77}],\\"doseMode\\":{\\"groupNumber\\":\\"Group1\\",\\"brewingType\\":\\"PulsesType\\"}}]"}]'
-    machine.on_websocket_message_received(msg)
-    assert machine.config.doses[PhysicalKey(1)] == 126
-    assert machine.config.doses[PhysicalKey(2)] == 130
-    assert machine.config.doses[PhysicalKey(3)] == 140
-    assert machine.config.doses[PhysicalKey(4)] == 77
+    """Test setting scale target."""
+    # fails with not Linea Mini
+    with pytest.raises(ValueError):
+        await machine.set_scale_target(PhysicalKey.B, 42)
+
+    # set to Linea Mini
+    machine.model = MachineModel.LINEA_MINI
+    machine.config.bbw_settings = LaMarzoccoBrewByWeightSettings(
+        doses={}, active_dose=PhysicalKey.A
+    )
+
+    assert await machine.set_scale_target(PhysicalKey.B, 42)
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
+        method=HTTPMethod.POST,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/scale/target-dose",
+        json={
+            "group": "Group1",
+            "dose_index": "DoseB",
+            "dose_type": "MassType",
+            "value": 42,
+        },
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
+    )
+
+    assert machine.config.bbw_settings.doses[PhysicalKey.B] == 42
