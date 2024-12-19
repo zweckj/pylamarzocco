@@ -540,3 +540,41 @@ class LaMarzoccoCloudClient:
         if await self._check_cloud_command_status(serial_number, response):
             return True
         return False
+
+    async def set_bbw_recipes(
+        self,
+        serial_number: str,
+        targets: dict[PhysicalKey, int],
+    ) -> bool:
+        """Configure brew by weight recipes."""
+        data = {
+            "recipeId": "Recipe1",
+            "doseMode": "Mass",
+            "recipeDoses": [
+                {"id": key.name, "target": value} for (key, value) in targets.items()
+            ],
+        }
+
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/recipes/"
+        response = await self._rest_api_call(url=url, method=HTTPMethod.PUT, data=data)
+        if await self._check_cloud_command_status(serial_number, response):
+            return True
+        return False
+
+    async def set_active_bbw_recipe(
+        self,
+        serial_number: str,
+        key: PhysicalKey,
+    ) -> bool:
+        """Set the active brew by weight recipe."""
+        data = {
+            "group": "Group1",
+            "doseIndex": "DoseA",
+            "recipeId": "Recipe1",
+            "recipeDose": key.name,
+        }
+        url = f"{GW_MACHINE_BASE_URL}/{serial_number}/recipes/active-recipe"
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        if await self._check_cloud_command_status(serial_number, response):
+            return True
+        return False
