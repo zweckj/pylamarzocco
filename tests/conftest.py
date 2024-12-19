@@ -85,6 +85,13 @@ def mock_response(mock_aioresponse: aioresponses) -> None:
         payload={"data": {"commandId": "123456"}},
     )
 
+    # put
+    mock_aioresponse.put(
+        url=pattern,
+        status=200,
+        payload={"data": {"commandId": "123456"}},
+    )
+
     # commands
     pattern = re.compile(rf"{GW_AWS_PROXY_BASE_URL}/{MACHINE_SERIAL}/commands/.*")
     mock_aioresponse.get(

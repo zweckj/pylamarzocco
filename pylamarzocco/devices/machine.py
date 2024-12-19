@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable
+from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
@@ -292,6 +293,33 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
         if await self.cloud_client.set_scale_target(self.serial_number, key, target):
             self.config.bbw_settings.doses[key] = target
+            return True
+        return False
+
+    async def set_active_bbw_recipe(self, key: PhysicalKey) -> bool:
+        """Set the active scale target"""
+        if not self.model == MachineModel.LINEA_MINI:
+            raise ValueError("Scale is only supported on Linea Mini")
+
+        assert self.config.bbw_settings
+
+        if await self.cloud_client.set_active_bbw_recipe(self.serial_number, key):
+            self.config.bbw_settings.active_dose = key
+            return True
+        return False
+
+    async def set_bbw_recipe_target(self, key: PhysicalKey, target: int) -> bool:
+        """Set the bbw recipe target"""
+        if not self.model == MachineModel.LINEA_MINI:
+            raise ValueError("Scale is only supported on Linea Mini")
+
+        assert self.config.bbw_settings
+
+        doses = deepcopy(self.config.bbw_settings.doses)
+        doses[key] = target
+
+        if await self.cloud_client.set_bbw_recipes(self.serial_number, doses):
+            self.config.bbw_settings.doses = doses
             return True
         return False
 

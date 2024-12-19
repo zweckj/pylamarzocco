@@ -1,10 +1,9 @@
 """Test the LaMarzoccoMachine class."""
 
 # pylint: disable=W0212
-
-from aiohttp import ClientTimeout
 from dataclasses import asdict
 from http import HTTPMethod
+from aiohttp import ClientTimeout
 import pytest
 
 from aioresponses import aioresponses
@@ -275,3 +274,72 @@ async def test_set_scale_target(
     )
 
     assert machine.config.bbw_settings.doses[PhysicalKey.B] == 42
+
+
+async def test_set_bbw_recipe(
+    machine: LaMarzoccoMachine,
+    mock_aioresponse: aioresponses,
+):
+    """Test setting scale target."""
+    # fails with not Linea Mini
+    with pytest.raises(ValueError):
+        await machine.set_bbw_recipe_target(PhysicalKey.B, 42)
+
+    # set to Linea Mini
+    machine.model = MachineModel.LINEA_MINI
+    machine.config.bbw_settings = LaMarzoccoBrewByWeightSettings(
+        doses={PhysicalKey.A: 12, PhysicalKey.B: 34}, active_dose=PhysicalKey.A
+    )
+
+    assert await machine.set_bbw_recipe_target(PhysicalKey.B, 42)
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
+        method=HTTPMethod.PUT,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/recipes/",
+        json={
+            "recipeId": "Recipe1",
+            "doseMode": "Mass",
+            "recipeDoses": [
+                {"id": "A", "target": 12},
+                {"id": "B", "target": 42},
+            ],
+        },
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+    )
+
+    assert machine.config.bbw_settings.doses[PhysicalKey.B] == 42
+
+
+async def test_set_active_bbw_recipe(
+    machine: LaMarzoccoMachine,
+    mock_aioresponse: aioresponses,
+):
+    """Test active bbw recipe."""
+    # fails with not Linea Mini
+    with pytest.raises(ValueError):
+        await machine.set_active_bbw_recipe(PhysicalKey.B)
+
+    # set to Linea Mini
+    machine.model = MachineModel.LINEA_MINI
+    machine.config.bbw_settings = LaMarzoccoBrewByWeightSettings(
+        doses={PhysicalKey.A: 12, PhysicalKey.B: 34}, active_dose=PhysicalKey.A
+    )
+
+    assert await machine.set_active_bbw_recipe(PhysicalKey.B)
+    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
+        method=HTTPMethod.POST,
+        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/recipes/active-recipe",
+        json={
+            "group": "Group1",
+            "doseIndex": "DoseA",
+            "recipeId": "Recipe1",
+            "recipeDose": "B",
+        },
+        headers={"Authorization": "Bearer 123"},
+        timeout=CLIENT_TIMEOUT,
+        allow_redirects=True,
+        data=None,
+    )
+
+    assert machine.config.bbw_settings.active_dose == PhysicalKey.B
