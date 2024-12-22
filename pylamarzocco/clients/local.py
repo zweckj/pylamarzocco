@@ -29,6 +29,7 @@ class LaMarzoccoLocalClient:
         self._local_bearer = local_bearer
 
         self.websocket: ClientWebSocketResponse | None = None
+        self.websocket_exception = False
 
         if client is None:
             self._client = ClientSession()
@@ -110,6 +111,9 @@ class LaMarzoccoLocalClient:
                 headers=headers,
             ) as ws:
                 self.websocket = ws
+                if self.websocket_exception:
+                    _LOGGER.debug("Websocket reconnected")
+                    self.websocket_exception = False
                 async for msg in ws:
                     _LOGGER.debug("Received websocket message: %s", msg)
                     if callback is not None:
@@ -120,4 +124,9 @@ class LaMarzoccoLocalClient:
         except InvalidURL:
             _LOGGER.error("Invalid URI passed to websocket connection: %s", self._host)
         except (TimeoutError, OSError, ClientError) as ex:
-            _LOGGER.error("Error establishing the websocket connection: %s", ex)
+            if not self.websocket_exception:
+                _LOGGER.warning("Websocket disconnected")
+                _LOGGER.debug(
+                    "Websocket disconnected with exception: %s", ex, exc_info=True
+                )
+                self.websocket_exception = True
