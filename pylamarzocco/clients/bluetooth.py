@@ -46,7 +46,6 @@ class LaMarzoccoBluetoothClient:
             else address_or_ble_device
         )
         self._address_or_ble_device = address_or_ble_device
-        self._client = BleakClient(address_or_ble_device)
 
     @staticmethod
     async def discover_devices(
@@ -70,12 +69,6 @@ class LaMarzoccoBluetoothClient:
         """Return the BT MAC address of the machine."""
 
         return self._address
-
-    @property
-    def connected(self) -> bool:
-        """Return the connection status."""
-
-        return self._client.is_connected
 
     async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""
@@ -118,27 +111,41 @@ class LaMarzoccoBluetoothClient:
     ) -> None:
         """Connect to machine and write a message."""
 
-        if not self._client.is_connected:
-            try:
-                self._client = BleakClient(self._address_or_ble_device)
-                await self._client.connect()
-                await self._authenticate()
-            except (BleakError, TimeoutError) as e:
-                raise BluetoothConnectionFailed(
-                    f"Failed to connect to machine with Bluetooth: {e}"
-                ) from e
-
         # check if message is already bytes string
         if not isinstance(message, bytes):
             message = bytes(message, "utf-8")
 
-        # append trailing zeros to settings message
-        if characteristic == SETTINGS_CHARACTERISTIC:
-            message += b"\x00"
+        # append trailing zeros to message
+        message += b"\x00"
 
-        _logger.debug("Sending bluetooth message: %s to %s", message, characteristic)
+        async with BleakClient(self._address_or_ble_device) as client:
 
-        await self._client.write_gatt_char(characteristic, message)
+            async def authenticate() -> None:
+                """Build authentication string and send it to the machine."""
+
+                user = self._username + ":" + self._serial_number
+                user_bytes = user.encode("utf-8")
+                token = self._token.encode("utf-8")
+                auth_string = (
+                    base64.b64encode(user_bytes) + b"@" + base64.b64encode(token)
+                )
+
+                try:
+                    await client.write_gatt_char(
+                        char_specifier=AUTH_CHARACTERISTIC,
+                        data=auth_string,
+                    )
+                except (BleakError, TimeoutError) as e:
+                    raise BluetoothConnectionFailed(
+                        f"Failed to connect to machine with Bluetooth: {e}"
+                    ) from e
+
+            await authenticate()
+            _logger.debug(
+                "Sending bluetooth message: %s to %s", message, characteristic
+            )
+
+            await client.write_gatt_char(characteristic, message)
 
     async def _write_bluetooth_json_message(
         self,
@@ -150,16 +157,4 @@ class LaMarzoccoBluetoothClient:
         await self._write_bluetooth_message(
             characteristic=characteristic,
             message=json.dumps(data, separators=(",", ":")),
-        )
-
-    async def _authenticate(self) -> None:
-        """Build authentication string and send it to the machine."""
-
-        user = self._username + ":" + self._serial_number
-        user_bytes = user.encode("utf-8")
-        token = self._token.encode("utf-8")
-        auth_string = base64.b64encode(user_bytes) + b"@" + base64.b64encode(token)
-        await self._write_bluetooth_message(
-            characteristic=AUTH_CHARACTERISTIC,
-            message=auth_string,
         )

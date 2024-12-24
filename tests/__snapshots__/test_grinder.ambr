@@ -1,7 +1,6 @@
 # serializer version: 1
 # name: test_create
   LaMarzoccoGrinder(
-    bluetooth_connected=False,
     cloud_client=LaMarzoccoCloudClient(
     ),
     config=LaMarzoccoGrinderConfig(turned_on=True, doses={<PhysicalKey.A: 1>: 5.3, <PhysicalKey.B: 2>: 10.3}, led_enabled=True, bell_opened=True, stand_by_time=10),
