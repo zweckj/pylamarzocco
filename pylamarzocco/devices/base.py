@@ -78,14 +78,6 @@ class LaMarzoccoBaseDevice:
         """Parse the statistics object."""
 
     @property
-    def bluetooth_connected(self) -> bool:
-        """Return the connection status of the bluetooth client."""
-
-        if self._bluetooth_client is None:
-            return False
-        return self._bluetooth_client.connected
-
-    @property
     def full_model_name(self) -> str:
         """Return the full model name of the device."""
         return self.model

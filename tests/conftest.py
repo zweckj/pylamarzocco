@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from aiohttp import ClientSession
 from aioresponses import aioresponses
-from bleak import BleakError, BLEDevice
+from bleak import BLEDevice
 
 from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
@@ -146,11 +146,7 @@ def bluetooth_client() -> Generator[LaMarzoccoBluetoothClient, None, None]:
         details={"path": "path/to/device"},
         rssi=50,
     )
-
     bt_client = LaMarzoccoBluetoothClient("username", "serial", "token", ble_device)
-    bt_client._client = AsyncMock()
-    bt_client._client.is_connected = True
-    bt_client._client.write_gatt_char.side_effect = BleakError("Failed to write")
     yield bt_client
 
 

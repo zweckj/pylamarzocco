@@ -18,6 +18,17 @@ async def main():
     with open(f"{Path(__file__).parent}/secrets.json", encoding="utf-8") as f:
         data = json.load(f)
 
+    # local_client = LaMarzoccoLocalClient(
+    #     host=data["host"],
+    #     local_bearer=data["token"],
+    # )
+
+    # def print_msg(msg):
+    #     print(msg)
+
+    # await local_client.websocket_connect(print_msg)
+    # await asyncio.sleep(60)
+
     cloud_client = LaMarzoccoCloudClient(
         username=data["username"],
         password=data["password"],

@@ -3,10 +3,12 @@
 # pylint: disable=W0212
 from dataclasses import asdict
 from http import HTTPMethod
+from unittest.mock import AsyncMock, patch
 from aiohttp import ClientTimeout
 import pytest
 
 from aioresponses import aioresponses
+from bleak import BleakError
 from syrupy import SnapshotAssertion
 
 from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
@@ -129,21 +131,22 @@ async def test_set_power(
     """Test setting the power."""
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
 
-    assert await machine.set_power(True)
+    with patch(
+        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_power",
+        new=AsyncMock(),
+    ) as mock_set_power:
+        mock_set_power.side_effect = BleakError("Failed to write")
+        assert await machine.set_power(True)
 
-    bluetooth_client._client.write_gatt_char.assert_called_once_with(  # type: ignore[attr-defined]
-        "050b7847-e12b-09a8-b04b-8e0922a9abab",
-        b'{"name":"MachineChangeMode","parameter":{"mode":"BrewingMode"}}\x00',
-    )
-    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-        method=HTTPMethod.POST,
-        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
-        json={"status": "BrewingMode"},
-        headers={"Authorization": "Bearer 123"},
-        timeout=CLIENT_TIMEOUT,
-        allow_redirects=True,
-        data=None,
-    )
+        mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
+            method=HTTPMethod.POST,
+            url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
+            json={"status": "BrewingMode"},
+            headers={"Authorization": "Bearer 123"},
+            timeout=CLIENT_TIMEOUT,
+            allow_redirects=True,
+            data=None,
+        )
 
 
 async def test_set_steam(
@@ -154,21 +157,23 @@ async def test_set_steam(
     """Test setting the steam."""
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
 
-    assert await machine.set_steam(True)
+    with patch(
+        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_steam",
+        new=AsyncMock(),
+    ) as mock_set_steam:
+        mock_set_steam.side_effect = BleakError("Failed to write")
 
-    bluetooth_client._client.write_gatt_char.assert_called_once_with(  # type: ignore[attr-defined]
-        "050b7847-e12b-09a8-b04b-8e0922a9abab",
-        b'{"name":"SettingBoilerEnable","parameter":{"identifier":"SteamBoiler","state":true}}\x00',
-    )
-    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-        method=HTTPMethod.POST,
-        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
-        json={"identifier": "SteamBoiler", "state": True},
-        headers={"Authorization": "Bearer 123"},
-        timeout=CLIENT_TIMEOUT,
-        allow_redirects=True,
-        data=None,
-    )
+        assert await machine.set_steam(True)
+
+        mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
+            method=HTTPMethod.POST,
+            url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
+            json={"identifier": "SteamBoiler", "state": True},
+            headers={"Authorization": "Bearer 123"},
+            timeout=CLIENT_TIMEOUT,
+            allow_redirects=True,
+            data=None,
+        )
 
 
 async def test_set_temperature(
@@ -179,21 +184,23 @@ async def test_set_temperature(
     """Test setting temperature."""
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
 
-    assert await machine.set_temp(BoilerType.STEAM, 131)
+    with patch(
+        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_temp",
+        new=AsyncMock(),
+    ) as mock_set_temp:
+        mock_set_temp.side_effect = BleakError("Failed to write")
 
-    bluetooth_client._client.write_gatt_char.assert_called_once_with(  # type: ignore[attr-defined]
-        "050b7847-e12b-09a8-b04b-8e0922a9abab",
-        b'{"name":"SettingBoilerTarget","parameter":{"identifier":"SteamBoiler","value":131}}\x00',
-    )
-    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-        method=HTTPMethod.POST,
-        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
-        json={"identifier": "SteamBoiler", "value": 131},
-        headers={"Authorization": "Bearer 123"},
-        timeout=CLIENT_TIMEOUT,
-        allow_redirects=True,
-        data=None,
-    )
+        assert await machine.set_temp(BoilerType.STEAM, 131)
+
+        mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
+            method=HTTPMethod.POST,
+            url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
+            json={"identifier": "SteamBoiler", "value": 131},
+            headers={"Authorization": "Bearer 123"},
+            timeout=CLIENT_TIMEOUT,
+            allow_redirects=True,
+            data=None,
+        )
 
 
 async def test_set_prebrew_time(

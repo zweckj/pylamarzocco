@@ -6,7 +6,7 @@ import json
 import logging
 from collections.abc import Callable
 from copy import deepcopy
-from datetime import datetime
+from time import time
 from typing import Any
 
 from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
@@ -92,7 +92,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
         self._notify_callback: Callable[[], None] | None = None
         self._system_info: dict[str, Any] | None = None
-        self._timestamp_last_websocket_msg: datetime | None = None
+        self.timestamp_last_websocket_msg: float | None = None
 
     @classmethod
     async def create(cls, *args: Any, **kwargs: Any) -> LaMarzoccoMachine:
@@ -434,7 +434,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
     def on_websocket_message_received(self, message: str | bytes) -> None:
         """Websocket message received"""
 
-        self._timestamp_last_websocket_msg = datetime.now()
+        self.timestamp_last_websocket_msg = time()
         message = str(message)
 
         _LOGGER.debug("Received message from websocket, message %s", message)
@@ -530,8 +530,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
             elif (
                 "BrewingStoppedGroup1StopType" in msg
-                or "BrewingSnapshotGroup1"
-                in msg  # deprecated message (from GW 3.7-rc7)
+                or "BrewingSnapshotGroup1" in msg
                 or "FlushSnapshotGroup1" in msg
             ):
                 self.config.brew_active = False
