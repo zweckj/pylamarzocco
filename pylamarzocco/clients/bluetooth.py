@@ -145,7 +145,7 @@ class LaMarzoccoBluetoothClient:
                 "Sending bluetooth message: %s to %s", message, characteristic
             )
 
-            await client.write_gatt_char(characteristic, message)
+            await client.write_gatt_char(char_specifier=characteristic, data=message)
 
     async def _write_bluetooth_json_message(
         self,
