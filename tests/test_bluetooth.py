@@ -1,7 +1,7 @@
 """"Test the Bluetooth client."""
 
-from unittest.mock import AsyncMock, patch
 from collections.abc import Generator
+from unittest.mock import AsyncMock
 
 from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.const import (
