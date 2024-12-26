@@ -154,3 +154,11 @@ def bluetooth_client() -> Generator[LaMarzoccoBluetoothClient, None, None]:
 async def machine(cloud_client: LaMarzoccoCloudClient) -> LaMarzoccoMachine:
     """Get a lamarzocco machine"""
     return await init_machine(cloud_client)
+
+
+@pytest.fixture
+def mock_bleak() -> Generator[AsyncMock, None, None]:
+    """Mock BleakClient."""
+    with patch("pylamarzocco.clients.bluetooth.BleakClient") as bleak_client:
+        aenter = bleak_client.return_value.__aenter__.return_value
+        yield aenter
