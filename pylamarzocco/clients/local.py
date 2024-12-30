@@ -118,7 +118,7 @@ class LaMarzoccoLocalClient:
             ) as ws:
                 self.websocket = ws
                 if self.websocket_disconnected:
-                    _LOGGER.debug("Websocket reconnected")
+                    _LOGGER.warning("Websocket reconnected")
                     self.websocket_disconnected = False
                 async for msg in ws:
                     if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
