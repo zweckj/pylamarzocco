@@ -1,6 +1,6 @@
 [project]
 name = "pylamarzocco"
-version = "1.4.5"
+version = "1.4.6a1"
 license = { text = "MIT" }
 description = "A Python implementation of the new La Marzocco API"
 readme = "README.md"

@@ -108,7 +108,7 @@ class LaMarzoccoBluetoothClient:
         await self._write_bluetooth_json_message(data)
 
     async def _write_bluetooth_message(
-        self, characteristic: str, message: bytes | str
+        self, characteristic: str | int, message: bytes | str
     ) -> None:
         """Connect to machine and write a message."""
 
@@ -135,7 +135,7 @@ class LaMarzoccoBluetoothClient:
                     await client.write_gatt_char(
                         char_specifier=AUTH_CHARACTERISTIC,
                         data=auth_string,
-                        response=False,
+                        response=True,
                     )
                 except (BleakError, TimeoutError) as e:
                     raise BluetoothConnectionFailed(
@@ -151,13 +151,13 @@ class LaMarzoccoBluetoothClient:
             await client.write_gatt_char(
                 char_specifier=characteristic,
                 data=message,
-                response=False,
+                response=True,
             )
 
     async def _write_bluetooth_json_message(
         self,
         data: dict[str, Any],
-        characteristic: str = SETTINGS_CHARACTERISTIC,
+        characteristic: str | int = SETTINGS_CHARACTERISTIC,
     ) -> None:
         """Write a json message to the machine."""
 
