@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -134,6 +135,7 @@ class LaMarzoccoBluetoothClient:
                     await client.write_gatt_char(
                         char_specifier=AUTH_CHARACTERISTIC,
                         data=auth_string,
+                        response=False,
                     )
                 except (BleakError, TimeoutError) as e:
                     raise BluetoothConnectionFailed(
@@ -141,11 +143,16 @@ class LaMarzoccoBluetoothClient:
                     ) from e
 
             await authenticate()
+            await asyncio.sleep(0.1)
             _logger.debug(
                 "Sending bluetooth message: %s to %s", message, characteristic
             )
 
-            await client.write_gatt_char(char_specifier=characteristic, data=message)
+            await client.write_gatt_char(
+                char_specifier=characteristic,
+                data=message,
+                response=False,
+            )
 
     async def _write_bluetooth_json_message(
         self,
