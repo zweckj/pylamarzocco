@@ -3,7 +3,13 @@
 import logging
 from typing import Any, Callable
 
-from aiohttp import ClientSession, ClientWebSocketResponse, WSMsgType
+from aiohttp import (
+    ClientSession,
+    ClientWebSocketResponse,
+    WSMsgType,
+    ClientWSTimeout,
+    ClientConnectionError,
+)
 from aiohttp.client_exceptions import ClientError, InvalidURL
 
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
@@ -104,28 +110,42 @@ class LaMarzoccoLocalClient:
     ) -> None:
         """Connect to the websocket of the machine."""
 
-        async with await self._client.ws_connect(
-            f"ws://{self._host}:{self._local_port}/api/v1/streaming",
-            headers={"Authorization": f"Bearer {self._local_bearer}"},
-        ) as ws:
-            self.websocket = ws
-            if self.websocket_disconnected:
-                _LOGGER.debug("Websocket reconnected")
-                self.websocket_disconnected = False
-            async for msg in ws:
-                if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
-                    _LOGGER.warning("Websocket disconnected gracefully")
-                    self.websocket_disconnected = True
-                    break
-                if msg.type == WSMsgType.ERROR:
-                    _LOGGER.warning(
-                        "Websocket disconnected with error %s", ws.exception()
-                    )
-                    self.websocket_disconnected = True
-                    break
-                _LOGGER.debug("Received websocket message: %s", msg)
-                if callback is not None:
-                    try:
-                        callback(msg.data)
-                    except Exception as ex:  # pylint: disable=broad-except
-                        _LOGGER.exception("Error during callback: %s", ex)
+        try:
+            async with await self._client.ws_connect(
+                f"ws://{self._host}:{self._local_port}/api/v1/streaming",
+                headers={"Authorization": f"Bearer {self._local_bearer}"},
+                timeout=ClientWSTimeout(ws_receive=25, ws_close=10.0),
+            ) as ws:
+                self.websocket = ws
+                if self.websocket_disconnected:
+                    _LOGGER.debug("Websocket reconnected")
+                    self.websocket_disconnected = False
+                async for msg in ws:
+                    if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
+                        _LOGGER.warning("Websocket disconnected gracefully")
+                        self.websocket_disconnected = True
+                        break
+                    if msg.type == WSMsgType.ERROR:
+                        _LOGGER.warning(
+                            "Websocket disconnected with error %s", ws.exception()
+                        )
+                        self.websocket_disconnected = True
+                        break
+                    _LOGGER.debug("Received websocket message: %s", msg)
+                    if callback is not None:
+                        try:
+                            callback(msg.data)
+                        except Exception as ex:  # pylint: disable=broad-except
+                            _LOGGER.exception("Error during callback: %s", ex)
+        except TimeoutError as err:
+            if not self.websocket_disconnected:
+                _LOGGER.warning("Websocket disconnected: Connection timed out")
+                self.websocket_disconnected = True
+            _LOGGER.debug("Websocket timeout: %s", err)
+        except ClientConnectionError as err:
+            if not self.websocket_disconnected:
+                _LOGGER.warning("Websocket disconnected: Could not connect: %s", err)
+                self.websocket_disconnected = True
+            _LOGGER.debug("Websocket disconnected: Could not connect: %s", err)
+        except InvalidURL:
+            _LOGGER.error("Invalid URL for websocket.")
