@@ -131,11 +131,19 @@ class LaMarzoccoBluetoothClient:
                     base64.b64encode(user_bytes) + b"@" + base64.b64encode(token)
                 )
 
+                auth_characteristic = client.services.get_characteristic(
+                    AUTH_CHARACTERISTIC
+                )
+                if auth_characteristic is None:
+                    raise BluetoothConnectionFailed(
+                        f"Could not find auth characteristic {AUTH_CHARACTERISTIC} on machine."
+                    )
+
                 try:
                     await client.write_gatt_char(
-                        char_specifier=AUTH_CHARACTERISTIC,
+                        char_specifier=auth_characteristic,
                         data=auth_string,
-                        response=False,
+                        response=True,
                     )
                 except (BleakError, TimeoutError) as e:
                     raise BluetoothConnectionFailed(
@@ -148,10 +156,18 @@ class LaMarzoccoBluetoothClient:
                 "Sending bluetooth message: %s to %s", message, characteristic
             )
 
+            settings_characteristic = client.services.get_characteristic(
+                SETTINGS_CHARACTERISTIC
+            )
+            if settings_characteristic is None:
+                raise BluetoothConnectionFailed(
+                    f"Could not find settings characteristic {SETTINGS_CHARACTERISTIC} on machine."
+                )
+
             await client.write_gatt_char(
-                char_specifier=characteristic,
+                char_specifier=settings_characteristic,
                 data=message,
-                response=False,
+                response=True,
             )
 
     async def _write_bluetooth_json_message(
