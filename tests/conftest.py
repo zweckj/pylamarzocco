@@ -161,4 +161,6 @@ def mock_bleak() -> Generator[AsyncMock, None, None]:
     """Mock BleakClient."""
     with patch("pylamarzocco.clients.bluetooth.BleakClient") as bleak_client:
         aenter = bleak_client.return_value.__aenter__.return_value
+        aenter.services.get_characteristic = lambda uuid: uuid
+
         yield aenter
