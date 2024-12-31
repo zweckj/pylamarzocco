@@ -15,6 +15,7 @@ from bleak import (
     BleakScanner,
     BLEDevice,
 )
+from bleak.backends.characteristic import BleakGATTCharacteristic
 
 from pylamarzocco.const import (
     AUTH_CHARACTERISTIC,
@@ -108,7 +109,7 @@ class LaMarzoccoBluetoothClient:
         await self._write_bluetooth_json_message(data)
 
     async def _write_bluetooth_message(
-        self, characteristic: str | int, message: bytes | str
+        self, characteristic: str, message: bytes | str
     ) -> None:
         """Connect to machine and write a message."""
 
@@ -120,43 +121,21 @@ class LaMarzoccoBluetoothClient:
         message += b"\x00"
 
         async with BleakClient(self._address_or_ble_device) as client:
-            for service in client.services:
-                _logger.warning("[Service] %s", service)
 
-                for char in service.characteristics:
-                    if "read" in char.properties:
-                        try:
-                            value = await client.read_gatt_char(char.uuid)
-                            extra = f", Value: {value}"
-                        except Exception as e:
-                            extra = f", Error: {e}"
-                    else:
-                        extra = ""
-
-                    if "write-without-response" in char.properties:
-                        extra += f", Max write w/o rsp size: {char.max_write_without_response_size}"
-
-                    _logger.warning(
-                        "  [Characteristic] %s (%s)%s",
-                        char,
-                        ",".join(char.properties),
-                        extra,
-                    )
-
-                for descriptor in char.descriptors:
-                    try:
-                        value = await client.read_gatt_descriptor(descriptor.handle)
-                        _logger.warning(
-                            "    [Descriptor] %s, Value: %r", descriptor, value
-                        )
-                    except Exception as e:
-                        _logger.error("    [Descriptor] %s, Error: %s", descriptor, e)
+            auth_char: BleakGATTCharacteristic | None = None
+            settings_char: BleakGATTCharacteristic | None = None
             for service in client.services:
                 for char in service.characteristics:
-                    if char.uuid == "090b7847-e12b-09a8-b04b-8e0922a9abab":
-                        _logger.warning("Auth char: %s", char.handle)
-                    if char.uuid == "050b7847-e12b-09a8-b04b-8e0922a9abab":
-                        _logger.warning("Settings char: %s", char.handle)
+                    if char.uuid == AUTH_CHARACTERISTIC:
+                        auth_char = char
+                        _logger.debug("Found auth characteristic: %s", char.handle)
+                    if char.uuid == characteristic:
+                        settings_char = char
+                        _logger.debug("Found settings characteristic: %s", char.handle)
+            if auth_char is None or settings_char is None:
+                raise BluetoothConnectionFailed(
+                    "Could not find required characteristics on machine."
+                )
 
             async def authenticate() -> None:
                 """Build authentication string and send it to the machine."""
@@ -170,7 +149,7 @@ class LaMarzoccoBluetoothClient:
 
                 try:
                     await client.write_gatt_char(
-                        char_specifier=AUTH_CHARACTERISTIC,
+                        char_specifier=auth_char,
                         data=auth_string,
                         response=True,
                     )
@@ -186,7 +165,7 @@ class LaMarzoccoBluetoothClient:
             )
 
             await client.write_gatt_char(
-                char_specifier=characteristic,
+                char_specifier=settings_char,
                 data=message,
                 response=True,
             )
@@ -194,7 +173,7 @@ class LaMarzoccoBluetoothClient:
     async def _write_bluetooth_json_message(
         self,
         data: dict[str, Any],
-        characteristic: str | int = SETTINGS_CHARACTERISTIC,
+        characteristic: str = SETTINGS_CHARACTERISTIC,
     ) -> None:
         """Write a json message to the machine."""
 
