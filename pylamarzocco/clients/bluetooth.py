@@ -151,6 +151,12 @@ class LaMarzoccoBluetoothClient:
                         )
                     except Exception as e:
                         _logger.error("    [Descriptor] %s, Error: %s", descriptor, e)
+            for service in client.services:
+                for char in service.characteristics:
+                    if char.uuid == "090b7847-e12b-09a8-b04b-8e0922a9abab":
+                        _logger.warning("Auth char: %s", char.handle)
+                    if char.uuid == "050b7847-e12b-09a8-b04b-8e0922a9abab":
+                        _logger.warning("Settings char: %s", char.handle)
 
             async def authenticate() -> None:
                 """Build authentication string and send it to the machine."""
