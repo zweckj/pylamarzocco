@@ -120,6 +120,37 @@ class LaMarzoccoBluetoothClient:
         message += b"\x00"
 
         async with BleakClient(self._address_or_ble_device) as client:
+            for service in client.services:
+                _logger.warning("[Service] %s", service)
+
+                for char in service.characteristics:
+                    if "read" in char.properties:
+                        try:
+                            value = await client.read_gatt_char(char.uuid)
+                            extra = f", Value: {value}"
+                        except Exception as e:
+                            extra = f", Error: {e}"
+                    else:
+                        extra = ""
+
+                    if "write-without-response" in char.properties:
+                        extra += f", Max write w/o rsp size: {char.max_write_without_response_size}"
+
+                    _logger.warning(
+                        "  [Characteristic] %s (%s)%s",
+                        char,
+                        ",".join(char.properties),
+                        extra,
+                    )
+
+                for descriptor in char.descriptors:
+                    try:
+                        value = await client.read_gatt_descriptor(descriptor.handle)
+                        _logger.warning(
+                            "    [Descriptor] %s, Value: %r", descriptor, value
+                        )
+                    except Exception as e:
+                        _logger.error("    [Descriptor] %s, Error: %s", descriptor, e)
 
             async def authenticate() -> None:
                 """Build authentication string and send it to the machine."""
