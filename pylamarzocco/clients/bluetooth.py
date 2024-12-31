@@ -122,20 +122,12 @@ class LaMarzoccoBluetoothClient:
 
         async with BleakClient(self._address_or_ble_device) as client:
 
-            auth_char: BleakGATTCharacteristic | None = None
-            settings_char: BleakGATTCharacteristic | None = None
-            for service in client.services:
-                for char in service.characteristics:
-                    if char.uuid == AUTH_CHARACTERISTIC:
-                        auth_char = char
-                        _logger.debug("Found auth characteristic: %s", char.handle)
-                    if char.uuid == characteristic:
-                        settings_char = char
-                        _logger.debug("Found settings characteristic: %s", char.handle)
-            if auth_char is None or settings_char is None:
-                raise BluetoothConnectionFailed(
-                    "Could not find required characteristics on machine."
-                )
+            auth_c = client.services.get_characteristic(AUTH_CHARACTERISTIC)
+            if auth_c is not None:
+                _logger.warning("Found auth characteristic: %s", auth_c.handle)
+            settings_c = client.services.get_characteristic(SETTINGS_CHARACTERISTIC)
+            if settings_c is not None:
+                _logger.warning("Found settings characteristic: %s", settings_c.handle)
 
             async def authenticate() -> None:
                 """Build authentication string and send it to the machine."""
@@ -146,6 +138,18 @@ class LaMarzoccoBluetoothClient:
                 auth_string = (
                     base64.b64encode(user_bytes) + b"@" + base64.b64encode(token)
                 )
+
+                auth_char: BleakGATTCharacteristic | None = None
+                for service in client.services:
+                    for char in service.characteristics:
+                        if char.uuid == AUTH_CHARACTERISTIC:
+                            auth_char = char
+                            _logger.debug("Found auth characteristic: %s", char.handle)
+                            break
+                if auth_char is None:
+                    raise BluetoothConnectionFailed(
+                        f"Could not find auth characteristic {AUTH_CHARACTERISTIC} on machine."
+                    )
 
                 try:
                     await client.write_gatt_char(
@@ -163,6 +167,18 @@ class LaMarzoccoBluetoothClient:
             _logger.debug(
                 "Sending bluetooth message: %s to %s", message, characteristic
             )
+
+            settings_char: BleakGATTCharacteristic | None = None
+            for service in client.services:
+                for char in service.characteristics:
+                    if char.uuid == characteristic:
+                        settings_char = char
+                        _logger.debug("Found settings characteristic: %s", char.handle)
+                        break
+            if settings_char is None:
+                raise BluetoothConnectionFailed(
+                    f"Could not find characteristic {characteristic} on machine."
+                )
 
             await client.write_gatt_char(
                 char_specifier=settings_char,
