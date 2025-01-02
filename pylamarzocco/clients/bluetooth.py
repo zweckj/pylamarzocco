@@ -121,6 +121,47 @@ class LaMarzoccoBluetoothClient:
 
         async with BleakClient(self._address_or_ble_device) as client:
 
+            async def service_info() -> None:
+                for service in client.services:
+                    _logger.debug("[Service] %s", service)
+
+                    for char in service.characteristics:
+                        if "read" in char.properties:
+                            try:
+                                value = await client.read_gatt_char(char.uuid)
+                                extra = f", Value: {value}"
+                            except (
+                                Exception  # pylint: disable=broad-exception-caught
+                            ) as e:
+                                extra = f", Error: {e}"
+                        else:
+                            extra = ""
+
+                        if "write-without-response" in char.properties:
+                            extra += f", Max write w/o rsp size: {char.max_write_without_response_size}"
+
+                        _logger.debug(
+                            "  [Characteristic] %s (%s)%s",
+                            char,
+                            ",".join(char.properties),
+                            extra,
+                        )
+
+                        for descriptor in char.descriptors:
+                            try:
+                                value = await client.read_gatt_descriptor(
+                                    descriptor.handle
+                                )
+                                _logger.debug(
+                                    "    [Descriptor] %s, Value: %r", descriptor, value
+                                )
+                            except (
+                                Exception  # pylint: disable=broad-exception-caught
+                            ) as e:
+                                _logger.error(
+                                    "    [Descriptor] %s, Error: %s", descriptor, e
+                                )
+
             async def authenticate() -> None:
                 """Build authentication string and send it to the machine."""
 
@@ -134,11 +175,12 @@ class LaMarzoccoBluetoothClient:
                 auth_characteristic = client.services.get_characteristic(
                     AUTH_CHARACTERISTIC
                 )
+
                 if auth_characteristic is None:
                     raise BluetoothConnectionFailed(
                         f"Could not find auth characteristic {AUTH_CHARACTERISTIC} on machine."
                     )
-
+                _logger.debug("Auth characteristic: %s", auth_characteristic.handle)
                 try:
                     await client.write_gatt_char(
                         char_specifier=auth_characteristic,
@@ -150,6 +192,7 @@ class LaMarzoccoBluetoothClient:
                         f"Failed to connect to machine with Bluetooth: {e}"
                     ) from e
 
+            await service_info()
             await authenticate()
             await asyncio.sleep(0.1)
             _logger.debug(
@@ -159,10 +202,12 @@ class LaMarzoccoBluetoothClient:
             settings_characteristic = client.services.get_characteristic(
                 SETTINGS_CHARACTERISTIC
             )
+
             if settings_characteristic is None:
                 raise BluetoothConnectionFailed(
                     f"Could not find settings characteristic {SETTINGS_CHARACTERISTIC} on machine."
                 )
+            _logger.debug("Settings characteristic: %s", settings_characteristic.handle)
 
             await client.write_gatt_char(
                 char_specifier=settings_characteristic,
