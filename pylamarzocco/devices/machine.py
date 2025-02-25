@@ -191,8 +191,8 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
                     msg = "Steam temp must be one of 126, 128, 131 (°C)"
                     _LOGGER.debug(msg)
                     raise ValueError(msg)
-            elif self.model == MachineModel.LINEA_MINI:
-                _LOGGER.error("Steam temp is not supported on Linea Mini.")
+            elif self.model in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
+                _LOGGER.error("Steam temp is not supported on Linea Mini (R).")
                 return False
         else:
             if temperature > 104 or temperature < 85:
@@ -286,8 +286,8 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
     async def set_scale_target(self, key: PhysicalKey, target: int) -> bool:
         """Set scale target"""
-        if not self.model == MachineModel.LINEA_MINI:
-            raise ValueError("Scale is only supported on Linea Mini")
+        if not self.model in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
+            raise ValueError("Scale is only supported on Linea Mini (R)")
 
         assert self.config.bbw_settings
 
@@ -298,8 +298,8 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
     async def set_active_bbw_recipe(self, key: PhysicalKey) -> bool:
         """Set the active scale target"""
-        if not self.model == MachineModel.LINEA_MINI:
-            raise ValueError("Scale is only supported on Linea Mini")
+        if not self.model in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
+            raise ValueError("Scale is only supported on Linea Mini (R)")
 
         assert self.config.bbw_settings
 
@@ -310,8 +310,8 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
     async def set_bbw_recipe_target(self, key: PhysicalKey, target: int) -> bool:
         """Set the bbw recipe target"""
-        if not self.model == MachineModel.LINEA_MINI:
-            raise ValueError("Scale is only supported on Linea Mini")
+        if not self.model in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
+            raise ValueError("Scale is only supported on Linea Mini (R)")
 
         assert self.config.bbw_settings
 

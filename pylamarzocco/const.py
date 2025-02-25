@@ -10,6 +10,7 @@ class MachineModel(StrEnum):
     GS3_AV = "GS3 AV"
     GS3_MP = "GS3 MP"
     LINEA_MINI = "Linea Mini"
+    LINEA_MINI_R = "Linea Mini R"
     LINEA_MICRA = "Micra"
 
 
@@ -80,6 +81,7 @@ class SmartStandbyMode(StrEnum):
 KEYS_PER_MODEL: Final = {
     MachineModel.LINEA_MICRA: 0,
     MachineModel.LINEA_MINI: 0,
+    MachineModel.LINEA_MINI_R: 0,
     MachineModel.GS3_AV: 4,
     MachineModel.GS3_MP: 0,
 }
