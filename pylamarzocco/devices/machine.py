@@ -133,7 +133,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
         self.config.doses, self.config.dose_hot_water = parse_coffee_doses(raw_config)
         self.config.boilers = parse_boilers(raw_config["boilers"])
         self.config.prebrew_mode, self.config.prebrew_configuration = (
-            parse_preinfusion_settings(raw_config)
+            parse_preinfusion_settings(MachineModel(self.model), raw_config)
         )
         self.config.smart_standby = parse_smart_standby(
             raw_config.get("smartStandBy", {})
@@ -207,7 +207,6 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
             boiler=boiler,
             temperature=temperature,
         ):
-
             self.config.boilers[boiler].target_temperature = temperature
             return True
         return False
@@ -241,16 +240,16 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
         """Set prebrew time"""
 
         if prebrew_on_time is None:
-            prebrew_on_time = self.config.prebrew_configuration[key].on_time
+            prebrew_on_time = self.config.prebrew_configuration[key][0].on_time
 
         if prebrew_off_time is None:
-            prebrew_off_time = self.config.prebrew_configuration[key].off_time
+            prebrew_off_time = self.config.prebrew_configuration[key][0].off_time
 
         if await self.cloud_client.configure_pre_brew_infusion_time(
             self.serial_number, prebrew_on_time, prebrew_off_time, key
         ):
-            self.config.prebrew_configuration[key].on_time = prebrew_on_time
-            self.config.prebrew_configuration[key].off_time = prebrew_off_time
+            self.config.prebrew_configuration[key][0].on_time = prebrew_on_time
+            self.config.prebrew_configuration[key][0].off_time = prebrew_off_time
             return True
         return False
 
@@ -264,7 +263,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
         if await self.cloud_client.configure_pre_brew_infusion_time(
             self.serial_number, 0, preinfusion_time, key
         ):
-            self.config.prebrew_configuration[key].off_time = preinfusion_time
+            self.config.prebrew_configuration[key][1].off_time = preinfusion_time
             return True
         return False
 
@@ -286,7 +285,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
     async def set_scale_target(self, key: PhysicalKey, target: int) -> bool:
         """Set scale target"""
-        if not self.model in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
+        if self.model not in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
             raise ValueError("Scale is only supported on Linea Mini (R)")
 
         assert self.config.bbw_settings
@@ -298,7 +297,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
     async def set_active_bbw_recipe(self, key: PhysicalKey) -> bool:
         """Set the active scale target"""
-        if not self.model in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
+        if self.model not in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
             raise ValueError("Scale is only supported on Linea Mini (R)")
 
         assert self.config.bbw_settings
@@ -310,7 +309,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
     async def set_bbw_recipe_target(self, key: PhysicalKey, target: int) -> bool:
         """Set the bbw recipe target"""
-        if not self.model in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
+        if self.model not in (MachineModel.LINEA_MINI, MachineModel.LINEA_MINI_R):
             raise ValueError("Scale is only supported on Linea Mini (R)")
 
         assert self.config.bbw_settings
@@ -487,7 +486,6 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
 
         property_updated = False
         for msg in message:
-
             if "SteamBoilerUpdateTemperature" in msg:
                 self.config.boilers[BoilerType.STEAM].current_temperature = msg[
                     "SteamBoilerUpdateTemperature"
@@ -571,7 +569,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
                 settings["preinfusionSettings"] = json.loads(msg["PreinfusionSettings"])
 
                 self.config.prebrew_mode, self.config.prebrew_configuration = (
-                    parse_preinfusion_settings(settings)
+                    parse_preinfusion_settings(MachineModel(self.model),  settings)
                 )
                 property_updated = True
 

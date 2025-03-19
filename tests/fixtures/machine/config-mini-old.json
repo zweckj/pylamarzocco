@@ -80,20 +80,12 @@
       }
     },
     "preinfusionSettings": {
-      "mode": "TypeA",
+      "mode": "Enabled",
       "Group1": [
         {
-          "mode": "TypeA",
           "groupNumber": "Group1",
-          "doseType": "Continuous",
+          "doseType": "DoseA",
           "preWetTime": 2,
-          "preWetHoldTime": 3
-        },
-        {
-          "mode": "TypeB",
-          "groupNumber": "Group1",
-          "doseType": "Continuous",
-          "preWetTime": 0,
           "preWetHoldTime": 3
         }
       ]
@@ -120,7 +112,7 @@
     "clock": "2024-08-31T14:47:45",
     "firmwareVersions": [
       { "name": "machine_firmware", "fw_version": "2.12" },
-      { "name": "gateway_firmware", "fw_version": "v5.0.9" }
+      { "name": "gateway_firmware", "fw_version": "v3.6-rc4" }
     ]
   }
 }

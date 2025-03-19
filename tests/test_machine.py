@@ -226,8 +226,8 @@ async def test_set_prebrew_time(
         data=None,
     )
 
-    assert machine.config.prebrew_configuration[PhysicalKey.A].on_time == 1.0
-    assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 3.5
+    assert machine.config.prebrew_configuration[PhysicalKey.A][0].on_time == 1.0
+    assert machine.config.prebrew_configuration[PhysicalKey.A][0].off_time == 3.5
 
 
 async def test_set_preinfusion_time(
@@ -246,7 +246,7 @@ async def test_set_preinfusion_time(
         data=None,
     )
 
-    assert machine.config.prebrew_configuration[PhysicalKey.A].off_time == 4.5
+    assert machine.config.prebrew_configuration[PhysicalKey.A][1].off_time == 4.5
 
 
 async def test_set_scale_target(

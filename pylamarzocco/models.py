@@ -128,7 +128,10 @@ class LaMarzoccoMachineConfig(LaMarzoccoDeviceConfig):
     boilers: dict[BoilerType, LaMarzoccoBoiler]
     prebrew_mode: PrebrewMode
     plumbed_in: bool
-    prebrew_configuration: dict[PhysicalKey, LaMarzoccoPrebrewConfiguration]
+    prebrew_configuration: dict[
+        PhysicalKey,
+        tuple[LaMarzoccoPrebrewConfiguration, LaMarzoccoPrebrewConfiguration],
+    ]
     dose_hot_water: int
     water_contact: bool
     wake_up_sleep_entries: dict[str, LaMarzoccoWakeUpSleepEntry]
