@@ -116,7 +116,7 @@
     'plumbed_in': False,
     'prebrew_configuration': dict({
     }),
-    'prebrew_mode': <PrebrewMode.PREBREW_TYPE_A: 'TypeA'>,
+    'prebrew_mode': <PrebrewMode.PREBREW: 'TypeA'>,
     'scale': dict({
       'address': '44:b7:d0:74:5f:90',
       'battery': 64,
