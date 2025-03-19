@@ -46,6 +46,26 @@
           'on_time': 0,
         }),
       ),
+      <PhysicalKey.C: 3>: tuple(
+        dict({
+          'off_time': 3.3,
+          'on_time': 3.3,
+        }),
+        dict({
+          'off_time': 4,
+          'on_time': 0,
+        }),
+      ),
+      <PhysicalKey.D: 4>: tuple(
+        dict({
+          'off_time': 2,
+          'on_time': 2,
+        }),
+        dict({
+          'off_time': 4,
+          'on_time': 0,
+        }),
+      ),
     }),
     'prebrew_mode': <PrebrewMode.PREINFUSION: 'TypeB'>,
     'scale': None,
@@ -115,6 +135,16 @@
     }),
     'plumbed_in': False,
     'prebrew_configuration': dict({
+      <PhysicalKey.A: 1>: tuple(
+        dict({
+          'off_time': 3,
+          'on_time': 2,
+        }),
+        dict({
+          'off_time': 3,
+          'on_time': 0,
+        }),
+      ),
     }),
     'prebrew_mode': <PrebrewMode.PREBREW: 'TypeA'>,
     'scale': dict({
