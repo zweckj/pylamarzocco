@@ -96,19 +96,25 @@ def parse_preinfusion_settings(
     """Parse preinfusion settings from API config object."""
 
     num_keys = KEYS_PER_MODEL[model]
+    if num_keys == 0:
+        num_keys = 1
 
     parsed: dict[PhysicalKey, tuple[LaMarzoccoPrebrewConfiguration, LaMarzoccoPrebrewConfiguration]] = {}
     preinfusion_settings = config.get("preinfusionSettings", {})
     mode = PrebrewMode(preinfusion_settings.get("mode", "Disabled"))
     settings_group_1 = preinfusion_settings.get("Group1", [])
     key = 1
-    for i in range(0, num_keys, 1 if len(settings_group_1) == num_keys else 2):
+    if (num_settings := len(settings_group_1)) > num_keys:
+        step = 2
+    else:
+        step = 1
+    for i in range(0, num_settings, step):
 
         type_a = LaMarzoccoPrebrewConfiguration(
             on_time=settings_group_1[i].get("preWetTime", 0),
             off_time=settings_group_1[i].get("preWetHoldTime", 0),
         )
-        if len(settings_group_1) > num_keys:
+        if num_settings > num_keys:
             type_b = LaMarzoccoPrebrewConfiguration(
                 on_time=settings_group_1[i + 1].get("preWetTime", 0),
                 off_time=settings_group_1[i + 1].get("preWetHoldTime", 0),
