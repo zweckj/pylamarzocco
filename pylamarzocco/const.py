@@ -38,7 +38,8 @@ class PrebrewMode(StrEnum):
     """Enum for prebrew infusion mode"""
 
     DISABLED = "Disabled"
-    PREBREW = "Enabled"
+    PREBREW_ENABLED = "Enabled" # deprecated
+    PREBREW = "TypeA"
     PREINFUSION = "TypeB"
 
 

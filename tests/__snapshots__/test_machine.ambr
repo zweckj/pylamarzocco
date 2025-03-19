@@ -26,22 +26,26 @@
     }),
     'plumbed_in': True,
     'prebrew_configuration': dict({
-      <PhysicalKey.A: 1>: dict({
-        'off_time': 1,
-        'on_time': 0.5,
-      }),
-      <PhysicalKey.B: 2>: dict({
-        'off_time': 1,
-        'on_time': 0.5,
-      }),
-      <PhysicalKey.C: 3>: dict({
-        'off_time': 3.299999952316284,
-        'on_time': 3.299999952316284,
-      }),
-      <PhysicalKey.D: 4>: dict({
-        'off_time': 2,
-        'on_time': 2,
-      }),
+      <PhysicalKey.A: 1>: tuple(
+        dict({
+          'off_time': 1,
+          'on_time': 0.5,
+        }),
+        dict({
+          'off_time': 4,
+          'on_time': 0,
+        }),
+      ),
+      <PhysicalKey.B: 2>: tuple(
+        dict({
+          'off_time': 1,
+          'on_time': 0.5,
+        }),
+        dict({
+          'off_time': 4,
+          'on_time': 0,
+        }),
+      ),
     }),
     'prebrew_mode': <PrebrewMode.PREINFUSION: 'TypeB'>,
     'scale': None,
@@ -111,12 +115,8 @@
     }),
     'plumbed_in': False,
     'prebrew_configuration': dict({
-      <PhysicalKey.A: 1>: dict({
-        'off_time': 3,
-        'on_time': 2,
-      }),
     }),
-    'prebrew_mode': <PrebrewMode.PREBREW: 'Enabled'>,
+    'prebrew_mode': <PrebrewMode.PREBREW: 'TypeA'>,
     'scale': dict({
       'address': '44:b7:d0:74:5f:90',
       'battery': 64,

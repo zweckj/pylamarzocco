@@ -1,4 +1,4 @@
-""" Helper functions for pylamarzocco. """
+"""Helper functions for pylamarzocco."""
 
 from typing import Any
 from aiohttp import ClientResponse
@@ -10,6 +10,8 @@ from .const import (
     PrebrewMode,
     SmartStandbyMode,
     WeekDay,
+    MachineModel,
+    KEYS_PER_MODEL,
 )
 from .models import (
     LaMarzoccoBoiler,
@@ -82,20 +84,39 @@ def parse_boilers(boilers: list[dict[str, Any]]) -> dict[BoilerType, LaMarzoccoB
 
 
 def parse_preinfusion_settings(
-    config: dict[str, Any]
-) -> tuple[PrebrewMode, dict[PhysicalKey, LaMarzoccoPrebrewConfiguration]]:
+    model: MachineModel,
+    config: dict[str, Any],
+) -> tuple[
+    PrebrewMode,
+    dict[
+        PhysicalKey,
+        tuple[LaMarzoccoPrebrewConfiguration, LaMarzoccoPrebrewConfiguration],
+    ],
+]:
     """Parse preinfusion settings from API config object."""
 
-    parsed: dict[PhysicalKey, LaMarzoccoPrebrewConfiguration] = {}
-    i = 1
+    num_keys = KEYS_PER_MODEL[model]
+
+    parsed: dict[PhysicalKey, tuple[LaMarzoccoPrebrewConfiguration, LaMarzoccoPrebrewConfiguration]] = {}
     preinfusion_settings = config.get("preinfusionSettings", {})
     mode = PrebrewMode(preinfusion_settings.get("mode", "Disabled"))
-    for group in preinfusion_settings.get("Group1", {}):
-        parsed[PhysicalKey(i)] = LaMarzoccoPrebrewConfiguration(
-            on_time=group.get("preWetTime", 0),
-            off_time=group.get("preWetHoldTime", 0),
+    settings_group_1 = preinfusion_settings.get("Group1", [])
+    key = 1
+    for i in range(0, num_keys, 1 if len(settings_group_1) == num_keys else 2):
+
+        type_a = LaMarzoccoPrebrewConfiguration(
+            on_time=settings_group_1[i].get("preWetTime", 0),
+            off_time=settings_group_1[i].get("preWetHoldTime", 0),
         )
-        i += 1
+        if len(settings_group_1) > num_keys:
+            type_b = LaMarzoccoPrebrewConfiguration(
+                on_time=settings_group_1[i + 1].get("preWetTime", 0),
+                off_time=settings_group_1[i + 1].get("preWetHoldTime", 0),
+            )
+        else:
+            type_b = type_a
+        parsed[PhysicalKey(key)] = (type_a, type_b)
+        key += 1
 
     return mode, parsed
 
@@ -119,7 +140,7 @@ def parse_coffee_doses(config: dict[str, Any]) -> tuple[dict[PhysicalKey, float]
 
 
 def parse_cloud_statistics(
-    statistics: list[dict[str, Any]]
+    statistics: list[dict[str, Any]],
 ) -> LaMarzoccoCoffeeStatistics:
     """Parse statistics from API statistics object."""
 
@@ -196,7 +217,7 @@ def parse_smart_standby(smart_standby_config: dict[str, Any]) -> LaMarzoccoSmart
 
 
 def parse_wakeup_sleep_entries(
-    entries: list[dict[str, Any]]
+    entries: list[dict[str, Any]],
 ) -> dict[str, LaMarzoccoWakeUpSleepEntry]:
     """Parse wake up sleep entries from API config object."""
     parsed = {}
@@ -214,7 +235,7 @@ def parse_wakeup_sleep_entries(
 
 
 def parse_brew_by_weight_settings(
-    config: dict[str, Any]
+    config: dict[str, Any],
 ) -> LaMarzoccoBrewByWeightSettings | None:
     """Parse brew by weight settings from API config object."""
     if "recipes" not in config:
