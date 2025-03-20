@@ -89,6 +89,12 @@ KEYS_PER_MODEL: Final = {
 
 
 # Base URL for La Marzocco Cloud
+
+BASE_URL = "lion.lamarzocco.io"
+CUSTOMER_APP_URL = f"https://{BASE_URL}/api/customer-app"
+
+
+
 CMS_URL: Final = "https://cms.lamarzocco.io"
 TOKEN_URL: Final = f"{CMS_URL}/oauth/v2/token"
 LOGOUT_URL: Final = f"{CMS_URL}/oauth/v2/logout"

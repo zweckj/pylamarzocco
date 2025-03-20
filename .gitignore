@@ -137,3 +137,5 @@ bleak_discover.py
 bleaktest.py
 bleak_info.py
 testconf.json
+run.py
+run_v5.py
