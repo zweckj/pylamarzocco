@@ -9,10 +9,10 @@ from copy import deepcopy
 from time import time
 from typing import Any
 
-from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.const import (
+from pylamarzocco.legacy.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.legacy.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.legacy.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.legacy.const import (
     BoilerType,
     FirmwareType,
     MachineModel,
@@ -21,8 +21,8 @@ from pylamarzocco.const import (
     SmartStandbyMode,
     SteamLevel,
 )
-from pylamarzocco.exceptions import ClientNotInitialized, UnknownWebSocketMessage
-from pylamarzocco.helpers import (
+from pylamarzocco.legacy.exceptions import ClientNotInitialized, UnknownWebSocketMessage
+from pylamarzocco.legacy.helpers import (
     parse_boilers,
     parse_brew_by_weight_settings,
     parse_cloud_statistics,
@@ -32,8 +32,8 @@ from pylamarzocco.helpers import (
     parse_smart_standby,
     parse_wakeup_sleep_entries,
 )
-from pylamarzocco.devices.base import LaMarzoccoBaseDevice
-from pylamarzocco.models import (
+from pylamarzocco.legacy.devices.base import LaMarzoccoBaseDevice
+from pylamarzocco.legacy.models import (
     LaMarzoccoCoffeeStatistics,
     LaMarzoccoMachineConfig,
     LaMarzoccoSmartStandby,

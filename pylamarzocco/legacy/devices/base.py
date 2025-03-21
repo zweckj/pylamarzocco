@@ -7,18 +7,18 @@ from typing import Any
 
 from bleak import BleakError
 
-from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.const import FirmwareType
-from pylamarzocco.exceptions import (
+from pylamarzocco.legacy.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.legacy.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.legacy.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.legacy.const import FirmwareType
+from pylamarzocco.legacy.exceptions import (
     AuthFail,
     BluetoothConnectionFailed,
     ClientNotInitialized,
     RequestNotSuccessful,
 )
-from pylamarzocco.helpers import parse_firmware
-from pylamarzocco.models import (
+from pylamarzocco.legacy.helpers import parse_firmware
+from pylamarzocco.legacy.models import (
     LaMarzoccoDeviceConfig,
     LaMarzoccoFirmware,
     LaMarzoccoStatistics,

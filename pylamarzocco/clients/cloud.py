@@ -19,29 +19,14 @@ from aiohttp import (
 )
 from aiohttp.client_exceptions import ClientError, InvalidURL
 
+from pylamarzocco.util import is_success
 from pylamarzocco.const import (
-    CUSTOMER_URL,
-    DEFAULT_CLIENT_ID,
-    DEFAULT_CLIENT_SECRET,
-    GW_AWS_PROXY_BASE_URL,
-    GW_MACHINE_BASE_URL,
-    LOGOUT_URL,
-    TOKEN_URL,
     CUSTOMER_APP_URL,
-    BoilerType,
-    FirmwareType,
-    PhysicalKey,
-    PrebrewMode,
-    SmartStandbyMode,
     BASE_URL,
 )
-from pylamarzocco.helpers import is_success
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models import (
     AccessToken,
-    LaMarzoccoDeviceInfo,
-    LaMarzoccoFirmware,
-    LaMarzoccoWakeUpSleepEntry,
 )
 from pylamarzocco.models.authentication import TokenRequest, TokenResponse
 from pylamarzocco.models.general import ChangeSettingResponse, Device
@@ -90,7 +75,7 @@ class LaMarzoccoCloudClient:
         except ClientError as ex:
             raise RequestNotSuccessful(
                 "Error during HTTP request."
-                + f"Request to endpoint {TOKEN_URL} failed with error: {ex}"
+                + f"Request auth to endpoint failed with error: {ex}"
             ) from ex
         if is_success(response):
             json_response = await response.json()
@@ -99,7 +84,7 @@ class LaMarzoccoCloudClient:
             raise AuthFail("Invalid username or password")
 
         raise RequestNotSuccessful(
-            f"Request to endpoint {TOKEN_URL} failed with status code {response.status}"
+            f"Request t auth endpoint failed with status code {response.status}"
             + f"response: {await response.text()}"
         )
 

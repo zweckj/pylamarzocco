@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.const import FirmwareType, GrinderModel, PhysicalKey
-from pylamarzocco.devices.base import LaMarzoccoBaseDevice
-from pylamarzocco.models import LaMarzoccoGrinderConfig
+from pylamarzocco.legacy.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.legacy.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.legacy.const import FirmwareType, GrinderModel, PhysicalKey
+from pylamarzocco.legacy.devices.base import LaMarzoccoBaseDevice
+from pylamarzocco.legacy.models import LaMarzoccoGrinderConfig
 
 
 class LaMarzoccoGrinder(LaMarzoccoBaseDevice):
