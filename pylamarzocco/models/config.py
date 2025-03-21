@@ -12,7 +12,7 @@ from mashumaro.types import Discriminator
 
 from pylamarzocco.models.general import CommandResponse
 
-from pylamarzocco.const import MachineState, PreExtractionMode
+from pylamarzocco.const import MachineState, PreExtractionMode, WidgetType, SteamTargetLevel
 
 @dataclass(kw_only=True)
 class DeviceConfig(DataClassJSONMixin):
@@ -27,6 +27,14 @@ class DeviceConfig(DataClassJSONMixin):
     uuid: str
     commands: list[CommandResponse]
 
+    @classmethod
+    def __pre_deserialize__(cls, d: dict) -> dict:
+        widgets: dict = d["widgets"]
+        for widget in widgets:
+            widget["output"]["widget_type"] = widget["code"]
+        d["widgets"] = widgets
+        return d
+
 
 @dataclass(kw_only=True)
 class BaseWidget(DataClassJSONMixin):
@@ -40,24 +48,23 @@ class BaseWidget(DataClassJSONMixin):
 class Widget(BaseWidget):
     """Widget configuration."""
 
-    output: list[
-        Annotated[WidgetBaseOutput, Discriminator(field="code", include_subtypes=True)]
-    ]
+    output: Annotated[BaseWidgetOutput, Discriminator(field="widget_type", include_subtypes=True)]
 
 @dataclass(kw_only=True)
-class WidgetBaseOutput(DataClassJSONMixin):
+class BaseWidgetOutput(DataClassJSONMixin):
     """Widget configuration."""
 
 @dataclass(kw_only=True)
-class CMMachineStatus(WidgetBaseOutput):
+class MachineStatus(BaseWidgetOutput):
     """Machine status configuration."""
 
+    widget_type = WidgetType.MACHINE_STATUS
     status: MachineState
     available_modes: list[MachineState] = field(
         metadata=field_options(alias="availableModes")
     )
     mode: MachineState
-    next_state: MachineState | None = field(metadata=field_options(alias="nextState"))
+    next_status: MachineState | None = field(metadata=field_options(alias="nextStatus"))
     brewing_start_time: datetime | None = field(
         metadata=field_options(
             alias="brewingStartTime",
@@ -68,9 +75,10 @@ class CMMachineStatus(WidgetBaseOutput):
 
 
 @dataclass(kw_only=True)
-class CMCoffeeBoiler(WidgetBaseOutput):
+class CoffeeBoiler(BaseWidgetOutput):
     """Coffee boiler configuration."""
 
+    widget_type = WidgetType.COFFEE_BOILER
     status: MachineState
     enabled: bool
     enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
@@ -93,12 +101,13 @@ class CMCoffeeBoiler(WidgetBaseOutput):
     )
 
 @dataclass(kw_only=True)
-class CMSteamBoilerLevel(WidgetBaseOutput):
+class SteamBoilerLevel(BaseWidgetOutput):
     """Steam boiler level configuration."""
+    widget_type = WidgetType.STEAM_BOILER_LEVEL
     status: MachineState # TODO: correct type
     enabled: bool
     enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
-    target_level: float = field(metadata=field_options(alias="targetLevel"))
+    target_level: SteamTargetLevel = field(metadata=field_options(alias="targetLevel"))
     target_level_supported: bool = field(
         metadata=field_options(alias="targetLevelSupported")
     )
@@ -111,7 +120,7 @@ class CMSteamBoilerLevel(WidgetBaseOutput):
     )
 
 @dataclass(kw_only=True)
-class PreExtractionBase(WidgetBaseOutput):
+class PreExtractionBase(BaseWidgetOutput):
     """Pre-extraction configuration."""
     available_modes: list[PreExtractionMode] = field(
         metadata=field_options(alias="availableModes")
@@ -119,15 +128,16 @@ class PreExtractionBase(WidgetBaseOutput):
     mode: PreExtractionMode
 
 @dataclass(kw_only=True)
-class CMPreExtraction(PreExtractionBase):
+class PreExtraction(PreExtractionBase):
     """Pre-extraction configuration."""
-
+    widget_type = WidgetType.PRE_EXTRACTION
     times: InOutTime
 
 @dataclass(kw_only=True)
-class CMPreBrewing(PreExtractionBase):
+class PreBrewing(PreExtractionBase):
     """Pre-brewing configuration."""
 
+    widget_type = WidgetType.PRE_BREWING
     times: PrebrewInfusionTimeLists
     dose_index_supported: bool = field(metadata=field_options(alias="doseIndexSupported"), default=False)
 
@@ -135,8 +145,8 @@ class CMPreBrewing(PreExtractionBase):
 class InOutTime(DataClassJSONMixin):
     """In and out time configuration."""
 
-    time_in: PreExtractionInOutTimes = field(metadata=field_options(alias="In"))
-    time_out: PreExtractionInOutTimes = field(metadata=field_options(alias="Out"))
+    time_in: PreExtractionPreBrewInfusionTimes = field(metadata=field_options(alias="In"))
+    time_out: PreExtractionPreBrewInfusionTimes = field(metadata=field_options(alias="Out"))
 
 @dataclass(kw_only=True)
 class SecondsInOut(DataClassJSONMixin):
@@ -173,7 +183,7 @@ class PreExtractionPreBrewInfusionTimes(PreExtractionBaseTimes[PreBrewInfusionTi
 class PreExtractionInOutTimes(PreExtractionBaseTimes[SecondsInOut]):
     """Pre-extraction times configuration."""
     dose_index: str = field(metadata=field_options(alias="doseIndex"))
-
+    seconds: SecondsInOut
 
 @dataclass(kw_only=True)
 class PrebrewInfusionTimeLists(DataClassJSONMixin):
@@ -182,10 +192,10 @@ class PrebrewInfusionTimeLists(DataClassJSONMixin):
     pre_brewing: list[PreExtractionInOutTimes] = field(metadata=field_options(alias="PreBrewing"))
 
 @dataclass(kw_only=True)
-class CMBackFlush(WidgetBaseOutput):
+class BackFlush(BaseWidgetOutput):
     """Backflush configuration."""
-
-    enabled: bool
+    widget_type = WidgetType.BACK_FLUSH
+    status: str
     last_cleaning_start_time: datetime | None = field(
         metadata=field_options(
             alias="lastCleaningStartTime",
