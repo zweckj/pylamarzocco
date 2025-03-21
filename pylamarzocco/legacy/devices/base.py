@@ -38,10 +38,32 @@ class LaMarzoccoBaseDevice:
         serial_number: str,
         name: str,
         cloud_client: LaMarzoccoCloudClient | None = None,
+        local_client: LaMarzoccoLocalClient | None = None,
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
         """Initializes a new LaMarzoccoMachine instance"""
 
+        self.model: str = model
+        self.serial_number: str = serial_number
+        self.name: str = name
+        self.firmware: dict[FirmwareType, LaMarzoccoFirmware] = {}
+        self.statistics: LaMarzoccoStatistics | None = None
+        self.config: LaMarzoccoDeviceConfig = LaMarzoccoDeviceConfig(
+            turned_on=False,
+            doses={},
+        )
+
+        self._raw_config: dict[str, Any] | None = None
+        self._cloud_client = cloud_client
+        self._bluetooth_client = bluetooth_client
+        self._local_client = local_client
+        self._update_lock = asyncio.Lock()
+        self._local_connection_down = False
+
+    def parse_config(self, raw_config: dict[str, Any]) -> None:
+        """Parse the config object."""
+
+        self.firmware = parse_firmware(raw_config["firmwareVersions"], self.firmware)
 
     @property
     def cloud_client(self) -> LaMarzoccoCloudClient:
@@ -51,10 +73,61 @@ class LaMarzoccoBaseDevice:
             raise ClientNotInitialized("Cloud client not initialized")
         return self._cloud_client
 
+    @abstractmethod
+    def parse_statistics(self, raw_statistics: list[dict[str, Any]]) -> None:
+        """Parse the statistics object."""
+
     @property
     def full_model_name(self) -> str:
         """Return the full model name of the device."""
         return self.model
+
+    async def get_config(
+        self,
+        local_api_retry_delay: int = 3,
+    ) -> None:
+        """Update the machine status."""
+
+        raw_config: dict[str, Any] = {}
+
+        async with self._update_lock:
+            # first, try to update locally
+            if self._local_client is not None:
+                try:
+                    raw_config = await self._local_client.get_config()
+                except AuthFail as exc:
+                    _LOGGER.debug(
+                        "Got 403 from local API, sending token request to cloud"
+                    )
+                    # for some machines (GS3) we need to send a token request before local API works
+                    if self._cloud_client is not None:
+                        await self._cloud_client.token_command(self.serial_number)
+                        await asyncio.sleep(local_api_retry_delay)
+                        raw_config = await self._local_client.get_config()
+                    else:
+                        raise exc
+                except RequestNotSuccessful as exc:
+                    msg = (
+                        "Could not connect to local API although initialized, "
+                        "falling back to cloud."
+                    )
+                    if not self._local_connection_down:
+                        _LOGGER.warning(msg)
+                        self._local_connection_down = True
+                    _LOGGER.debug(msg)
+                    _LOGGER.debug(exc)
+                    if self._cloud_client is None:
+                        raise exc
+                else:
+                    if self._local_connection_down:
+                        _LOGGER.warning("Local API connection restored.")
+                        self._local_connection_down = False
+
+            # if local update failed, try to update from cloud
+            if self._cloud_client is not None and not raw_config:
+                raw_config = await self._cloud_client.get_config(self.serial_number)
+
+            self.parse_config(raw_config)
 
     async def get_statistics(self) -> None:
         """Update the statistics"""
