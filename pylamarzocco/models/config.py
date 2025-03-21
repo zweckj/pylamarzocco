@@ -40,7 +40,7 @@ class DeviceConfig(DataClassJSONMixin):
 class BaseWidget(DataClassJSONMixin):
     """Base widget configuration."""
 
-    code: str
+    code: WidgetType
     index: int
 
 
@@ -58,7 +58,7 @@ class BaseWidgetOutput(DataClassJSONMixin):
 class MachineStatus(BaseWidgetOutput):
     """Machine status configuration."""
 
-    widget_type = WidgetType.MACHINE_STATUS
+    widget_type = WidgetType.CM_MACHINE_STATUS
     status: MachineState
     available_modes: list[MachineState] = field(
         metadata=field_options(alias="availableModes")
@@ -78,7 +78,7 @@ class MachineStatus(BaseWidgetOutput):
 class CoffeeBoiler(BaseWidgetOutput):
     """Coffee boiler configuration."""
 
-    widget_type = WidgetType.COFFEE_BOILER
+    widget_type = WidgetType.CM_COFFEE_BOILER
     status: MachineState
     enabled: bool
     enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
@@ -103,7 +103,7 @@ class CoffeeBoiler(BaseWidgetOutput):
 @dataclass(kw_only=True)
 class SteamBoilerLevel(BaseWidgetOutput):
     """Steam boiler level configuration."""
-    widget_type = WidgetType.STEAM_BOILER_LEVEL
+    widget_type = WidgetType.CM_STEAM_BOILER_LEVEL
     status: MachineState # TODO: correct type
     enabled: bool
     enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
@@ -130,14 +130,14 @@ class PreExtractionBase(BaseWidgetOutput):
 @dataclass(kw_only=True)
 class PreExtraction(PreExtractionBase):
     """Pre-extraction configuration."""
-    widget_type = WidgetType.PRE_EXTRACTION
+    widget_type = WidgetType.CM_PRE_EXTRACTION
     times: InOutTime
 
 @dataclass(kw_only=True)
 class PreBrewing(PreExtractionBase):
     """Pre-brewing configuration."""
 
-    widget_type = WidgetType.PRE_BREWING
+    widget_type = WidgetType.CM_PRE_BREWING
     times: PrebrewInfusionTimeLists
     dose_index_supported: bool = field(metadata=field_options(alias="doseIndexSupported"), default=False)
 
@@ -194,7 +194,7 @@ class PrebrewInfusionTimeLists(DataClassJSONMixin):
 @dataclass(kw_only=True)
 class BackFlush(BaseWidgetOutput):
     """Backflush configuration."""
-    widget_type = WidgetType.BACK_FLUSH
+    widget_type = WidgetType.CM_BACK_FLUSH
     status: str
     last_cleaning_start_time: datetime | None = field(
         metadata=field_options(
