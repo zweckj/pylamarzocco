@@ -11,17 +11,17 @@ from aioresponses import aioresponses
 from bleak import BleakError
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.const import (
+from pylamarzocco.legacy.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.legacy.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.legacy.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.legacy.const import (
     BoilerType,
     PhysicalKey,
     MachineModel,
     GW_MACHINE_BASE_URL,
 )
-from pylamarzocco.devices.machine import LaMarzoccoMachine
-from pylamarzocco.models import LaMarzoccoBrewByWeightSettings
+from pylamarzocco.legacy.devices.machine import LaMarzoccoMachine
+from pylamarzocco.legacy.models import LaMarzoccoBrewByWeightSettings
 
 from . import init_machine
 from .conftest import load_fixture
@@ -132,7 +132,7 @@ async def test_set_power(
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
 
     with patch(
-        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_power",
+        "pylamarzocco.legacy.clients.bluetooth.LaMarzoccoBluetoothClient.set_power",
         new=AsyncMock(),
     ) as mock_set_power:
         mock_set_power.side_effect = BleakError("Failed to write")
@@ -158,7 +158,7 @@ async def test_set_steam(
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
 
     with patch(
-        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_steam",
+        "pylamarzocco.legacy.clients.bluetooth.LaMarzoccoBluetoothClient.set_steam",
         new=AsyncMock(),
     ) as mock_set_steam:
         mock_set_steam.side_effect = BleakError("Failed to write")
@@ -185,7 +185,7 @@ async def test_set_temperature(
     machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
 
     with patch(
-        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_temp",
+        "pylamarzocco.legacy.clients.bluetooth.LaMarzoccoBluetoothClient.set_temp",
         new=AsyncMock(),
     ) as mock_set_temp:
         mock_set_temp.side_effect = BleakError("Failed to write")

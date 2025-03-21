@@ -14,11 +14,11 @@ from aiohttp import ClientSession
 from aioresponses import aioresponses
 from bleak import BLEDevice
 
-from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.const import GW_AWS_PROXY_BASE_URL, GW_MACHINE_BASE_URL, TOKEN_URL
-from pylamarzocco.devices.machine import LaMarzoccoMachine
+from pylamarzocco.legacy.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.legacy.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.legacy.clients.local import LaMarzoccoLocalClient
+from pylamarzocco.legacy.const import GW_AWS_PROXY_BASE_URL, GW_MACHINE_BASE_URL, TOKEN_URL
+from pylamarzocco.legacy.devices.machine import LaMarzoccoMachine
 
 from . import GRINDER_SERIAL, MACHINE_SERIAL, init_machine
 
@@ -107,7 +107,7 @@ def mock_response(mock_aioresponse: aioresponses) -> None:
 def mock_asyncio_sleep() -> Generator[None, None, None]:
     """Mock asyncio.sleep to speed up tests."""
 
-    with patch("pylamarzocco.clients.cloud.asyncio.sleep", new_callable=AsyncMock):
+    with patch("pylamarzocco.legacy.clients.cloud.asyncio.sleep", new_callable=AsyncMock):
         yield
 
 
@@ -159,7 +159,7 @@ async def machine(cloud_client: LaMarzoccoCloudClient) -> LaMarzoccoMachine:
 @pytest.fixture
 def mock_bleak() -> Generator[AsyncMock, None, None]:
     """Mock BleakClient."""
-    with patch("pylamarzocco.clients.bluetooth.BleakClient") as bleak_client:
+    with patch("pylamarzocco.legacy.clients.bluetooth.BleakClient") as bleak_client:
         aenter = bleak_client.return_value.__aenter__.return_value
         aenter.services.get_characteristic = lambda uuid: uuid
 

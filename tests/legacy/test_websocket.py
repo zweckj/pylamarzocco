@@ -4,9 +4,9 @@ from dataclasses import asdict
 
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.devices.machine import LaMarzoccoMachine
+from pylamarzocco.legacy.devices.machine import LaMarzoccoMachine
 
-from pylamarzocco.const import PhysicalKey
+from pylamarzocco.legacy.const import PhysicalKey
 
 
 async def test_websocket_message(

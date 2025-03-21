@@ -3,8 +3,8 @@
 from collections.abc import Generator
 from unittest.mock import AsyncMock
 
-from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.const import (
+from pylamarzocco.legacy.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.legacy.const import (
     AUTH_CHARACTERISTIC,
     SETTINGS_CHARACTERISTIC,
     BoilerType,
