@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import asyncio
 import logging
 import time
 from datetime import datetime
 from http import HTTPMethod
 from typing import Any
+import uuid
 
 from aiohttp import (
     ClientSession,
@@ -25,11 +27,9 @@ from pylamarzocco.const import (
     BASE_URL,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
-from pylamarzocco.models import (
-    AccessToken,
-)
-from pylamarzocco.models.authentication import TokenRequest, TokenResponse
+from pylamarzocco.models.authentication import TokenRequest, AccessToken
 from pylamarzocco.models.general import CommandResponse, Device
+from pylamarzocco.models.config import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +40,11 @@ class LaMarzoccoCloudClient:
     _client: ClientSession
 
     def __init__(
-        self, username: str, password: str, client: ClientSession | None = None
+        self,
+        username: str,
+        password: str,
+        client: ClientSession | None = None,
+        notification_callback: Callable[[DeviceConfig], Any] | None = None,
     ) -> None:
         if client is None:
             self._client = ClientSession()
@@ -51,22 +55,30 @@ class LaMarzoccoCloudClient:
         self._access_token: AccessToken | None = None
         self.websocket_disconnected = True
         self.websocket: ClientWebSocketResponse | None = None
+        self.notification_callback: Callable[[DeviceConfig], Any] | None = (
+            notification_callback
+        )
 
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
         if self._access_token is None or self._access_token.expires_in < time.time():
-            return await self._async_get_access_token()
+            await self._async_get_access_token()
+        assert self._access_token
         if self._access_token.expires_in < time.time() + 300:
-            return await self._async_get_refresh_token()
+            await self._async_get_refresh_token()
         return self._access_token.access_token
 
-    async def _async_get_access_token(self) -> str:
+    async def _async_get_access_token(self) -> None:
         """Get a new access token."""
-        data = TokenRequest(username=self._username, password=self._password).as_dict()
+        data = TokenRequest(username=self._username, password=self._password).to_dict()
         _LOGGER.debug("Getting new access token, data: %s", data)
-        return await self.__async_get_token(data)
+        self._access_token = await self.__async_get_token(data)
 
-    async def __async_get_token(self, data: dict[str, Any]) -> str:
+    async def _async_get_refresh_token(self) -> None:
+        """Refresh a access token."""
+        # TODO: implement refresh token logic
+
+    async def __async_get_token(self, data: dict[str, Any]) -> AccessToken:
         """Wrapper for a token request."""
         try:
             response = await self._client.post(
@@ -79,6 +91,7 @@ class LaMarzoccoCloudClient:
             ) from ex
         if is_success(response):
             json_response = await response.json()
+            return AccessToken.from_dict(json_response)
 
         if response.status == 401:
             raise AuthFail("Invalid username or password")
@@ -123,25 +136,32 @@ class LaMarzoccoCloudClient:
             f"Request to endpoint {response.url} failed with status code {response.status}"
             + f"response: {await response.text()}"
         )
-    
+
     async def get_things(self) -> list[Device]:
         """Get all things."""
         url = f"{CUSTOMER_APP_URL}/things"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return [Device.from_dict(device) for device in result]
-        
 
     async def websocket_connect(
         self,
+        serial_number: str,
     ) -> None:
         """Connect to the websocket of the machine."""
 
         try:
             async with await self._client.ws_connect(
-                f"wss://{BASE_URL}/ws_connect",
-                headers={"Authorization": f"Bearer {self.async_get_access_token()}"},
-                timeout=ClientWSTimeout(ws_receive=25, ws_close=10.0),
+                f"wss://{BASE_URL}/ws/connect",
+                timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
             ) as ws:
+                connect_msg = f"CONNECT\nhost:{BASE_URL}\naccept-version:1.2,1.1,1.0\nheart-beat:0,0\nAuthorization:Bearer {Bearer}\n\n\x00"
+                print(connect_msg)
+                await ws.send_str(connect_msg)
+                msg = await ws.receive()
+                print(msg)
+                subscribe_msg = f"SUBSCRIBE\ndestination:/ws/sn/{serial_number}/dashboard\nack:auto\nid:{uuid.uuid4()}\ncontent-length:0\n\n\x00"
+                print(subscribe_msg)
+                await ws.send_str(subscribe_msg)
                 self.websocket = ws
                 if self.websocket_disconnected:
                     _LOGGER.warning("Websocket reconnected")
@@ -177,7 +197,9 @@ class LaMarzoccoCloudClient:
 
     def parse_websocket_message(self, message: dict[str, Any]) -> None:
         """Parse the websocket message."""
-        # TODO implement
+        config = DeviceConfig.from_dict(message)
+        if self.notification_callback is not None:
+            self.notification_callback(config)
 
     async def set_power(
         self,
@@ -189,7 +211,9 @@ class LaMarzoccoCloudClient:
         mode = "BrewingMode" if enabled else "StandBy"
 
         data = {"mode": mode}
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineChangeMode"
+        url = (
+            f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineChangeMode"
+        )
         return await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
 
     async def set_steam(
@@ -206,7 +230,6 @@ class LaMarzoccoCloudClient:
         }
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSteamBoilerEnabled"
         return await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        
 
     # async def async_get_access_token(self) -> str:
     #     """Return a valid access token."""
@@ -286,7 +309,6 @@ class LaMarzoccoCloudClient:
     #         )
     #     self._access_token = None
 
-
     # async def get_customer_fleet(self) -> dict[str, LaMarzoccoDeviceInfo]:
     #     """Get basic machine info from the customer endpoint."""
 
@@ -316,8 +338,6 @@ class LaMarzoccoCloudClient:
 
     #     url = f"{GW_MACHINE_BASE_URL}/{serial_number}/configuration"
     #     return await self._rest_api_call(url=url, method=HTTPMethod.GET)
-
-
 
     # async def set_temp(
     #     self,

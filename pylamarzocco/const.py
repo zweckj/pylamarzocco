@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-# Base URL for La Marzocco Cloud
+TOKEN_EXPIRATION = 60 * 60 * 24 * 5  # 5 days
 
 BASE_URL = "lion.lamarzocco.io"
 CUSTOMER_APP_URL = f"https://{BASE_URL}/api/customer-app"
