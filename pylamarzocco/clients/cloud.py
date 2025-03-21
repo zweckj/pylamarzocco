@@ -29,7 +29,7 @@ from pylamarzocco.models import (
     AccessToken,
 )
 from pylamarzocco.models.authentication import TokenRequest, TokenResponse
-from pylamarzocco.models.general import ChangeSettingResponse, Device
+from pylamarzocco.models.general import CommandResponse, Device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -183,7 +183,7 @@ class LaMarzoccoCloudClient:
         self,
         serial_number: str,
         enabled: bool,
-    ) -> ChangeSettingResponse:
+    ) -> CommandResponse:
         """Turn power of machine on or off"""
 
         mode = "BrewingMode" if enabled else "StandBy"
@@ -197,7 +197,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         enabled: bool,
         boiler_index: int = 1,
-    ) -> ChangeSettingResponse:
+    ) -> CommandResponse:
         """Turn Steamboiler on or off"""
 
         data = {

@@ -7,7 +7,7 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 
 @dataclass(kw_only=True)
-class ChangeSettingResponse(DataClassJSONMixin):
+class CommandResponse(DataClassJSONMixin):
     """Response for change setting endpoint"""
     id: str
     status: str
