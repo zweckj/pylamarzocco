@@ -13,3 +13,10 @@ class MachineState(StrEnum):
 
     BREWING_MODE = "BrewingMode"
     STANDBY = "StandBy"
+
+class PreExtractionMode(StrEnum):
+    """Pre-extraction modes."""
+
+    PREINFUSION = "PreInfusion"
+    PREBREWING = "PreBrewing"
+    DISABLED = "Disabled"
