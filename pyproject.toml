@@ -2,7 +2,7 @@
 name = "pylamarzocco"
 version = "2.0.0a1"
 license = { text = "MIT" }
-description = "A Python implementation of the new La Marzocco API"
+description = "A Python implementation of the La Marzocco API"
 readme = "README.md"
 authors = [
     { name = "Josef Zweck", email = "24647999+zweckj@users.noreply.github.com" },
