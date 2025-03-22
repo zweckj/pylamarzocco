@@ -83,3 +83,9 @@ class ModelCode(StrEnum):
     GS3 = "GS3"
     GS3_MP = "GS3MP"
     GS3_AV = "GS3AV"
+
+class FirmwareType(StrEnum):
+    """Firmware types."""
+
+    MACHINE = "Machine"
+    GATEWAY = "Gateway"

@@ -19,6 +19,7 @@ from pylamarzocco.const import (
     SteamTargetLevel,
     DeviceType,
     ModelCode,
+    FirmwareType,
 )
 
 
@@ -294,4 +295,61 @@ class BackFlush(BaseWidgetOutput):
             deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
         ),
         default=None,
+    )
+
+
+@dataclass(kw_only=True)
+class FirmwareSettings(DataClassJSONMixin):
+    """Firmware settings configuration."""
+
+    type: FirmwareType
+    build_version: str = field(metadata=field_options(alias="buildVersion"))
+    change_log: str = field(metadata=field_options(alias="changeLog"))
+    thing_model_code: str = field(
+        metadata=field_options(alias="thingModelCode")
+    )
+    status: str
+    available_update: dict | None = field(
+        metadata=field_options(alias="availableUpdate"), default=None
+    )
+
+@dataclass(kw_only=True)
+class DeviceSettings(Device):
+    """Device settings configuration."""
+
+    actual_firmwares: list[FirmwareSettings] = field(
+        metadata=field_options(alias="actualFirmwares"), default_factory=list
+    )
+    wifi_ssid: str | None = field(
+        metadata=field_options(alias="wifiSsid"), default=None
+    )
+    wifi_rssi: int | None = field(
+        metadata=field_options(alias="wifiRssi"), default=None
+    )
+    plumb_in_supported: bool = field(
+        metadata=field_options(alias="plumbInSupported"), default=False
+    )
+    is_plumbed_in: bool = field(
+        metadata=field_options(alias="isPlumbedIn"), default=False
+    )
+    cropster_supported: bool = field(
+        metadata=field_options(alias="cropsterSupported"), default=False
+    )
+    cropster_active: bool = field(
+        metadata=field_options(alias="cropsterActive"), default=False
+    )
+    hemro_supported: bool = field(
+        metadata=field_options(alias="hemroSupported"), default=False
+    )
+    hemro_active: bool = field(
+        metadata=field_options(alias="hemroActive"), default=False
+    )
+    factory_reset_supported: bool = field(
+        metadata=field_options(alias="factoryResetSupported"), default=False
+    )
+    auto_update_supported: bool = field(
+        metadata=field_options(alias="autoUpdateSupported"), default=False
+    )
+    auto_update: bool = field(
+        metadata=field_options(alias="autoUpdate"), default=False
     )

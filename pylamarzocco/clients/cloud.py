@@ -21,7 +21,11 @@ from aiohttp import (
 )
 from aiohttp.client_exceptions import ClientError, InvalidURL
 
-from pylamarzocco.util import is_success, encode_stomp_ws_message, decode_stomp_ws_message
+from pylamarzocco.util import (
+    is_success,
+    encode_stomp_ws_message,
+    decode_stomp_ws_message,
+)
 from pylamarzocco.const import (
     CUSTOMER_APP_URL,
     BASE_URL,
@@ -30,7 +34,12 @@ from pylamarzocco.const import (
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models.authentication import TokenRequest, AccessToken
 from pylamarzocco.models.general import CommandResponse
-from pylamarzocco.models.config import DashboardWSConfig, Device, DashboardDeviceConfig
+from pylamarzocco.models.config import (
+    DashboardWSConfig,
+    Device,
+    DashboardDeviceConfig,
+    DeviceSettings,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -143,12 +152,18 @@ class LaMarzoccoCloudClient:
         url = f"{CUSTOMER_APP_URL}/things"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return [Device.from_dict(device) for device in result]
-    
+
     async def get_thing_dashboard(self, serial_number: str) -> DashboardDeviceConfig:
         """Get the dashboard of a thing."""
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/dashboard"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return DashboardDeviceConfig.from_dict(result)
+
+    async def get_thing_settings(self, serial_number: str) -> DeviceSettings:
+        """Get the settings of a thing."""
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/settings"
+        result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
+        return DeviceSettings.from_dict(result)
 
     async def websocket_connect(
         self,
@@ -161,7 +176,15 @@ class LaMarzoccoCloudClient:
                 f"wss://{BASE_URL}/ws/connect",
                 timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
             ) as ws:
-                connect_msg = encode_stomp_ws_message(StompMessageType.CONNECT, {"host":BASE_URL, "accept-version":"1.2,1.1,1.0","heart-beat":"0,0","Authorization":f"Bearer {await self.async_get_access_token()}"})
+                connect_msg = encode_stomp_ws_message(
+                    StompMessageType.CONNECT,
+                    {
+                        "host": BASE_URL,
+                        "accept-version": "1.2,1.1,1.0",
+                        "heart-beat": "0,0",
+                        "Authorization": f"Bearer {await self.async_get_access_token()}",
+                    },
+                )
                 print(connect_msg)
                 await ws.send_str(connect_msg)
                 msg = await ws.receive()
@@ -169,7 +192,15 @@ class LaMarzoccoCloudClient:
                 result, _, _ = decode_stomp_ws_message(str(msg.data))
                 if result is not StompMessageType.CONNECTED:
                     raise ClientConnectionError("No connected message")
-                subscribe_msg = encode_stomp_ws_message(StompMessageType.SUBSCRIBE, {"destination":f"/ws/sn/{serial_number}/dashboard", "ack":"auto", "id": str(uuid.uuid4()), "content-length": "0"})
+                subscribe_msg = encode_stomp_ws_message(
+                    StompMessageType.SUBSCRIBE,
+                    {
+                        "destination": f"/ws/sn/{serial_number}/dashboard",
+                        "ack": "auto",
+                        "id": str(uuid.uuid4()),
+                        "content-length": "0",
+                    },
+                )
                 print(subscribe_msg)
                 await ws.send_str(subscribe_msg)
                 self.websocket = ws

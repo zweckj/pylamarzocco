@@ -168,3 +168,60 @@
     ]),
   })
 # ---
+# name: test_get_thing_settings
+  dict({
+    'actual_firmwares': list([
+      dict({
+        'available_update': None,
+        'build_version': 'v5.0.9',
+        'change_log': '''
+          What’s new in this version:
+          
+          * New La Marzocco compatibility
+          * Improved connectivity
+          * Improved pairing process
+          * Improved statistics
+          * Boilers heating time
+          * Last backflush date (GS3 MP excluded)
+          * Automatic gateway updates option
+        ''',
+        'status': 'Updated',
+        'thing_model_code': 'LineaMicra',
+        'type': 'Gateway',
+      }),
+      dict({
+        'available_update': None,
+        'build_version': 'v1.17',
+        'change_log': 'None',
+        'status': 'Updated',
+        'thing_model_code': 'LineaMicra',
+        'type': 'Machine',
+      }),
+    ]),
+    'auto_update': False,
+    'auto_update_supported': True,
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'connected': True,
+    'connection_date': '2025-03-21T03:00:19.892000+00:00',
+    'cropster_active': False,
+    'cropster_supported': False,
+    'factory_reset_supported': True,
+    'hemro_active': False,
+    'hemro_supported': False,
+    'image_url': 'https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-bianco.png',
+    'is_plumbed_in': True,
+    'location': None,
+    'model_code': 'LINEAMICRA',
+    'model_name': 'LINEA MICRA',
+    'name': 'MR123456',
+    'offline_mode': False,
+    'plumb_in_supported': True,
+    'require_firmware_update': False,
+    'serial_number': 'MR123456',
+    'type': 'CoffeeMachine',
+    'wifi_rssi': -51,
+    'wifi_ssid': 'MyWifi',
+  })
+# ---
