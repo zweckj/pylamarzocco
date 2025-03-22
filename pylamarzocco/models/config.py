@@ -26,7 +26,6 @@ class DeviceConfig(DataClassJSONMixin):
     widgets: list[Widget] = field(default_factory=list)
     uuid: str
     commands: list[CommandResponse]
-    config: dict[WidgetType, BaseWidgetOutput]
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
@@ -37,12 +36,6 @@ class DeviceConfig(DataClassJSONMixin):
             widget["output"]["widget_type"] = widget["code"]
         d["widgets"] = widgets
         return d
-   
-    @classmethod
-    def __post_deserialize__(cls, obj: DeviceConfig) -> DeviceConfig:
-        # move the widgets to a dict for easier consumption
-        obj.config = {widget.code: widget.output for widget in obj.widgets}
-        return obj
 
 
 @dataclass(kw_only=True)
