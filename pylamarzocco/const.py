@@ -67,3 +67,19 @@ class StompMessageType(StrEnum):
     SUBSCRIBE = "SUBSCRIBE"
     UNSUBSCRIBE = "UNSUBSCRIBE"
     MESSAGE = "MESSAGE"
+
+class DeviceType(StrEnum):
+    """Device types."""
+
+    MACHINE = "CoffeeMachine"
+    GRINDER = "Grinder"
+
+class ModelCode(StrEnum):
+    """Model codes."""
+
+    LINEA_MINI = "LINEAMINI"
+    LINEA_MICRA = "LINEAMICRA"
+    LINEA_MINI_R = "LINEAMINIR"
+    GS3 = "GS3"
+    GS3_MP = "GS3MP"
+    GS3_AV = "GS3AV"

@@ -12,10 +12,72 @@ from mashumaro.types import Discriminator
 
 from pylamarzocco.models.general import CommandResponse
 
-from pylamarzocco.const import MachineState, PreExtractionMode, WidgetType, SteamTargetLevel
+from pylamarzocco.const import (
+    MachineState,
+    PreExtractionMode,
+    WidgetType,
+    SteamTargetLevel,
+    DeviceType,
+    ModelCode,
+)
+
 
 @dataclass(kw_only=True)
-class DeviceConfig(DataClassJSONMixin):
+class Device(DataClassJSONMixin):
+    """Generic device information t"""
+
+    serial_number: str = field(metadata=field_options(alias="serialNumber"))
+    type: DeviceType
+    name: str
+    location: str | None = field(default=None)
+    model_code: ModelCode = field(metadata=field_options(alias="modelCode"))
+    model_name: str = field(metadata=field_options(alias="modelName"))
+    connected: bool
+    connection_date: datetime = field(
+        metadata=field_options(
+            alias="connectionDate",
+            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+        )
+    )
+    offline_mode: bool = field(metadata=field_options(alias="offlineMode"))
+    require_firmware_update: bool = field(
+        metadata=field_options(alias="requireFirmwareUpdate"), default=False
+    )
+    available_firmware_update: bool = field(
+        metadata=field_options(alias="availableFirmwareUpdate"), default=False
+    )
+    coffee_station: dict | None = field(
+        metadata=field_options(alias="coffeeStation"), default=None
+    )
+    image_url: str = field(metadata=field_options(alias="imageUrl"))
+    ble_auth_token: str | None = field(
+        metadata=field_options(alias="bleAuthToken"), default=None
+    )
+
+
+@dataclass(kw_only=True)
+class DashboardConfig(DataClassJSONMixin):
+    """Dashboard config with widgets."""
+
+    widgets: list[Widget] = field(default_factory=list)
+
+    @classmethod
+    def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
+        # move code to widget_type for mashumaro annotated serialization
+        widgets = d["widgets"]
+        for widget in widgets:
+            widget["output"]["widget_type"] = widget["code"]
+        d["widgets"] = widgets
+        return d
+
+
+@dataclass(kw_only=True)
+class DashboardDeviceConfig(DashboardConfig, Device):
+    """Device configuration."""
+
+
+@dataclass(kw_only=True)
+class DashboardWSConfig(DashboardConfig):
     """Device configuration."""
 
     connected: bool
@@ -29,7 +91,6 @@ class DeviceConfig(DataClassJSONMixin):
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
-
         # move code to widget_type for mashumaro annotated serialization
         widgets = d["widgets"]
         for widget in widgets:
@@ -50,11 +111,15 @@ class BaseWidget(DataClassJSONMixin):
 class Widget(BaseWidget):
     """Widget configuration."""
 
-    output: Annotated[BaseWidgetOutput, Discriminator(field="widget_type", include_subtypes=True)]
+    output: Annotated[
+        BaseWidgetOutput, Discriminator(field="widget_type", include_subtypes=True)
+    ]
+
 
 @dataclass(kw_only=True)
 class BaseWidgetOutput(DataClassJSONMixin):
     """Widget configuration."""
+
 
 @dataclass(kw_only=True)
 class MachineStatus(BaseWidgetOutput):
@@ -70,7 +135,7 @@ class MachineStatus(BaseWidgetOutput):
     brewing_start_time: datetime | None = field(
         metadata=field_options(
             alias="brewingStartTime",
-            serialize=lambda ts: datetime.fromtimestamp(ts, timezone.utc),
+            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
         ),
         default=None,
     )
@@ -97,16 +162,18 @@ class CoffeeBoiler(BaseWidgetOutput):
     ready_start_time: datetime | None = field(
         metadata=field_options(
             alias="readyStartTime",
-            serialize=lambda ts: datetime.fromtimestamp(ts, timezone.utc),
+            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
         ),
         default=None,
     )
 
+
 @dataclass(kw_only=True)
 class SteamBoilerLevel(BaseWidgetOutput):
     """Steam boiler level configuration."""
+
     widget_type = WidgetType.CM_STEAM_BOILER_LEVEL
-    status: MachineState # TODO: correct type
+    status: MachineState  # TODO: correct type
     enabled: bool
     enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
     target_level: SteamTargetLevel = field(metadata=field_options(alias="targetLevel"))
@@ -116,24 +183,29 @@ class SteamBoilerLevel(BaseWidgetOutput):
     ready_start_time: datetime | None = field(
         metadata=field_options(
             alias="readyStartTime",
-            serialize=lambda ts: datetime.fromtimestamp(ts, timezone.utc),
+            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
         ),
         default=None,
     )
 
+
 @dataclass(kw_only=True)
 class PreExtractionBase(BaseWidgetOutput):
     """Pre-extraction configuration."""
+
     available_modes: list[PreExtractionMode] = field(
         metadata=field_options(alias="availableModes")
     )
     mode: PreExtractionMode
 
+
 @dataclass(kw_only=True)
 class PreExtraction(PreExtractionBase):
     """Pre-extraction configuration."""
+
     widget_type = WidgetType.CM_PRE_EXTRACTION
     times: InOutTime
+
 
 @dataclass(kw_only=True)
 class PreBrewing(PreExtractionBase):
@@ -141,67 +213,85 @@ class PreBrewing(PreExtractionBase):
 
     widget_type = WidgetType.CM_PRE_BREWING
     times: PrebrewInfusionTimeLists
-    dose_index_supported: bool = field(metadata=field_options(alias="doseIndexSupported"), default=False)
+    dose_index_supported: bool = field(
+        metadata=field_options(alias="doseIndexSupported"), default=False
+    )
+
 
 @dataclass(kw_only=True)
 class InOutTime(DataClassJSONMixin):
     """In and out time configuration."""
 
-    time_in: PreExtractionPreBrewInfusionTimes = field(metadata=field_options(alias="In"))
-    time_out: PreExtractionPreBrewInfusionTimes = field(metadata=field_options(alias="Out"))
+    time_in: PreExtractionPreBrewInfusionTimes = field(
+        metadata=field_options(alias="In")
+    )
+    time_out: PreExtractionPreBrewInfusionTimes = field(
+        metadata=field_options(alias="Out")
+    )
+
 
 @dataclass(kw_only=True)
 class SecondsInOut(DataClassJSONMixin):
     """Seconds in and out configuration."""
+
     seconds_in: float = field(metadata=field_options(alias="In"))
     seconds_out: float = field(metadata=field_options(alias="Out"))
+
 
 @dataclass(kw_only=True)
 class PreBrewInfusionTime(DataClassJSONMixin):
     """Prebrew/-infusion configuration."""
+
     pre_infusion: float = field(metadata=field_options(alias="PreInfusion"))
     pre_brewing: float = field(metadata=field_options(alias="PreBrewing"))
+
 
 @dataclass(kw_only=True)
 class PreExtractionBaseTimes[T](DataClassJSONMixin):
     """Pre-extraction times configuration."""
-    seconds_min: T = field(
-        metadata=field_options(alias="secondsMin")
-    )
-    seconds_max: T = field(
-        metadata=field_options(alias="secondsMax")
-    )
-    seconds_step: T = field(
-        metadata=field_options(alias="secondsStep")
-    )   
+
+    seconds_min: T = field(metadata=field_options(alias="secondsMin"))
+    seconds_max: T = field(metadata=field_options(alias="secondsMax"))
+    seconds_step: T = field(metadata=field_options(alias="secondsStep"))
 
 
 @dataclass(kw_only=True)
 class PreExtractionPreBrewInfusionTimes(PreExtractionBaseTimes[PreBrewInfusionTime]):
     """Pre-extraction times configuration."""
+
     seconds: float
+
 
 @dataclass(kw_only=True)
 class PreExtractionInOutTimes(PreExtractionBaseTimes[SecondsInOut]):
     """Pre-extraction times configuration."""
+
     dose_index: str = field(metadata=field_options(alias="doseIndex"))
     seconds: SecondsInOut
+
 
 @dataclass(kw_only=True)
 class PrebrewInfusionTimeLists(DataClassJSONMixin):
     """Prebrew/-infusion configuration."""
-    pre_infusion: list[PreExtractionInOutTimes] = field(metadata=field_options(alias="PreInfusion"))
-    pre_brewing: list[PreExtractionInOutTimes] = field(metadata=field_options(alias="PreBrewing"))
+
+    pre_infusion: list[PreExtractionInOutTimes] = field(
+        metadata=field_options(alias="PreInfusion")
+    )
+    pre_brewing: list[PreExtractionInOutTimes] = field(
+        metadata=field_options(alias="PreBrewing")
+    )
+
 
 @dataclass(kw_only=True)
 class BackFlush(BaseWidgetOutput):
     """Backflush configuration."""
+
     widget_type = WidgetType.CM_BACK_FLUSH
     status: str
     last_cleaning_start_time: datetime | None = field(
         metadata=field_options(
             alias="lastCleaningStartTime",
-            serialize=lambda ts: datetime.fromtimestamp(ts, timezone.utc),
+            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
         ),
         default=None,
     )

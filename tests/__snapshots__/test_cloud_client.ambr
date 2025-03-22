@@ -1,0 +1,170 @@
+# serializer version: 1
+# name: test_get_thing_dashboard
+  dict({
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'connected': True,
+    'connection_date': '2025-03-21T03:00:19.892000+00:00',
+    'image_url': 'https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-bianco.png',
+    'location': None,
+    'model_code': 'LINEAMICRA',
+    'model_name': 'LINEA MICRA',
+    'name': 'MR123456',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'MR123456',
+    'type': 'CoffeeMachine',
+    'widgets': list([
+      dict({
+        'code': 'CMMachineStatus',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'BrewingMode',
+            'StandBy',
+          ]),
+          'brewing_start_time': None,
+          'mode': 'StandBy',
+          'next_status': None,
+          'status': 'StandBy',
+        }),
+      }),
+      dict({
+        'code': 'CMCoffeeBoiler',
+        'index': 1,
+        'output': dict({
+          'enabled': True,
+          'enabled_supported': False,
+          'ready_start_time': None,
+          'status': 'StandBy',
+          'target_temperature': 94.0,
+          'target_temperature_max': 100,
+          'target_temperature_min': 80,
+          'target_temperature_step': 0.1,
+        }),
+      }),
+      dict({
+        'code': 'CMSteamBoilerLevel',
+        'index': 1,
+        'output': dict({
+          'enabled': True,
+          'enabled_supported': True,
+          'ready_start_time': None,
+          'status': 'StandBy',
+          'target_level': 'Level3',
+          'target_level_supported': True,
+        }),
+      }),
+      dict({
+        'code': 'CMPreExtraction',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'PreBrewing',
+            'PreInfusion',
+            'Disabled',
+          ]),
+          'mode': 'PreInfusion',
+          'times': dict({
+            'time_in': dict({
+              'seconds': 0.0,
+              'seconds_max': dict({
+                'pre_brewing': 9.0,
+                'pre_infusion': 9.0,
+              }),
+              'seconds_min': dict({
+                'pre_brewing': 2.0,
+                'pre_infusion': 2.0,
+              }),
+              'seconds_step': dict({
+                'pre_brewing': 0.1,
+                'pre_infusion': 0.1,
+              }),
+            }),
+            'time_out': dict({
+              'seconds': 4.0,
+              'seconds_max': dict({
+                'pre_brewing': 9.0,
+                'pre_infusion': 25.0,
+              }),
+              'seconds_min': dict({
+                'pre_brewing': 1.0,
+                'pre_infusion': 1.0,
+              }),
+              'seconds_step': dict({
+                'pre_brewing': 0.1,
+                'pre_infusion': 0.1,
+              }),
+            }),
+          }),
+        }),
+      }),
+      dict({
+        'code': 'CMPreBrewing',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'PreBrewing',
+            'PreInfusion',
+            'Disabled',
+          ]),
+          'dose_index_supported': False,
+          'mode': 'PreInfusion',
+          'times': dict({
+            'pre_brewing': list([
+              dict({
+                'dose_index': 'ByGroup',
+                'seconds': dict({
+                  'seconds_in': 5.0,
+                  'seconds_out': 5.0,
+                }),
+                'seconds_max': dict({
+                  'seconds_in': 9.0,
+                  'seconds_out': 9.0,
+                }),
+                'seconds_min': dict({
+                  'seconds_in': 1.0,
+                  'seconds_out': 1.0,
+                }),
+                'seconds_step': dict({
+                  'seconds_in': 0.1,
+                  'seconds_out': 0.1,
+                }),
+              }),
+            ]),
+            'pre_infusion': list([
+              dict({
+                'dose_index': 'ByGroup',
+                'seconds': dict({
+                  'seconds_in': 0.0,
+                  'seconds_out': 4.0,
+                }),
+                'seconds_max': dict({
+                  'seconds_in': 25.0,
+                  'seconds_out': 25.0,
+                }),
+                'seconds_min': dict({
+                  'seconds_in': 1.0,
+                  'seconds_out': 1.0,
+                }),
+                'seconds_step': dict({
+                  'seconds_in': 0.1,
+                  'seconds_out': 0.1,
+                }),
+              }),
+            ]),
+          }),
+        }),
+      }),
+      dict({
+        'code': 'CMBackFlush',
+        'index': 1,
+        'output': dict({
+          'last_cleaning_start_time': None,
+          'status': 'Off',
+        }),
+      }),
+    ]),
+  })
+# ---

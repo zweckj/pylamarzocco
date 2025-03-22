@@ -29,8 +29,8 @@ from pylamarzocco.const import (
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models.authentication import TokenRequest, AccessToken
-from pylamarzocco.models.general import CommandResponse, Device
-from pylamarzocco.models.config import DeviceConfig
+from pylamarzocco.models.general import CommandResponse
+from pylamarzocco.models.config import DashboardWSConfig, Device, DashboardDeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class LaMarzoccoCloudClient:
         username: str,
         password: str,
         client: ClientSession | None = None,
-        notification_callback: Callable[[DeviceConfig], Any] | None = None,
+        notification_callback: Callable[[DashboardWSConfig], Any] | None = None,
     ) -> None:
         if client is None:
             self._client = ClientSession()
@@ -56,7 +56,7 @@ class LaMarzoccoCloudClient:
         self._access_token: AccessToken | None = None
         self.websocket_disconnected = True
         self.websocket: ClientWebSocketResponse | None = None
-        self.notification_callback: Callable[[DeviceConfig], Any] | None = (
+        self.notification_callback: Callable[[DashboardWSConfig], Any] | None = (
             notification_callback
         )
 
@@ -138,11 +138,17 @@ class LaMarzoccoCloudClient:
             + f"response: {await response.text()}"
         )
 
-    async def get_things(self) -> list[Device]:
+    async def list_things(self) -> list[Device]:
         """Get all things."""
         url = f"{CUSTOMER_APP_URL}/things"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return [Device.from_dict(device) for device in result]
+    
+    async def get_thing_dashboard(self, serial_number: str) -> DashboardDeviceConfig:
+        """Get the dashboard of a thing."""
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/dashboard"
+        result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
+        return DashboardDeviceConfig.from_dict(result)
 
     async def websocket_connect(
         self,
@@ -207,7 +213,7 @@ class LaMarzoccoCloudClient:
         """Parse the websocket message."""
         if message is None:
             return
-        config = DeviceConfig.from_json(message)
+        config = DashboardWSConfig.from_json(message)
         if self.notification_callback is not None:
             self.notification_callback(config)
 
