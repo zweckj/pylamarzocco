@@ -57,3 +57,13 @@ class SteamTargetLevel(StrEnum):
     LEVEL_1 = "Level1"
     LEVEL_2 = "Level2"
     LEVEL_3 = "Level3"
+
+class StompMessageType(StrEnum):
+    """Stomp message types."""
+
+    CONNECT = "CONNECT"
+    CONNECTED = "CONNECTED"
+    DISCONNECT = "DISCONNECT"
+    SUBSCRIBE = "SUBSCRIBE"
+    UNSUBSCRIBE = "UNSUBSCRIBE"
+    MESSAGE = "MESSAGE"

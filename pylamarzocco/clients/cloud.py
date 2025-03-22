@@ -21,10 +21,11 @@ from aiohttp import (
 )
 from aiohttp.client_exceptions import ClientError, InvalidURL
 
-from pylamarzocco.util import is_success
+from pylamarzocco.util import is_success, encode_stomp_ws_message, decode_stomp_ws_message
 from pylamarzocco.const import (
     CUSTOMER_APP_URL,
     BASE_URL,
+    StompMessageType,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models.authentication import TokenRequest, AccessToken
@@ -154,12 +155,15 @@ class LaMarzoccoCloudClient:
                 f"wss://{BASE_URL}/ws/connect",
                 timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
             ) as ws:
-                connect_msg = f"CONNECT\nhost:{BASE_URL}\naccept-version:1.2,1.1,1.0\nheart-beat:0,0\nAuthorization:Bearer {Bearer}\n\n\x00"
+                connect_msg = encode_stomp_ws_message(StompMessageType.CONNECT, {"host":BASE_URL, "accept-version":"1.2,1.1,1.0","heart-beat":"0,0","Authorization":f"Bearer {await self.async_get_access_token()}"})
                 print(connect_msg)
                 await ws.send_str(connect_msg)
                 msg = await ws.receive()
-                print(msg)
-                subscribe_msg = f"SUBSCRIBE\ndestination:/ws/sn/{serial_number}/dashboard\nack:auto\nid:{uuid.uuid4()}\ncontent-length:0\n\n\x00"
+                print(msg.data)
+                result, _, _ = decode_stomp_ws_message(str(msg.data))
+                if result is not StompMessageType.CONNECTED:
+                    raise ClientConnectionError("No connected message")
+                subscribe_msg = encode_stomp_ws_message(StompMessageType.SUBSCRIBE, {"destination":f"/ws/sn/{serial_number}/dashboard", "ack":"auto", "id": str(uuid.uuid4()), "content-length": "0"})
                 print(subscribe_msg)
                 await ws.send_str(subscribe_msg)
                 self.websocket = ws
@@ -179,7 +183,11 @@ class LaMarzoccoCloudClient:
                         break
                     _LOGGER.debug("Received websocket message: %s", msg)
                     try:
-                        self.parse_websocket_message(msg.data)
+                        msg_type, _, data = decode_stomp_ws_message(str(msg.data))
+                        if msg_type is not StompMessageType.MESSAGE:
+                            _LOGGER.warning("Non MESSAGE-type message: %s", msg.data)
+                        else:
+                            self.parse_websocket_message(data)
                     except Exception as ex:  # pylint: disable=broad-except
                         _LOGGER.exception("Error during callback: %s", ex)
         except TimeoutError as err:
@@ -195,9 +203,11 @@ class LaMarzoccoCloudClient:
         except InvalidURL:
             _LOGGER.error("Invalid URL for websocket.")
 
-    def parse_websocket_message(self, message: dict[str, Any]) -> None:
+    def parse_websocket_message(self, message: str | None) -> None:
         """Parse the websocket message."""
-        config = DeviceConfig.from_dict(message)
+        if message is None:
+            return
+        config = DeviceConfig.from_json(message)
         if self.notification_callback is not None:
             self.notification_callback(config)
 
@@ -214,7 +224,8 @@ class LaMarzoccoCloudClient:
         url = (
             f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineChangeMode"
         )
-        return await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        return CommandResponse.from_dict(response)
 
     async def set_steam(
         self,
@@ -229,7 +240,8 @@ class LaMarzoccoCloudClient:
             "enabled": enabled,
         }
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSteamBoilerEnabled"
-        return await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        return CommandResponse.from_dict(response)
 
     # async def async_get_access_token(self) -> str:
     #     """Return a valid access token."""
