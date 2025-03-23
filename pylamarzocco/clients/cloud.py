@@ -224,7 +224,7 @@ class LaMarzoccoCloudClient:
                         if msg_type is not StompMessageType.MESSAGE:
                             _LOGGER.warning("Non MESSAGE-type message: %s", msg.data)
                         else:
-                            self.parse_websocket_message(data)
+                            self._parse_websocket_message(data)
                     except Exception as ex:  # pylint: disable=broad-except
                         _LOGGER.exception("Error during callback: %s", ex)
         except TimeoutError as err:
@@ -240,7 +240,7 @@ class LaMarzoccoCloudClient:
         except InvalidURL:
             _LOGGER.error("Invalid URL for websocket.")
 
-    def parse_websocket_message(self, message: str | None) -> None:
+    def _parse_websocket_message(self, message: str | None) -> None:
         """Parse the websocket message."""
         if message is None:
             return

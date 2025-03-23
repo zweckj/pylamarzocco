@@ -352,3 +352,21 @@
     'wifi_ssid': 'MyWifi',
   })
 # ---
+# name: test_list_things
+  dict({
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'connected': True,
+    'connection_date': '2025-03-21T03:00:19.892000+00:00',
+    'image_url': 'https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-bianco.png',
+    'location': None,
+    'model_code': 'LINEAMICRA',
+    'model_name': 'LINEA MICRA',
+    'name': 'MR123456',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'MR123456',
+    'type': 'CoffeeMachine',
+  })
+# ---

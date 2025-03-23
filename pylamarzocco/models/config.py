@@ -74,17 +74,18 @@ class DashboardConfig(DataClassJSONMixin):
     
     @classmethod
     def __post_deserialize__(cls, obj: DashboardConfig) -> DashboardConfig:
+        # move the widgets to a dict with type as key for easy access to config
         obj.config = {widget.code: widget.output for widget in obj.widgets}
         return obj
 
 @dataclass(kw_only=True)
 class DashboardDeviceConfig(DashboardConfig, Device):
-    """Device configuration."""
+    """Device configuration from API."""
 
 
 @dataclass(kw_only=True)
 class DashboardWSConfig(DashboardConfig):
-    """Device configuration."""
+    """Device configuration from WS."""
 
     connected: bool
     removed_widgets: list[BaseWidget] = field(
