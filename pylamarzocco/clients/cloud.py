@@ -32,7 +32,11 @@ from pylamarzocco.const import (
     StompMessageType,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
-from pylamarzocco.models.authentication import TokenRequest, AccessToken
+from pylamarzocco.models.authentication import (
+    SigninTokenRequest,
+    AccessToken,
+    RefreshTokenRequest,
+)
 from pylamarzocco.models.general import CommandResponse
 from pylamarzocco.models.config import (
     DashboardWSConfig,
@@ -69,31 +73,43 @@ class LaMarzoccoCloudClient:
             notification_callback
         )
 
+# region Authentication
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
-        if self._access_token is None or self._access_token.expires_in < time.time():
-            await self._async_get_access_token()
-        assert self._access_token
-        if self._access_token.expires_in < time.time() + 300:
-            await self._async_get_refresh_token()
+        if self._access_token is None or self._access_token.expires_at < time.time():
+            self._access_token = await self._async_sign_in()
+
+        if self._access_token.expires_at < time.time() + 300:
+            self._access_token = await self._async_refresh_token()
+
         return self._access_token.access_token
 
-    async def _async_get_access_token(self) -> None:
+    async def _async_sign_in(self) -> AccessToken:
         """Get a new access token."""
-        data = TokenRequest(username=self._username, password=self._password).to_dict()
-        _LOGGER.debug("Getting new access token, data: %s", data)
-        self._access_token = await self.__async_get_token(data)
+        _LOGGER.debug("Getting new access token")
+        return await self.__async_get_token(
+            f"{CUSTOMER_APP_URL}/auth/signin",
+            SigninTokenRequest(
+                username=self._username, password=self._password
+            ).to_dict(),
+        )
 
-    async def _async_get_refresh_token(self) -> None:
+    async def _async_refresh_token(self) -> AccessToken:
         """Refresh a access token."""
-        # TODO: implement refresh token logic
+        if not self._access_token:
+            raise ValueError("No access token available")
+        _LOGGER.debug("Refreshing access token")
+        return await self.__async_get_token(
+            f"{CUSTOMER_APP_URL}/auth/refreshtoken",
+            RefreshTokenRequest(
+                username=self._username, refresh_token=self._access_token.refresh_token
+            ).to_dict(),
+        )
 
-    async def __async_get_token(self, data: dict[str, Any]) -> AccessToken:
+    async def __async_get_token(self, url: str, data: dict[str, Any]) -> AccessToken:
         """Wrapper for a token request."""
         try:
-            response = await self._client.post(
-                f"{CUSTOMER_APP_URL}/auth/signin", json=data
-            )
+            response = await self._client.post(url=url, json=data)
         except ClientError as ex:
             raise RequestNotSuccessful(
                 "Error during HTTP request."
@@ -110,6 +126,7 @@ class LaMarzoccoCloudClient:
             f"Request t auth endpoint failed with status code {response.status}"
             + f"response: {await response.text()}"
         )
+# endregion
 
     async def _rest_api_call(
         self,
