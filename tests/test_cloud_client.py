@@ -3,7 +3,7 @@
 from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.const import CUSTOMER_APP_URL
+from pylamarzocco.const import CUSTOMER_APP_URL, SteamTargetLevel
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
 
 from .conftest import load_fixture
@@ -107,5 +107,31 @@ async def test_set_steam(
 
     client = LaMarzoccoCloudClient("test", "test")
     result = await client.set_steam(serial, True)
+    assert result.status == "Pending"
+    assert result.error_code is None
+
+async def test_set_steam_target_level(
+    mock_aioresponse: aioresponses
+) -> None:
+    """Test setting the steam target level for a thing."""
+
+    serial = "MR123456"
+
+    mock_aioresponse.post(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerTargetLevel",
+        status=200,
+        body={
+            "boilerIndex": 1,
+            "targetLevel": "Level1",
+        },
+        payload={
+            "id": "mock-id",
+            "status": "Pending",
+            "error_code": None,
+        },
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.set_steam_target_level(serial, SteamTargetLevel.LEVEL_1)
     assert result.status == "Pending"
     assert result.error_code is None
