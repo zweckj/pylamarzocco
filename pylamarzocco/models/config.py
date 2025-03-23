@@ -61,6 +61,7 @@ class DashboardConfig(DataClassJSONMixin):
     """Dashboard config with widgets."""
 
     widgets: list[Widget] = field(default_factory=list)
+    config: dict[WidgetType, BaseWidgetOutput] = field(default_factory=dict)
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
@@ -70,7 +71,11 @@ class DashboardConfig(DataClassJSONMixin):
             widget["output"]["widget_type"] = widget["code"]
         d["widgets"] = widgets
         return d
-
+    
+    @classmethod
+    def __post_deserialize__(cls, obj: DashboardConfig) -> DashboardConfig:
+        obj.config = {widget.code: widget.output for widget in obj.widgets}
+        return obj
 
 @dataclass(kw_only=True)
 class DashboardDeviceConfig(DashboardConfig, Device):
@@ -86,18 +91,8 @@ class DashboardWSConfig(DashboardConfig):
         metadata=field_options(alias="removedWidgets"), default_factory=list
     )
     connection_date: int = field(metadata=field_options(alias="connectionDate"))
-    widgets: list[Widget] = field(default_factory=list)
     uuid: str
     commands: list[CommandResponse]
-
-    @classmethod
-    def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
-        # move code to widget_type for mashumaro annotated serialization
-        widgets = d["widgets"]
-        for widget in widgets:
-            widget["output"]["widget_type"] = widget["code"]
-        d["widgets"] = widgets
-        return d
 
 
 @dataclass(kw_only=True)
