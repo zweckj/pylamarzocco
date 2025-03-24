@@ -282,7 +282,7 @@ class LaMarzoccoCloudClient:
             f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineChangeMode"
         )
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response)
+        return CommandResponse.from_dict(response[0])
 
     async def set_steam(
         self,
@@ -298,7 +298,7 @@ class LaMarzoccoCloudClient:
         }
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSteamBoilerEnabled"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response)
+        return CommandResponse.from_dict(response[0])
 
     async def set_steam_target_level(
         self,
@@ -314,4 +314,15 @@ class LaMarzoccoCloudClient:
         }
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSteamBoilerTargetLevel"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response)
+        return CommandResponse.from_dict(response[0])
+
+    async def start_backflush_cleaning(
+        self,
+        serial_number: str,
+    ) -> CommandResponse:
+        """Start backflush cleaning"""
+
+        data = {"enabled": True}
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineBackFlushStartCleaning"
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        return CommandResponse.from_dict(response[0])

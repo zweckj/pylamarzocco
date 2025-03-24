@@ -10,6 +10,14 @@ from pylamarzocco.const import CUSTOMER_APP_URL, SteamTargetLevel
 
 from .conftest import load_fixture
 
+MOCK_COMMAND_RESPONSE = [
+    {
+        "id": "mock-id",
+        "status": "Pending",
+        "error_code": None,
+    }
+]
+
 
 async def test_access_token(mock_aioresponse: aioresponses) -> None:
     """Test getting the dashboard for a thing."""
@@ -128,11 +136,7 @@ async def test_set_power(mock_aioresponse: aioresponses) -> None:
         url=f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode",
         status=200,
         body={"mode": "StandBy"},
-        payload={
-            "id": "mock-id",
-            "status": "Pending",
-            "error_code": None,
-        },
+        payload=MOCK_COMMAND_RESPONSE,
     )
 
     client = LaMarzoccoCloudClient("test", "test")
@@ -153,11 +157,7 @@ async def test_set_steam(mock_aioresponse: aioresponses) -> None:
             "boilerIndex": 1,
             "enabled": True,
         },
-        payload={
-            "id": "mock-id",
-            "status": "Pending",
-            "error_code": None,
-        },
+        payload=MOCK_COMMAND_RESPONSE,
     )
 
     client = LaMarzoccoCloudClient("test", "test")
@@ -178,14 +178,29 @@ async def test_set_steam_target_level(mock_aioresponse: aioresponses) -> None:
             "boilerIndex": 1,
             "targetLevel": "Level1",
         },
-        payload={
-            "id": "mock-id",
-            "status": "Pending",
-            "error_code": None,
-        },
+        payload=MOCK_COMMAND_RESPONSE,
     )
 
     client = LaMarzoccoCloudClient("test", "test")
     result = await client.set_steam_target_level(serial, SteamTargetLevel.LEVEL_1)
+    assert result.status == "Pending"
+    assert result.error_code is None
+
+
+async def test_start_backflush_cleaning(mock_aioresponse: aioresponses) -> None:
+    """Test starting backflush cleaning for a thing."""
+    serial = "MR123456"
+
+    mock_aioresponse.post(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBackFlushStartCleaning",
+        status=200,
+        body={
+            "enabled": True,
+        },
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.start_backflush_cleaning(serial)
     assert result.status == "Pending"
     assert result.error_code is None
