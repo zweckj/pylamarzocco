@@ -1,11 +1,11 @@
 """Models for authentication."""
 
-from time import time
 from dataclasses import dataclass, field
+from time import time
 
 from mashumaro import field_options
-from mashumaro.mixins.json import DataClassJSONMixin
 from mashumaro.config import BaseConfig
+from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import TOKEN_EXPIRATION
 

@@ -3,6 +3,7 @@
 from http import HTTPMethod
 from unittest.mock import patch
 
+import pytest
 from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
 from yarl import URL
@@ -11,8 +12,8 @@ from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
 from pylamarzocco.const import (
     CUSTOMER_APP_URL,
     PreExtractionMode,
-    SteamTargetLevel,
     SmartStandByType,
+    SteamTargetLevel,
     WeekDay,
 )
 from pylamarzocco.models.schedule import WakeUpScheduleSettings
@@ -84,8 +85,9 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
     assert result == "new-token"
 
 
+@pytest.mark.parametrize("model", ["micra", "gs3av"])
 async def test_get_thing_dashboard(
-    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+    mock_aioresponse: aioresponses, model: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the dashboard for a thing."""
 
@@ -94,7 +96,7 @@ async def test_get_thing_dashboard(
     mock_aioresponse.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
         status=200,
-        payload=load_fixture("machine", "dashboard_micra.json"),
+        payload=load_fixture("machine", f"dashboard_{model}.json"),
     )
 
     client = LaMarzoccoCloudClient("test", "test")

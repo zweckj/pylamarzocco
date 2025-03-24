@@ -15,19 +15,19 @@ from aiohttp import (
     ClientTimeout,
     ClientWebSocketResponse,
     ClientWSTimeout,
-    WSMsgType,
     WSMessage,
+    WSMsgType,
 )
 from aiohttp.client_exceptions import ClientError, InvalidURL
 
 from pylamarzocco.const import (
     BASE_URL,
     CUSTOMER_APP_URL,
+    DoseIndexType,
+    PreExtractionMode,
+    SmartStandByType,
     SteamTargetLevel,
     StompMessageType,
-    PreExtractionMode,
-    DoseIndexType,
-    SmartStandByType,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models.authentication import (
@@ -40,12 +40,12 @@ from pylamarzocco.models.config import (
     DashboardWSConfig,
     Device,
     DeviceSettings,
-    SecondsInOut,
     PrebrewSettingTimes,
+    SecondsInOut,
 )
+from pylamarzocco.models.general import CommandResponse, WebSocketDetails
 from pylamarzocco.models.schedule import WakeUpScheduleSettings
 from pylamarzocco.models.statistics import Statistics
-from pylamarzocco.models.general import CommandResponse, WebSocketDetails
 from pylamarzocco.util import (
     decode_stomp_ws_message,
     encode_stomp_ws_message,
@@ -412,7 +412,7 @@ class LaMarzoccoCloudClient:
         return CommandResponse.from_dict(response[0])
 
     async def set_smart_standby(
-        self, serial_number: str, enabled: bool, minutes: 10, after: SmartStandByType
+        self, serial_number: str, enabled: bool, minutes: int, after: SmartStandByType
     ) -> CommandResponse:
         """Set smart standby"""
 

@@ -7,26 +7,27 @@ from datetime import datetime, timezone
 from typing import Any
 
 from mashumaro import field_options
+from mashumaro.config import BaseConfig
 from mashumaro.mixins.json import DataClassJSONMixin
 
-from mashumaro.config import BaseConfig
-
 from pylamarzocco.const import (
+    BoilerStatus,
+    DoseIndex,
+    DoseIndexType,
+    DoseMode,
     FirmwareType,
     MachineMode,
+    MachineState,
     PreExtractionMode,
     SteamTargetLevel,
     WidgetType,
-    DoseIndexType,
-    BoilerStatus,
-    MachineState,
 )
 from pylamarzocco.models.general import (
+    BaseWidget,
+    BaseWidgetOutput,
     CommandResponse,
     Device,
     Widget,
-    BaseWidgetOutput,
-    BaseWidget,
 )
 
 
@@ -153,6 +154,16 @@ class SteamBoilerLevel(BaseWidgetOutput):
 
 
 @dataclass(kw_only=True)
+class SteamBoilerTemperature(CoffeeBoiler):
+    """Steam boiler temperature configuration."""
+
+    widget_type = WidgetType.CM_STEAM_BOILER_TEMPERATURE
+    target_temperature_supported: bool = field(
+        metadata=field_options(alias="targetTemperatureSupported")
+    )
+
+
+@dataclass(kw_only=True)
 class PreExtractionBase(BaseWidgetOutput):
     """Pre-extraction configuration."""
 
@@ -234,7 +245,7 @@ class PreExtractionPreBrewInfusionTimes(PreExtractionBaseTimes[PreBrewInfusionTi
 class PreExtractionInOutTimes(PreExtractionBaseTimes[SecondsInOut]):
     """Pre-extraction times configuration."""
 
-    dose_index: str = field(metadata=field_options(alias="doseIndex"))
+    dose_index: DoseIndex = field(metadata=field_options(alias="doseIndex"))
     seconds: SecondsInOut
 
 
@@ -333,3 +344,67 @@ class PrebrewSettingTimes(DataClassJSONMixin):
         """Config for Mashumaro serialization."""
 
         serialize_by_alias = True
+
+
+@dataclass(kw_only=True)
+class GroupDosesSettings(BaseWidgetOutput):
+    """Group doses configuration."""
+
+    widget_type = WidgetType.CM_GROUP_DOSES
+    mirror_with_group_1_supported: bool = field(
+        metadata=field_options(alias="mirrorWithGroup1Supported"), default=False
+    )
+    mirror_with_group_1: str | None = field(
+        metadata=field_options(alias="mirrorWithGroup1"), default=None
+    )
+    mirror_with_group_1_not_effective: bool = field(
+        metadata=field_options(alias="mirrorWithGroup1NotEffective"), default=False
+    )
+    available_modes: list[DoseMode] = field(
+        metadata=field_options(alias="availableModes"), default_factory=list
+    )
+    mode: DoseMode = field(default=DoseMode.PULSES_TYPE)
+    profile: str | None = field(default=None)
+    doses: DosePulsesType
+    continuous_dose_supported: bool = field(
+        metadata=field_options(alias="continuousDoseSupported"), default=False
+    )
+    continuous_dose: str | None = field(
+        metadata=field_options(alias="continuousDose"), default=None
+    )
+    brewing_pressure_supported: bool = field(
+        metadata=field_options(alias="brewingPressureSupported"), default=False
+    )
+    brewing_pressure: str | None = field(
+        metadata=field_options(alias="brewingPressure"), default=None
+    )
+
+
+@dataclass(kw_only=True)
+class DosePulsesType(DataClassJSONMixin):
+    """Dose pulses type configuration."""
+
+    pulses_type: list[DoseSettings] = field(
+        metadata=field_options(alias="PulsesType"), default_factory=list
+    )
+
+
+@dataclass(kw_only=True)
+class DoseSettings(DataClassJSONMixin):
+    """Dose configuration."""
+
+    dose_index: DoseIndex = field(metadata=field_options(alias="doseIndex"))
+    dose: float
+    dose_min: float = field(metadata=field_options(alias="doseMin"))
+    dose_max: float = field(metadata=field_options(alias="doseMax"))
+    dose_step: int = field(metadata=field_options(alias="doseStep"))
+
+
+@dataclass(kw_only=True)
+class HotWaterDose(BaseWidgetOutput):
+    """Settings for hot water."""
+
+    widget_type = WidgetType.CM_HOT_WATER_DOSE
+    enabled: bool
+    enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
+    doses: list[DoseSettings] = field(default_factory=list)

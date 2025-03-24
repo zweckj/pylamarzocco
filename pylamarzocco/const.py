@@ -126,6 +126,7 @@ class DoseIndex(StrEnum):
     """Dose index types."""
 
     CONTINUOUS = "Continuous"
+    BY_GROUP = "ByGroup"
     DOSE_A = "DoseA"
     DOSE_B = "DoseB"
     DOSE_C = "DoseC"
@@ -144,7 +145,8 @@ class BoilerStatus(StrEnum):
 
     STAND_BY = "StandBy"
     HEATING = "HeatingUp"
-    READY = "Ready"  # TODO: Check if this is correct
+    READY = "Ready"
+    OFF = "Off"
 
 
 class WeekDay(StrEnum):
