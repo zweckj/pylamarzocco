@@ -103,3 +103,10 @@ class DoseIndexType(StrEnum):
 
     BY_GROUP = "ByGroup"
     BY_DOSE = "ByDose"  # TODO: Check if this is correct
+
+
+class SmartStandByType(StrEnum):
+    """Smart Standby types."""
+
+    LAST_BREW = "LastBrewing"
+    POWER_ON = "PowerOn"

@@ -26,6 +26,7 @@ from pylamarzocco.const import (
     StompMessageType,
     PreExtractionMode,
     DoseIndexType,
+    SmartStandByType,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models.authentication import (
@@ -365,4 +366,14 @@ class LaMarzoccoCloudClient:
         response = await self._rest_api_call(
             url=url, method=HTTPMethod.POST, data=data.to_dict()
         )
+        return CommandResponse.from_dict(response[0])
+
+    async def set_smart_standby(
+        self, serial_number: str, enabled: bool, minutes: 10, after: SmartStandByType
+    ) -> CommandResponse:
+        """Set smart standby"""
+
+        data = {"enabled": enabled, "minutes": minutes, "after": after.value}
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSmartStandBy"
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         return CommandResponse.from_dict(response[0])

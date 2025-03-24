@@ -8,7 +8,12 @@ from syrupy import SnapshotAssertion
 from yarl import URL
 
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.const import CUSTOMER_APP_URL, PreExtractionMode, SteamTargetLevel
+from pylamarzocco.const import (
+    CUSTOMER_APP_URL,
+    PreExtractionMode,
+    SteamTargetLevel,
+    SmartStandByType,
+)
 
 from .conftest import load_fixture
 
@@ -270,6 +275,33 @@ async def test_change_pre_extraction_times(
         "times": {"In": 5.1, "Out": 5.0},
         "groupIndex": 1,
         "doseIndex": "ByGroup",
+    }
+    assert result.status == "Pending"
+    assert result.error_code is None
+
+
+async def test_setting_smart_standby(
+    mock_aioresponse: aioresponses,
+) -> None:
+    """Test setting the smart standby for a thing."""
+    serial = "MR123456"
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSmartStandBy"
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.set_smart_standby(
+        serial, False, 20, SmartStandByType.LAST_BREW
+    )
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "enabled": False,
+        "minutes": 20,
+        "after": "LastBrewing",
     }
     assert result.status == "Pending"
     assert result.error_code is None
