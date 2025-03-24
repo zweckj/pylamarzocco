@@ -1,12 +1,14 @@
 """Testing the cloud client."""
 
+from http import HTTPMethod
 from unittest.mock import patch
 
 from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
+from yarl import URL
 
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.const import CUSTOMER_APP_URL, SteamTargetLevel
+from pylamarzocco.const import CUSTOMER_APP_URL, PreExtractionMode, SteamTargetLevel
 
 from .conftest import load_fixture
 
@@ -132,15 +134,19 @@ async def test_set_power(mock_aioresponse: aioresponses) -> None:
 
     serial = "MR123456"
 
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+
     mock_aioresponse.post(
-        url=f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode",
+        url=url,
         status=200,
-        body={"mode": "StandBy"},
         payload=MOCK_COMMAND_RESPONSE,
     )
 
     client = LaMarzoccoCloudClient("test", "test")
     result = await client.set_power(serial, False)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"mode": "StandBy"}
     assert result.status == "Pending"
     assert result.error_code is None
 
@@ -150,18 +156,22 @@ async def test_set_steam(mock_aioresponse: aioresponses) -> None:
 
     serial = "MR123456"
 
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerEnabled"
+
     mock_aioresponse.post(
-        url=f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerEnabled",
+        url=url,
         status=200,
-        body={
-            "boilerIndex": 1,
-            "enabled": True,
-        },
         payload=MOCK_COMMAND_RESPONSE,
     )
 
     client = LaMarzoccoCloudClient("test", "test")
     result = await client.set_steam(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "boilerIndex": 1,
+        "enabled": True,
+    }
     assert result.status == "Pending"
     assert result.error_code is None
 
@@ -171,18 +181,21 @@ async def test_set_steam_target_level(mock_aioresponse: aioresponses) -> None:
 
     serial = "MR123456"
 
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerTargetLevel"
+
     mock_aioresponse.post(
-        url=f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerTargetLevel",
+        url=url,
         status=200,
-        body={
-            "boilerIndex": 1,
-            "targetLevel": "Level1",
-        },
         payload=MOCK_COMMAND_RESPONSE,
     )
 
     client = LaMarzoccoCloudClient("test", "test")
     result = await client.set_steam_target_level(serial, SteamTargetLevel.LEVEL_1)
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "boilerIndex": 1,
+        "targetLevel": "Level1",
+    }
     assert result.status == "Pending"
     assert result.error_code is None
 
@@ -191,16 +204,72 @@ async def test_start_backflush_cleaning(mock_aioresponse: aioresponses) -> None:
     """Test starting backflush cleaning for a thing."""
     serial = "MR123456"
 
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBackFlushStartCleaning"
     mock_aioresponse.post(
-        url=f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBackFlushStartCleaning",
+        url=url,
         status=200,
-        body={
-            "enabled": True,
-        },
         payload=MOCK_COMMAND_RESPONSE,
     )
 
     client = LaMarzoccoCloudClient("test", "test")
     result = await client.start_backflush_cleaning(serial)
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "enabled": True,
+    }
+    assert result.status == "Pending"
+    assert result.error_code is None
+
+
+async def test_change_pre_extraction_mode(
+    mock_aioresponse: aioresponses,
+) -> None:
+    """Test changing the pre-extraction mode for a thing."""
+    serial = "MR123456"
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingChangeMode"
+    )
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.change_pre_extraction_mode(
+        serial, PreExtractionMode.PREBREWING
+    )
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "mode": "PreBrewing",
+    }
+    assert result.status == "Pending"
+    assert result.error_code is None
+
+
+async def test_change_pre_extraction_times(
+    mock_aioresponse: aioresponses,
+) -> None:
+    """Test changing the pre-extraction times for a thing."""
+    serial = "MR123456"
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingChangeTimes"
+    )
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.change_pre_extraction_times(serial, 5.12, 5.03)
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "times": {"In": 5.1, "Out": 5.0},
+        "groupIndex": 1,
+        "doseIndex": "ByGroup",
+    }
     assert result.status == "Pending"
     assert result.error_code is None

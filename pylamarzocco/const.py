@@ -14,12 +14,14 @@ class MachineState(StrEnum):
     BREWING_MODE = "BrewingMode"
     STANDBY = "StandBy"
 
+
 class PreExtractionMode(StrEnum):
     """Pre-extraction modes."""
 
     PREINFUSION = "PreInfusion"
     PREBREWING = "PreBrewing"
     DISABLED = "Disabled"
+
 
 class WidgetType(StrEnum):
     """Widget types."""
@@ -51,12 +53,14 @@ class WidgetType(StrEnum):
     G_MORE_DOSE = "GMoreDose"
     G_GRIND_WITH = "GGrindWith"
 
+
 class SteamTargetLevel(StrEnum):
     """Steam target levels."""
 
     LEVEL_1 = "Level1"
     LEVEL_2 = "Level2"
     LEVEL_3 = "Level3"
+
 
 class StompMessageType(StrEnum):
     """Stomp message types."""
@@ -68,11 +72,13 @@ class StompMessageType(StrEnum):
     UNSUBSCRIBE = "UNSUBSCRIBE"
     MESSAGE = "MESSAGE"
 
+
 class DeviceType(StrEnum):
     """Device types."""
 
     MACHINE = "CoffeeMachine"
     GRINDER = "Grinder"
+
 
 class ModelCode(StrEnum):
     """Model codes."""
@@ -84,8 +90,16 @@ class ModelCode(StrEnum):
     GS3_MP = "GS3MP"
     GS3_AV = "GS3AV"
 
+
 class FirmwareType(StrEnum):
     """Firmware types."""
 
     MACHINE = "Machine"
     GATEWAY = "Gateway"
+
+
+class DoseIndexType(StrEnum):
+    """Dose index types."""
+
+    BY_GROUP = "ByGroup"
+    BY_DOSE = "ByDose"  # TODO: Check if this is correct

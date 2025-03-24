@@ -24,6 +24,8 @@ from pylamarzocco.const import (
     CUSTOMER_APP_URL,
     SteamTargetLevel,
     StompMessageType,
+    PreExtractionMode,
+    DoseIndexType,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models.authentication import (
@@ -36,6 +38,8 @@ from pylamarzocco.models.config import (
     DashboardWSConfig,
     Device,
     DeviceSettings,
+    SecondsInOut,
+    PrebrewSettingTimes,
 )
 from pylamarzocco.models.general import CommandResponse
 from pylamarzocco.util import (
@@ -325,4 +329,40 @@ class LaMarzoccoCloudClient:
         data = {"enabled": True}
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineBackFlushStartCleaning"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        return CommandResponse.from_dict(response[0])
+
+    async def change_pre_extraction_mode(
+        self, serial_number: str, prebrew_mode: PreExtractionMode
+    ) -> CommandResponse:
+        """Change pre-extraction mode"""
+
+        data = {
+            "mode": prebrew_mode.value,
+        }
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachinePreBrewingChangeMode"
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        return CommandResponse.from_dict(response[0])
+
+    async def change_pre_extraction_times(
+        self,
+        serial_number: str,
+        seconds_in: float,
+        seconds_out: float,
+        group_index: int = 1,
+        dose_index: DoseIndexType = DoseIndexType.BY_GROUP,
+    ) -> CommandResponse:
+        """Change pre-extraction times"""
+
+        data = PrebrewSettingTimes(
+            times=SecondsInOut(
+                seconds_in=round(seconds_in, 1),
+                seconds_out=round(seconds_out, 1),
+            ),
+            group_index=group_index,
+            dose_index=dose_index,
+        )
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachinePreBrewingChangeTimes"
+        response = await self._rest_api_call(
+            url=url, method=HTTPMethod.POST, data=data.to_dict()
+        )
         return CommandResponse.from_dict(response[0])

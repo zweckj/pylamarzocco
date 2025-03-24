@@ -9,6 +9,7 @@ from typing import Annotated, Any
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
 from mashumaro.types import Discriminator
+from mashumaro.config import BaseConfig
 
 from pylamarzocco.const import (
     DeviceType,
@@ -18,6 +19,7 @@ from pylamarzocco.const import (
     PreExtractionMode,
     SteamTargetLevel,
     WidgetType,
+    DoseIndexType,
 )
 from pylamarzocco.models.general import CommandResponse
 
@@ -234,6 +236,11 @@ class SecondsInOut(DataClassJSONMixin):
     seconds_in: float = field(metadata=field_options(alias="In"))
     seconds_out: float = field(metadata=field_options(alias="Out"))
 
+    class Config(BaseConfig):
+        """Config for Mashumaro serialization."""
+
+        serialize_by_alias = True
+
 
 @dataclass(kw_only=True)
 class PreBrewInfusionTime(DataClassJSONMixin):
@@ -346,3 +353,19 @@ class DeviceSettings(Device):
         metadata=field_options(alias="autoUpdateSupported"), default=False
     )
     auto_update: bool = field(metadata=field_options(alias="autoUpdate"), default=False)
+
+
+@dataclass(kw_only=True)
+class PrebrewSettingTimes(DataClassJSONMixin):
+    """Prebrew/-infusion configuration."""
+
+    times: SecondsInOut
+    group_index: int = field(metadata=field_options(alias="groupIndex"), default=1)
+    dose_index: DoseIndexType = field(
+        metadata=field_options(alias="doseIndex"), default=DoseIndexType.BY_GROUP
+    )
+
+    class Config(BaseConfig):
+        """Config for Mashumaro serialization."""
+
+        serialize_by_alias = True
