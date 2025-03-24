@@ -60,6 +60,9 @@ class WidgetType(StrEnum):
     G_MIRROR_DOSES = "GMirrorDoses"
     G_MORE_DOSE = "GMoreDose"
     G_GRIND_WITH = "GGrindWith"
+    # statistic widgets
+    COFFEE_AND_FLUSH_TREND = "COFFEE_AND_FLUSH_TREND"
+    LAST_COFFEE = "LAST_COFFEE"
 
 
 class SteamTargetLevel(StrEnum):
@@ -111,6 +114,23 @@ class DoseIndexType(StrEnum):
 
     BY_GROUP = "ByGroup"
     BY_DOSE = "ByDose"  # TODO: Check if this is correct
+
+
+class DoseMode(StrEnum):
+    """Dose modes."""
+
+    CONTINUOUS = "Continuous"
+    PULSES_TYPE = "PulsesType"
+
+
+class DoseIndex(StrEnum):
+    """Dose index types."""
+
+    CONTINUOUS = "Continuous"
+    DOSE_A = "DoseA"
+    DOSE_B = "DoseB"
+    DOSE_C = "DoseC"
+    DOSE_D = "DoseD"
 
 
 class SmartStandByType(StrEnum):

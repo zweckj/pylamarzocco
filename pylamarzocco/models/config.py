@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Annotated, Any
+from typing import Any
 
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
-from mashumaro.types import Discriminator
+
 from mashumaro.config import BaseConfig
 
 from pylamarzocco.const import (
@@ -21,7 +21,13 @@ from pylamarzocco.const import (
     BoilerStatus,
     MachineState,
 )
-from pylamarzocco.models.general import CommandResponse, Device
+from pylamarzocco.models.general import (
+    CommandResponse,
+    Device,
+    Widget,
+    BaseWidgetOutput,
+    BaseWidget,
+)
 
 
 @dataclass(kw_only=True)
@@ -63,28 +69,6 @@ class DashboardWSConfig(DashboardConfig):
     connection_date: int = field(metadata=field_options(alias="connectionDate"))
     uuid: str
     commands: list[CommandResponse]
-
-
-@dataclass(kw_only=True)
-class BaseWidget(DataClassJSONMixin):
-    """Base widget configuration."""
-
-    code: WidgetType
-    index: int
-
-
-@dataclass(kw_only=True)
-class Widget(BaseWidget):
-    """Widget configuration."""
-
-    output: Annotated[
-        BaseWidgetOutput, Discriminator(field="widget_type", include_subtypes=True)
-    ]
-
-
-@dataclass(kw_only=True)
-class BaseWidgetOutput(DataClassJSONMixin):
-    """Widget configuration."""
 
 
 @dataclass(kw_only=True)

@@ -1,12 +1,16 @@
 """Models for general info"""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from typing import Annotated
 
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
+from mashumaro.types import Discriminator
 
-from pylamarzocco.const import DeviceType, ModelCode
+from pylamarzocco.const import DeviceType, ModelCode, WidgetType
 
 
 @dataclass(kw_only=True)
@@ -51,3 +55,25 @@ class Device(DataClassJSONMixin):
     ble_auth_token: str | None = field(
         metadata=field_options(alias="bleAuthToken"), default=None
     )
+
+
+@dataclass(kw_only=True)
+class BaseWidget(DataClassJSONMixin):
+    """Base widget configuration."""
+
+    code: WidgetType
+    index: int
+
+
+@dataclass(kw_only=True)
+class Widget(BaseWidget):
+    """Widget configuration."""
+
+    output: Annotated[
+        BaseWidgetOutput, Discriminator(field="widget_type", include_subtypes=True)
+    ]
+
+
+@dataclass(kw_only=True)
+class BaseWidgetOutput(DataClassJSONMixin):
+    """Widget configuration."""

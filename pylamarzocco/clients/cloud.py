@@ -43,6 +43,7 @@ from pylamarzocco.models.config import (
     PrebrewSettingTimes,
 )
 from pylamarzocco.models.schedule import WakeUpScheduleSettings
+from pylamarzocco.models.statistics import Statistics
 from pylamarzocco.models.general import CommandResponse
 from pylamarzocco.util import (
     decode_stomp_ws_message,
@@ -191,6 +192,12 @@ class LaMarzoccoCloudClient:
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/settings"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return DeviceSettings.from_dict(result)
+
+    async def get_thing_statistics(self, serial_number: str) -> Statistics:
+        """Get the statistics of a thing."""
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/stats"
+        result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
+        return Statistics.from_dict(result)
 
     async def websocket_connect(
         self,

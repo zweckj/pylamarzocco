@@ -136,6 +136,23 @@ async def test_list_things(
     assert result[0].to_dict() == snapshot
 
 
+async def test_get_statistics(
+    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+) -> None:
+    """Test getting the list of things."""
+    serial = "MR123456"
+
+    mock_aioresponse.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/stats",
+        status=200,
+        payload=load_fixture("machine", "statistics.json"),
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.get_thing_statistics(serial)
+    assert result.to_dict() == snapshot
+
+
 async def test_set_power(mock_aioresponse: aioresponses) -> None:
     """Test setting the power for a thing."""
 
