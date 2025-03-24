@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Annotated
 
+from aiohttp import ClientWebSocketResponse
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
 from mashumaro.types import Discriminator
@@ -77,3 +79,11 @@ class Widget(BaseWidget):
 @dataclass(kw_only=True)
 class BaseWidgetOutput(DataClassJSONMixin):
     """Widget configuration."""
+
+@dataclass
+class WebSocketDetails:
+    """Hold the websocket connection."""
+
+    ws: ClientWebSocketResponse | None = field(default=None)
+    disconnected: bool = field(default=True)
+    disconnect_callback: Callable[[], Awaitable] | None = field(default=None)

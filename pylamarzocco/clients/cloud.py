@@ -16,6 +16,7 @@ from aiohttp import (
     ClientWebSocketResponse,
     ClientWSTimeout,
     WSMsgType,
+    WSMessage,
 )
 from aiohttp.client_exceptions import ClientError, InvalidURL
 
@@ -44,7 +45,7 @@ from pylamarzocco.models.config import (
 )
 from pylamarzocco.models.schedule import WakeUpScheduleSettings
 from pylamarzocco.models.statistics import Statistics
-from pylamarzocco.models.general import CommandResponse
+from pylamarzocco.models.general import CommandResponse, WebSocketDetails
 from pylamarzocco.util import (
     decode_stomp_ws_message,
     encode_stomp_ws_message,
@@ -76,8 +77,7 @@ class LaMarzoccoCloudClient:
         self._username = username
         self._password = password
         self._access_token: AccessToken | None = None
-        self.websocket_disconnected = True
-        self.websocket: ClientWebSocketResponse | None = None
+        self.websocket = WebSocketDetails()
         self.notification_callback: Callable[[DashboardWSConfig], Any] | None = (
             notification_callback
         )
@@ -199,6 +199,7 @@ class LaMarzoccoCloudClient:
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return Statistics.from_dict(result)
 
+    # region websocket
     async def websocket_connect(
         self,
         serial_number: str,
@@ -210,71 +211,102 @@ class LaMarzoccoCloudClient:
                 f"wss://{BASE_URL}/ws/connect",
                 timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
             ) as ws:
-                connect_msg = encode_stomp_ws_message(
-                    StompMessageType.CONNECT,
-                    {
-                        "host": BASE_URL,
-                        "accept-version": "1.2,1.1,1.0",
-                        "heart-beat": "0,0",
-                        "Authorization": f"Bearer {await self.async_get_access_token()}",
-                    },
-                )
-                print(connect_msg)
-                await ws.send_str(connect_msg)
-                msg = await ws.receive()
-                print(msg.data)
-                result, _, _ = decode_stomp_ws_message(str(msg.data))
-                if result is not StompMessageType.CONNECTED:
-                    raise ClientConnectionError("No connected message")
-                subscribe_msg = encode_stomp_ws_message(
-                    StompMessageType.SUBSCRIBE,
-                    {
-                        "destination": f"/ws/sn/{serial_number}/dashboard",
-                        "ack": "auto",
-                        "id": str(uuid.uuid4()),
-                        "content-length": "0",
-                    },
-                )
-                print(subscribe_msg)
-                await ws.send_str(subscribe_msg)
-                self.websocket = ws
-                if self.websocket_disconnected:
-                    _LOGGER.warning("Websocket reconnected")
-                    self.websocket_disconnected = False
+                await self.__setup_websocket_connection(ws, serial_number)
                 async for msg in ws:
-                    if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
-                        _LOGGER.warning("Websocket disconnected gracefully")
-                        self.websocket_disconnected = True
+                    if await self.__handle_websocket_message(ws, msg):
                         break
-                    if msg.type == WSMsgType.ERROR:
-                        _LOGGER.warning(
-                            "Websocket disconnected with error %s", ws.exception()
-                        )
-                        self.websocket_disconnected = True
-                        break
-                    _LOGGER.debug("Received websocket message: %s", msg)
-                    try:
-                        msg_type, _, data = decode_stomp_ws_message(str(msg.data))
-                        if msg_type is not StompMessageType.MESSAGE:
-                            _LOGGER.warning("Non MESSAGE-type message: %s", msg.data)
-                        else:
-                            self._parse_websocket_message(data)
-                    except Exception as ex:  # pylint: disable=broad-except
-                        _LOGGER.exception("Error during callback: %s", ex)
         except TimeoutError as err:
-            if not self.websocket_disconnected:
+            if not self.websocket.disconnected:
                 _LOGGER.warning("Websocket disconnected: Connection timed out")
-                self.websocket_disconnected = True
+                self.websocket.disconnected = True
             _LOGGER.debug("Websocket timeout: %s", err)
         except ClientConnectionError as err:
-            if not self.websocket_disconnected:
+            if not self.websocket.disconnected:
                 _LOGGER.warning("Websocket disconnected: Could not connect: %s", err)
-                self.websocket_disconnected = True
+                self.websocket.disconnected = True
             _LOGGER.debug("Websocket disconnected: Could not connect: %s", err)
         except InvalidURL:
             _LOGGER.error("Invalid URL for websocket.")
 
-    def _parse_websocket_message(self, message: str | None) -> None:
+    async def __setup_websocket_connection(
+        self, ws: ClientWebSocketResponse, serial_number: str
+    ) -> None:
+        """Setup the websocket connection."""
+        self.websocket.ws = ws
+
+        connect_msg = encode_stomp_ws_message(
+            StompMessageType.CONNECT,
+            {
+                "host": BASE_URL,
+                "accept-version": "1.2,1.1,1.0",
+                "heart-beat": "0,0",
+                "Authorization": f"Bearer {await self.async_get_access_token()}",
+            },
+        )
+        _LOGGER.debug("Connecting to websocket.")
+        await ws.send_str(connect_msg)
+
+        msg = await ws.receive()
+        _LOGGER.debug("Received websocket message: %s", msg.data)
+        result, _, _ = decode_stomp_ws_message(str(msg.data))
+        if result is not StompMessageType.CONNECTED:
+            raise ClientConnectionError("No connected message")
+
+        _LOGGER.debug("Subscribing to websocket.")
+        subscription_id = str(uuid.uuid4())
+        subscribe_msg = encode_stomp_ws_message(
+            StompMessageType.SUBSCRIBE,
+            {
+                "destination": f"/ws/sn/{serial_number}/dashboard",
+                "ack": "auto",
+                "id": subscription_id,
+                "content-length": "0",
+            },
+        )
+        await ws.send_str(subscribe_msg)
+
+        async def disconnect_websocket() -> None:
+            _LOGGER.debug("Disconnecting websocket")
+            if ws.closed:
+                return
+            disconnect_msg = encode_stomp_ws_message(
+                StompMessageType.UNSUBSCRIBE,
+                {
+                    "id": subscription_id,
+                },
+            )
+            await ws.send_str(disconnect_msg)
+            await ws.close()
+
+        self.websocket.disconnect_callback = disconnect_websocket
+        if self.websocket.disconnected:
+            _LOGGER.warning("Websocket reconnected")
+            self.websocket.disconnected = False
+
+    async def __handle_websocket_message(self, ws: ClientWebSocketResponse, msg: WSMessage) -> bool:
+        """Handle receiving a websocket message. Return True for disconnect."""
+        if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
+            _LOGGER.debug("Websocket disconnected gracefully")
+            self.websocket.disconnected = True
+            return True
+        if msg.type == WSMsgType.ERROR:
+            _LOGGER.warning(
+                "Websocket disconnected with error %s", ws.exception()
+            )
+            self.websocket.disconnected = True
+            return True
+        _LOGGER.debug("Received websocket message: %s", msg)
+        try:
+            msg_type, _, data = decode_stomp_ws_message(str(msg.data))
+            if msg_type is not StompMessageType.MESSAGE:
+                _LOGGER.warning("Non MESSAGE-type message: %s", msg.data)
+            else:
+                self.__parse_websocket_message(data)
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.exception("Error during callback: %s", ex)
+        return False
+
+    def __parse_websocket_message(self, message: str | None) -> None:
         """Parse the websocket message."""
         if message is None:
             return
