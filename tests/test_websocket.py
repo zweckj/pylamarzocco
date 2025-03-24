@@ -1,13 +1,15 @@
 """Tests for websocket related functionality."""
 
-from pylamarzocco.models.config import DashboardWSConfig
-from pylamarzocco.const import StompMessageType
-from pylamarzocco.util import encode_stomp_ws_message, decode_stomp_ws_message
-from .conftest import load_fixture
-
 import json
 
 from syrupy import SnapshotAssertion
+
+from pylamarzocco.const import StompMessageType
+from pylamarzocco.models.config import DashboardWSConfig
+from pylamarzocco.util import decode_stomp_ws_message, encode_stomp_ws_message
+
+from .conftest import load_fixture
+
 
 async def test_encode_stomp_ws_message(snapshot: SnapshotAssertion) -> None:
     """Test the encode_stomp_ws_message function."""
