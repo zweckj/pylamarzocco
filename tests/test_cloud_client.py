@@ -36,7 +36,14 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
     assert result == "mock-access"
 
     # now get one again to get from cache
-    # aioresponse only mocks the first one
+    mock_aioresponse.post(
+        url=f"{CUSTOMER_APP_URL}/auth/signin",
+        status=200,
+        payload={
+            "accessToken": "new-new-token",
+            "refreshToken": "mock-refresh",
+        },
+    )
     result = await client.async_get_access_token()
     assert result == "mock-access"
 
