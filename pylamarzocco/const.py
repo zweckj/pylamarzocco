@@ -126,3 +126,15 @@ class BoilerStatus(StrEnum):
     STAND_BY = "StandBy"
     HEATING = "HeatingUp"
     READY = "Ready"  # TODO: Check if this is correct
+
+
+class WeekDay(StrEnum):
+    """Week days."""
+
+    MONDAY = "Monday"
+    TUESDAY = "Tuesday"
+    WEDNESDAY = "Wednesday"
+    THURSDAY = "Thursday"
+    FRIDAY = "Friday"
+    SATURDAY = "Saturday"
+    SUNDAY = "Sunday"

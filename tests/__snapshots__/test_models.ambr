@@ -379,3 +379,101 @@
     ]),
   })
 # ---
+# name: test_scheduling_config
+  dict({
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'connected': True,
+    'connection_date': '2025-03-21T03:00:19.892000+00:00',
+    'image_url': 'https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-bianco.png',
+    'location': None,
+    'model_code': 'LINEAMICRA',
+    'model_name': 'LINEA MICRA',
+    'name': 'MR123456',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'MR123456',
+    'smart_wake_up_sleep': dict({
+      'schedules': list([
+        dict({
+          'days': list([
+            'Tuesday',
+          ]),
+          'enabled': True,
+          'id': 'KofUy56',
+          'off_time_minutes': 514,
+          'on_time_minutes': 0,
+          'steam_boiler': True,
+        }),
+        dict({
+          'days': list([
+            'Monday',
+          ]),
+          'enabled': False,
+          'id': 'd1XUDAP',
+          'off_time_minutes': 1439,
+          'on_time_minutes': 60,
+          'steam_boiler': False,
+        }),
+      ]),
+      'smart_stand_by_after': 'PowerOn',
+      'smart_stand_by_enabled': True,
+      'smart_stand_by_minutes': 10,
+      'smart_stand_by_minutes_max': 30,
+      'smart_stand_by_minutes_min': 1,
+      'smart_stand_by_minutes_step': 1,
+    }),
+    'smart_wake_up_sleep_supported': True,
+    'type': 'CoffeeMachine',
+  })
+# ---
+# name: test_scheduling_websocket_config
+  dict({
+    'auto_on_off': None,
+    'auto_on_off_supported': False,
+    'auto_stand_by': None,
+    'auto_stand_by_supported': False,
+    'commands': list([
+      dict({
+        'error_code': None,
+        'id': '16c2df41-ca86-4995-98e6-9b892e9aaafd',
+        'status': 'Success',
+      }),
+    ]),
+    'connected': True,
+    'connection_date': '2025-03-21T03:00:19.892000+00:00',
+    'smart_wake_up_sleep': dict({
+      'schedules': list([
+        dict({
+          'days': list([
+            'Tuesday',
+          ]),
+          'enabled': True,
+          'id': 'KofUy56',
+          'off_time_minutes': 514,
+          'on_time_minutes': 0,
+          'steam_boiler': True,
+        }),
+        dict({
+          'days': list([
+            'Monday',
+          ]),
+          'enabled': False,
+          'id': 'd1XUDAP',
+          'off_time_minutes': 1439,
+          'on_time_minutes': 60,
+          'steam_boiler': False,
+        }),
+      ]),
+      'smart_stand_by_after': 'PowerOn',
+      'smart_stand_by_enabled': True,
+      'smart_stand_by_minutes': 10,
+      'smart_stand_by_minutes_max': 30,
+      'smart_stand_by_minutes_min': 1,
+      'smart_stand_by_minutes_step': 1,
+    }),
+    'smart_wake_up_sleep_supported': True,
+    'weekly_supported': False,
+  })
+# ---
