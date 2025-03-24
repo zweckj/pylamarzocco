@@ -42,6 +42,7 @@ from pylamarzocco.models.config import (
     SecondsInOut,
     PrebrewSettingTimes,
 )
+from pylamarzocco.models.schedule import WakeUpScheduleSettings
 from pylamarzocco.models.general import CommandResponse
 from pylamarzocco.util import (
     decode_stomp_ws_message,
@@ -172,6 +173,7 @@ class LaMarzoccoCloudClient:
             + f"response: {await response.text()}"
         )
 
+    # region config
     async def list_things(self) -> list[Device]:
         """Get all things."""
         url = f"{CUSTOMER_APP_URL}/things"
@@ -273,6 +275,8 @@ class LaMarzoccoCloudClient:
         if self.notification_callback is not None:
             self.notification_callback(config)
 
+    # endregion
+    # region Commands
     async def set_power(
         self,
         serial_number: str,
@@ -377,3 +381,29 @@ class LaMarzoccoCloudClient:
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSmartStandBy"
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
         return CommandResponse.from_dict(response[0])
+
+    async def delete_wakeup_schedule(
+        self,
+        serial_number: str,
+        schedule_id: str,
+    ) -> CommandResponse:
+        """Delete a smart wakeup schedule"""
+        data = {"id": schedule_id}
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineDeleteWakeUpSchedule"
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
+        return CommandResponse.from_dict(response[0])
+
+    async def set_wakeup_schedule(
+        self,
+        serial_number: str,
+        schedule: WakeUpScheduleSettings,
+    ) -> CommandResponse:
+        """Set smart wakeup schedule"""
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSetWakeUpSchedule"
+        response = await self._rest_api_call(
+            url=url, method=HTTPMethod.POST, data=schedule.to_dict()
+        )
+        return CommandResponse.from_dict(response[0])
+
+
+# endregion

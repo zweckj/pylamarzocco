@@ -3,26 +3,32 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 from mashumaro import field_options
+from mashumaro.config import BaseConfig
 from mashumaro.mixins.json import DataClassJSONMixin
 
-
-from datetime import datetime, timezone
-from pylamarzocco.const import WeekDay, SmartStandByType
-from pylamarzocco.models.general import Device, CommandResponse
+from pylamarzocco.const import SmartStandByType, WeekDay
+from pylamarzocco.models.general import CommandResponse, Device
 
 
 @dataclass(kw_only=True)
 class WakeUpScheduleSettings(DataClassJSONMixin):
     """Wake up schedule settings."""
 
-    id: str | None
+    identifier: str | None = field(metadata=field_options(alias="id"), default=None)
     enabled: bool = field(default=False)
     on_time_minutes: int = field(metadata=field_options(alias="onTimeMinutes"))
     off_time_minutes: int = field(metadata=field_options(alias="offTimeMinutes"))
     steam_boiler: bool = field(metadata=field_options(alias="steamBoiler"))
     days: list[WeekDay] = field(default_factory=list)
+
+    class Config(BaseConfig):
+        """Config for Mashumaro serialization."""
+
+        serialize_by_alias = True
+        omit_none = True
 
 
 @dataclass(kw_only=True)

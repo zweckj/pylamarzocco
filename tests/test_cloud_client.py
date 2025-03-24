@@ -13,7 +13,9 @@ from pylamarzocco.const import (
     PreExtractionMode,
     SteamTargetLevel,
     SmartStandByType,
+    WeekDay,
 )
+from pylamarzocco.models.schedule import WakeUpScheduleSettings
 
 from .conftest import load_fixture
 
@@ -302,6 +304,69 @@ async def test_setting_smart_standby(
         "enabled": False,
         "minutes": 20,
         "after": "LastBrewing",
+    }
+    assert result.status == "Pending"
+    assert result.error_code is None
+
+
+async def test_set_wake_up_schedule(
+    mock_aioresponse: aioresponses,
+) -> None:
+    """Test setting the wake up schedule for a thing."""
+    serial = "MR123456"
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSetWakeUpSchedule"
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+        repeat=2,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+
+    # new schedule
+    result = await client.set_wakeup_schedule(
+        serial,
+        WakeUpScheduleSettings(
+            enabled=True,
+            on_time_minutes=50,
+            off_time_minutes=1439,
+            steam_boiler=False,
+            days=[WeekDay.MONDAY, WeekDay.FRIDAY],
+        ),
+    )
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    expected_output = {
+        "enabled": True,
+        "onTimeMinutes": 50,
+        "offTimeMinutes": 1439,
+        "days": [
+            "Monday",
+            "Friday",
+        ],
+        "steamBoiler": False,
+    }
+    assert call.kwargs["json"] == expected_output
+    assert result.status == "Pending"
+    assert result.error_code is None
+
+    # existing schedule
+    result = await client.set_wakeup_schedule(
+        serial,
+        WakeUpScheduleSettings(
+            identifier="aBc23d",
+            enabled=True,
+            on_time_minutes=50,
+            off_time_minutes=1439,
+            steam_boiler=False,
+            days=[WeekDay.MONDAY, WeekDay.FRIDAY],
+        ),
+    )
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][1]
+    assert call.kwargs["json"] == {
+        "id": "aBc23d",
+        **expected_output,
     }
     assert result.status == "Pending"
     assert result.error_code is None
