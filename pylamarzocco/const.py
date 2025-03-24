@@ -8,11 +8,19 @@ BASE_URL = "lion.lamarzocco.io"
 CUSTOMER_APP_URL = f"https://{BASE_URL}/api/customer-app"
 
 
-class MachineState(StrEnum):
+class MachineMode(StrEnum):
     """Machine states."""
 
     BREWING_MODE = "BrewingMode"
     STANDBY = "StandBy"
+
+
+class MachineState(StrEnum):
+    """Machine statuses."""
+
+    STANDBY = "StandBy"
+    POWERED_ON = "PoweredOn"
+    BREWING = "Brewing"
 
 
 class PreExtractionMode(StrEnum):
@@ -110,3 +118,11 @@ class SmartStandByType(StrEnum):
 
     LAST_BREW = "LastBrewing"
     POWER_ON = "PowerOn"
+
+
+class BoilerStatus(StrEnum):
+    """Boiler statuses."""
+
+    STAND_BY = "StandBy"
+    HEATING = "HeatingUp"
+    READY = "Ready"  # TODO: Check if this is correct

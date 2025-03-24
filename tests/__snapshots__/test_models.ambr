@@ -30,7 +30,10 @@
         ]),
         'brewing_start_time': None,
         'mode': 'StandBy',
-        'next_status': None,
+        'next_status': dict({
+          'start_time': '2025-03-20T17:07:07.722000+00:00',
+          'status': 'StandBy',
+        }),
         'status': 'StandBy',
       }),
       'CMPreBrewing': dict({
@@ -46,20 +49,20 @@
             dict({
               'dose_index': 'ByGroup',
               'seconds': dict({
-                'seconds_in': 5.0,
-                'seconds_out': 5.0,
+                'In': 5.0,
+                'Out': 5.0,
               }),
               'seconds_max': dict({
-                'seconds_in': 9.0,
-                'seconds_out': 9.0,
+                'In': 9.0,
+                'Out': 9.0,
               }),
               'seconds_min': dict({
-                'seconds_in': 1.0,
-                'seconds_out': 1.0,
+                'In': 1.0,
+                'Out': 1.0,
               }),
               'seconds_step': dict({
-                'seconds_in': 0.1,
-                'seconds_out': 0.1,
+                'In': 0.1,
+                'Out': 0.1,
               }),
             }),
           ]),
@@ -67,20 +70,20 @@
             dict({
               'dose_index': 'ByGroup',
               'seconds': dict({
-                'seconds_in': 0.0,
-                'seconds_out': 4.0,
+                'In': 0.0,
+                'Out': 4.0,
               }),
               'seconds_max': dict({
-                'seconds_in': 25.0,
-                'seconds_out': 25.0,
+                'In': 25.0,
+                'Out': 25.0,
               }),
               'seconds_min': dict({
-                'seconds_in': 1.0,
-                'seconds_out': 1.0,
+                'In': 1.0,
+                'Out': 1.0,
               }),
               'seconds_step': dict({
-                'seconds_in': 0.1,
-                'seconds_out': 0.1,
+                'In': 0.1,
+                'Out': 0.1,
               }),
             }),
           ]),
@@ -231,7 +234,10 @@
           ]),
           'brewing_start_time': None,
           'mode': 'StandBy',
-          'next_status': None,
+          'next_status': dict({
+            'start_time': '2025-03-20T17:07:07.722000+00:00',
+            'status': 'StandBy',
+          }),
           'status': 'StandBy',
         }),
       }),
@@ -321,20 +327,20 @@
               dict({
                 'dose_index': 'ByGroup',
                 'seconds': dict({
-                  'seconds_in': 5.0,
-                  'seconds_out': 5.0,
+                  'In': 5.0,
+                  'Out': 5.0,
                 }),
                 'seconds_max': dict({
-                  'seconds_in': 9.0,
-                  'seconds_out': 9.0,
+                  'In': 9.0,
+                  'Out': 9.0,
                 }),
                 'seconds_min': dict({
-                  'seconds_in': 1.0,
-                  'seconds_out': 1.0,
+                  'In': 1.0,
+                  'Out': 1.0,
                 }),
                 'seconds_step': dict({
-                  'seconds_in': 0.1,
-                  'seconds_out': 0.1,
+                  'In': 0.1,
+                  'Out': 0.1,
                 }),
               }),
             ]),
@@ -342,20 +348,20 @@
               dict({
                 'dose_index': 'ByGroup',
                 'seconds': dict({
-                  'seconds_in': 0.0,
-                  'seconds_out': 4.0,
+                  'In': 0.0,
+                  'Out': 4.0,
                 }),
                 'seconds_max': dict({
-                  'seconds_in': 25.0,
-                  'seconds_out': 25.0,
+                  'In': 25.0,
+                  'Out': 25.0,
                 }),
                 'seconds_min': dict({
-                  'seconds_in': 1.0,
-                  'seconds_out': 1.0,
+                  'In': 1.0,
+                  'Out': 1.0,
                 }),
                 'seconds_step': dict({
-                  'seconds_in': 0.1,
-                  'seconds_out': 0.1,
+                  'In': 0.1,
+                  'Out': 0.1,
                 }),
               }),
             ]),

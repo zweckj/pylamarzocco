@@ -91,7 +91,7 @@
         "status": "StandBy",
         "availableModes": ["BrewingMode", "StandBy"],
         "mode": "StandBy",
-        "nextStatus": null,
+        "nextStatus": { "status": "StandBy", "startTime": 1742490427722 },
         "brewingStartTime": null
       }
     },

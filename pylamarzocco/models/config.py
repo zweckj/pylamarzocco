@@ -14,12 +14,14 @@ from mashumaro.config import BaseConfig
 from pylamarzocco.const import (
     DeviceType,
     FirmwareType,
-    MachineState,
+    MachineMode,
     ModelCode,
     PreExtractionMode,
     SteamTargetLevel,
     WidgetType,
     DoseIndexType,
+    BoilerStatus,
+    MachineState,
 )
 from pylamarzocco.models.general import CommandResponse
 
@@ -126,11 +128,11 @@ class MachineStatus(BaseWidgetOutput):
 
     widget_type = WidgetType.CM_MACHINE_STATUS
     status: MachineState
-    available_modes: list[MachineState] = field(
+    available_modes: list[MachineMode] = field(
         metadata=field_options(alias="availableModes")
     )
-    mode: MachineState
-    next_status: MachineState | None = field(metadata=field_options(alias="nextStatus"))
+    mode: MachineMode
+    next_status: NextStatus | None = field(metadata=field_options(alias="nextStatus"))
     brewing_start_time: datetime | None = field(
         metadata=field_options(
             alias="brewingStartTime",
@@ -141,11 +143,24 @@ class MachineStatus(BaseWidgetOutput):
 
 
 @dataclass(kw_only=True)
+class NextStatus(DataClassJSONMixin):
+    """Next status configuration."""
+
+    status: MachineState
+    start_time: datetime = field(
+        metadata=field_options(
+            alias="startTime",
+            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+        )
+    )
+
+
+@dataclass(kw_only=True)
 class CoffeeBoiler(BaseWidgetOutput):
     """Coffee boiler configuration."""
 
     widget_type = WidgetType.CM_COFFEE_BOILER
-    status: MachineState
+    status: BoilerStatus
     enabled: bool
     enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
     target_temperature: float = field(metadata=field_options(alias="targetTemperature"))
@@ -172,7 +187,7 @@ class SteamBoilerLevel(BaseWidgetOutput):
     """Steam boiler level configuration."""
 
     widget_type = WidgetType.CM_STEAM_BOILER_LEVEL
-    status: MachineState  # TODO: correct type
+    status: BoilerStatus
     enabled: bool
     enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
     target_level: SteamTargetLevel = field(metadata=field_options(alias="targetLevel"))
