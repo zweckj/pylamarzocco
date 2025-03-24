@@ -1,11 +1,14 @@
 """Setting up pytest fixtures for the tests."""
 
 import json
-from pathlib import Path
 from collections.abc import Generator
+from pathlib import Path
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import patch, AsyncMock
 from aioresponses import aioresponses
+
+from pylamarzocco.const import CUSTOMER_APP_URL
 
 
 def load_fixture(device_type: str, file_name: str) -> dict:
@@ -24,9 +27,14 @@ def fixture_mock_aioresponse() -> Generator[aioresponses, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def mock_access_token() -> Generator[AsyncMock]:
-    """Mock access token."""
-    with patch(
-        "pylamarzocco.clients.cloud.LaMarzoccoCloudClient.async_get_access_token"
-    ):
-        yield AsyncMock(return_value="Token")
+def mock_access_token(mock_aioresponse: aioresponses) -> Generator[AsyncMock]:
+    """Mock access getting token."""
+    mock_aioresponse.post(
+        url=f"{CUSTOMER_APP_URL}/auth/signin",
+        status=200,
+        payload={
+            "accessToken": "mock-access",
+            "refreshToken": "mock-refresh",
+        },
+        repeat=True,
+    )

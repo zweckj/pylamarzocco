@@ -1,26 +1,25 @@
 """Models for device configuration."""
 
 from __future__ import annotations
-from typing import Annotated, Any
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from typing import Annotated, Any
 
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
 from mashumaro.types import Discriminator
 
-from pylamarzocco.models.general import CommandResponse
-
 from pylamarzocco.const import (
-    MachineState,
-    PreExtractionMode,
-    WidgetType,
-    SteamTargetLevel,
     DeviceType,
-    ModelCode,
     FirmwareType,
+    MachineState,
+    ModelCode,
+    PreExtractionMode,
+    SteamTargetLevel,
+    WidgetType,
 )
+from pylamarzocco.models.general import CommandResponse
 
 
 @dataclass(kw_only=True)
@@ -71,12 +70,13 @@ class DashboardConfig(DataClassJSONMixin):
             widget["output"]["widget_type"] = widget["code"]
         d["widgets"] = widgets
         return d
-    
+
     @classmethod
     def __post_deserialize__(cls, obj: DashboardConfig) -> DashboardConfig:
         # move the widgets to a dict with type as key for easy access to config
         obj.config = {widget.code: widget.output for widget in obj.widgets}
         return obj
+
 
 @dataclass(kw_only=True)
 class DashboardDeviceConfig(DashboardConfig, Device):
@@ -301,13 +301,12 @@ class FirmwareSettings(DataClassJSONMixin):
     type: FirmwareType
     build_version: str = field(metadata=field_options(alias="buildVersion"))
     change_log: str = field(metadata=field_options(alias="changeLog"))
-    thing_model_code: str = field(
-        metadata=field_options(alias="thingModelCode")
-    )
+    thing_model_code: str = field(metadata=field_options(alias="thingModelCode"))
     status: str
     available_update: dict | None = field(
         metadata=field_options(alias="availableUpdate"), default=None
     )
+
 
 @dataclass(kw_only=True)
 class DeviceSettings(Device):
@@ -346,6 +345,4 @@ class DeviceSettings(Device):
     auto_update_supported: bool = field(
         metadata=field_options(alias="autoUpdateSupported"), default=False
     )
-    auto_update: bool = field(
-        metadata=field_options(alias="autoUpdate"), default=False
-    )
+    auto_update: bool = field(metadata=field_options(alias="autoUpdate"), default=False)

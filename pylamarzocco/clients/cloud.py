@@ -2,49 +2,52 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 import logging
 import time
+import uuid
+from collections.abc import Callable
 from http import HTTPMethod
 from typing import Any
-import uuid
 
 from aiohttp import (
-    ClientSession,
-    ClientWebSocketResponse,
-    WSMsgType,
-    ClientWSTimeout,
     ClientConnectionError,
+    ClientSession,
     ClientTimeout,
+    ClientWebSocketResponse,
+    ClientWSTimeout,
+    WSMsgType,
 )
 from aiohttp.client_exceptions import ClientError, InvalidURL
 
-from pylamarzocco.util import (
-    is_success,
-    encode_stomp_ws_message,
-    decode_stomp_ws_message,
-)
 from pylamarzocco.const import (
-    CUSTOMER_APP_URL,
     BASE_URL,
-    StompMessageType,
+    CUSTOMER_APP_URL,
     SteamTargetLevel,
+    StompMessageType,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models.authentication import (
-    SigninTokenRequest,
     AccessToken,
     RefreshTokenRequest,
+    SigninTokenRequest,
 )
-from pylamarzocco.models.general import CommandResponse
 from pylamarzocco.models.config import (
+    DashboardDeviceConfig,
     DashboardWSConfig,
     Device,
-    DashboardDeviceConfig,
     DeviceSettings,
+)
+from pylamarzocco.models.general import CommandResponse
+from pylamarzocco.util import (
+    decode_stomp_ws_message,
+    encode_stomp_ws_message,
+    is_success,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+TOKEN_TIME_TO_REFRESH = 4 * 60 * 60  # 4 hours
 
 
 class LaMarzoccoCloudClient:
@@ -78,7 +81,7 @@ class LaMarzoccoCloudClient:
         if self._access_token is None or self._access_token.expires_at < time.time():
             self._access_token = await self._async_sign_in()
 
-        if self._access_token.expires_at < time.time() + 300:
+        if self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH:
             self._access_token = await self._async_refresh_token()
 
         return self._access_token.access_token

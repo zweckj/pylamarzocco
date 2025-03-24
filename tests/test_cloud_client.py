@@ -1,12 +1,63 @@
 """Testing the cloud client."""
 
+from unittest.mock import patch
+
 from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.const import CUSTOMER_APP_URL, SteamTargetLevel
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.const import CUSTOMER_APP_URL, SteamTargetLevel
 
 from .conftest import load_fixture
+
+
+async def test_access_token(mock_aioresponse: aioresponses) -> None:
+    """Test getting the dashboard for a thing."""
+
+    mock_aioresponse.post(
+        url=f"{CUSTOMER_APP_URL}/auth/signin",
+        status=200,
+        body={
+            "username": "test",
+            "password": "test",
+        },
+        payload={
+            "id": "mock-id",
+            "accessToken": "mock-access",
+            "refreshToken": "mock-refresh",
+            "tokenType": "Bearer",
+            "username": "mock-username",
+            "email": "mock-email",
+        },
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.async_get_access_token()
+    assert result == "mock-access"
+
+    # now get one again to get from cache
+    # aioresponse only mocks the first one
+    result = await client.async_get_access_token()
+    assert result == "mock-access"
+
+    # now get one from refresh token
+    mock_aioresponse.post(
+        url=f"{CUSTOMER_APP_URL}/auth/refreshtoken",
+        body={
+            "username": "test",
+            "refreshToken": "mock-refresh",
+        },
+        payload={
+            "accessToken": "new-token",
+            "refreshToken": "new-refresh",
+            "tokenType": "Bearer",
+        },
+    )
+
+    with patch("pylamarzocco.clients.cloud.TOKEN_TIME_TO_REFRESH", new=432001):
+        result = await client.async_get_access_token()
+
+    assert result == "new-token"
 
 
 async def test_get_thing_dashboard(
@@ -44,6 +95,7 @@ async def test_get_thing_settings(
     result = await client.get_thing_settings(serial)
     assert result.to_dict() == snapshot
 
+
 async def test_list_things(
     mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
 ) -> None:
@@ -59,9 +111,8 @@ async def test_list_things(
     result = await client.list_things()
     assert result[0].to_dict() == snapshot
 
-async def test_set_power(
-    mock_aioresponse: aioresponses
-) -> None:
+
+async def test_set_power(mock_aioresponse: aioresponses) -> None:
     """Test setting the power for a thing."""
 
     serial = "MR123456"
@@ -69,9 +120,7 @@ async def test_set_power(
     mock_aioresponse.post(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode",
         status=200,
-        body={
-            "mode": "StandBy"
-        },
+        body={"mode": "StandBy"},
         payload={
             "id": "mock-id",
             "status": "Pending",
@@ -84,9 +133,8 @@ async def test_set_power(
     assert result.status == "Pending"
     assert result.error_code is None
 
-async def test_set_steam(
-    mock_aioresponse: aioresponses
-) -> None:
+
+async def test_set_steam(mock_aioresponse: aioresponses) -> None:
     """Test setting the steam for a thing."""
 
     serial = "MR123456"
@@ -110,9 +158,8 @@ async def test_set_steam(
     assert result.status == "Pending"
     assert result.error_code is None
 
-async def test_set_steam_target_level(
-    mock_aioresponse: aioresponses
-) -> None:
+
+async def test_set_steam_target_level(mock_aioresponse: aioresponses) -> None:
     """Test setting the steam target level for a thing."""
 
     serial = "MR123456"
