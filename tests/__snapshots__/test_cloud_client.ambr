@@ -1053,6 +1053,357 @@
     ]),
   })
 # ---
+# name: test_get_thing_dashboard[mini]
+  dict({
+    'available_firmware_update': True,
+    'ble_auth_token': None,
+    'coffee_station': dict({
+      'accessories': list([
+        dict({
+          'batteryLevel': None,
+          'connected': False,
+          'imageUrl': None,
+          'name': 'LMZ-123A12',
+          'type': 'ScaleAcaiaLunar',
+        }),
+      ]),
+      'coffeeMachine': dict({
+        'availableFirmwareUpdate': True,
+        'bleAuthToken': None,
+        'connected': True,
+        'connectionDate': 1742683649814,
+        'imageUrl': 'https://lion.lamarzocco.io/img/thing-model/list/lineamini/lineamini-1-c-nero_op.png',
+        'location': None,
+        'modelCode': 'LINEAMINI',
+        'modelName': 'LINEA MINI',
+        'name': None,
+        'offlineMode': False,
+        'requireFirmwareUpdate': False,
+        'serialNumber': 'LM123456',
+        'type': 'CoffeeMachine',
+      }),
+      'grinders': list([
+      ]),
+      'id': 'a59cd870-dc75-428f-b73e-e5a247c6db73',
+      'name': 'My coffee station',
+    }),
+    'config': dict({
+      'CMBackFlush': dict({
+        'last_cleaning_start_time': '2025-03-23T12:09:36.135000+00:00',
+        'status': 'Off',
+      }),
+      'CMBrewByWeightDoses': dict({
+        'available_modes': list([
+          'Continuous',
+        ]),
+        'doses': dict({
+          'dose_1': dict({
+            'dose': 34.5,
+            'dose_max': 100.0,
+            'dose_min': 5.0,
+            'dose_step': 0,
+          }),
+          'dose_2': dict({
+            'dose': 17.5,
+            'dose_max': 100.0,
+            'dose_min': 5.0,
+            'dose_step': 0,
+          }),
+        }),
+        'mode': 'Continuous',
+        'scale_connected': False,
+      }),
+      'CMCoffeeBoiler': dict({
+        'enabled': True,
+        'enabled_supported': False,
+        'ready_start_time': None,
+        'status': 'StandBy',
+        'target_temperature': 90.0,
+        'target_temperature_max': 100,
+        'target_temperature_min': 80,
+        'target_temperature_step': 0.1,
+      }),
+      'CMMachineStatus': dict({
+        'available_modes': list([
+          'BrewingMode',
+          'StandBy',
+        ]),
+        'brewing_start_time': None,
+        'mode': 'StandBy',
+        'next_status': None,
+        'status': 'StandBy',
+      }),
+      'CMPreBrewing': dict({
+        'available_modes': list([
+          'PreBrewing',
+          'Disabled',
+        ]),
+        'dose_index_supported': False,
+        'mode': 'PreBrewing',
+        'times': dict({
+          'pre_brewing': list([
+            dict({
+              'dose_index': 'ByGroup',
+              'seconds': dict({
+                'In': 2.0,
+                'Out': 3.0,
+              }),
+              'seconds_max': dict({
+                'In': 9.0,
+                'Out': 9.0,
+              }),
+              'seconds_min': dict({
+                'In': 1.0,
+                'Out': 1.0,
+              }),
+              'seconds_step': dict({
+                'In': 0.1,
+                'Out': 0.1,
+              }),
+            }),
+          ]),
+          'pre_infusion': list([
+          ]),
+        }),
+      }),
+      'CMPreExtraction': dict({
+        'available_modes': list([
+          'PreBrewing',
+          'Disabled',
+        ]),
+        'mode': 'PreBrewing',
+        'times': dict({
+          'time_in': dict({
+            'seconds': 2.0,
+            'seconds_max': dict({
+              'pre_brewing': 9.0,
+              'pre_infusion': 9.0,
+            }),
+            'seconds_min': dict({
+              'pre_brewing': 2.0,
+              'pre_infusion': 2.0,
+            }),
+            'seconds_step': dict({
+              'pre_brewing': 0.1,
+              'pre_infusion': 0.1,
+            }),
+          }),
+          'time_out': dict({
+            'seconds': 3.0,
+            'seconds_max': dict({
+              'pre_brewing': 9.0,
+              'pre_infusion': 25.0,
+            }),
+            'seconds_min': dict({
+              'pre_brewing': 1.0,
+              'pre_infusion': 1.0,
+            }),
+            'seconds_step': dict({
+              'pre_brewing': 0.1,
+              'pre_infusion': 0.1,
+            }),
+          }),
+        }),
+      }),
+      'CMSteamBoilerTemperature': dict({
+        'enabled': False,
+        'enabled_supported': True,
+        'ready_start_time': None,
+        'status': 'Off',
+        'target_temperature': 0.0,
+        'target_temperature_max': 140,
+        'target_temperature_min': 95,
+        'target_temperature_step': 0.1,
+        'target_temperature_supported': False,
+      }),
+      'ThingScale': dict({
+        'battery_level': 0.0,
+        'calibration_required': False,
+        'connected': False,
+        'name': 'LMZ-123A12',
+      }),
+    }),
+    'connected': True,
+    'connection_date': '2025-03-22T22:47:29.814000+00:00',
+    'image_url': 'https://lion.lamarzocco.io/img/thing-model/detail/lineamini/lineamini-1-c-nero_op.png',
+    'location': None,
+    'model_code': 'LINEAMINI',
+    'model_name': 'LINEA MINI',
+    'name': 'LM123456',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'LM123456',
+    'type': 'CoffeeMachine',
+    'widgets': list([
+      dict({
+        'code': 'CMMachineStatus',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'BrewingMode',
+            'StandBy',
+          ]),
+          'brewing_start_time': None,
+          'mode': 'StandBy',
+          'next_status': None,
+          'status': 'StandBy',
+        }),
+      }),
+      dict({
+        'code': 'CMCoffeeBoiler',
+        'index': 1,
+        'output': dict({
+          'enabled': True,
+          'enabled_supported': False,
+          'ready_start_time': None,
+          'status': 'StandBy',
+          'target_temperature': 90.0,
+          'target_temperature_max': 100,
+          'target_temperature_min': 80,
+          'target_temperature_step': 0.1,
+        }),
+      }),
+      dict({
+        'code': 'CMSteamBoilerTemperature',
+        'index': 1,
+        'output': dict({
+          'enabled': False,
+          'enabled_supported': True,
+          'ready_start_time': None,
+          'status': 'Off',
+          'target_temperature': 0.0,
+          'target_temperature_max': 140,
+          'target_temperature_min': 95,
+          'target_temperature_step': 0.1,
+          'target_temperature_supported': False,
+        }),
+      }),
+      dict({
+        'code': 'CMPreExtraction',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'PreBrewing',
+            'Disabled',
+          ]),
+          'mode': 'PreBrewing',
+          'times': dict({
+            'time_in': dict({
+              'seconds': 2.0,
+              'seconds_max': dict({
+                'pre_brewing': 9.0,
+                'pre_infusion': 9.0,
+              }),
+              'seconds_min': dict({
+                'pre_brewing': 2.0,
+                'pre_infusion': 2.0,
+              }),
+              'seconds_step': dict({
+                'pre_brewing': 0.1,
+                'pre_infusion': 0.1,
+              }),
+            }),
+            'time_out': dict({
+              'seconds': 3.0,
+              'seconds_max': dict({
+                'pre_brewing': 9.0,
+                'pre_infusion': 25.0,
+              }),
+              'seconds_min': dict({
+                'pre_brewing': 1.0,
+                'pre_infusion': 1.0,
+              }),
+              'seconds_step': dict({
+                'pre_brewing': 0.1,
+                'pre_infusion': 0.1,
+              }),
+            }),
+          }),
+        }),
+      }),
+      dict({
+        'code': 'CMPreBrewing',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'PreBrewing',
+            'Disabled',
+          ]),
+          'dose_index_supported': False,
+          'mode': 'PreBrewing',
+          'times': dict({
+            'pre_brewing': list([
+              dict({
+                'dose_index': 'ByGroup',
+                'seconds': dict({
+                  'In': 2.0,
+                  'Out': 3.0,
+                }),
+                'seconds_max': dict({
+                  'In': 9.0,
+                  'Out': 9.0,
+                }),
+                'seconds_min': dict({
+                  'In': 1.0,
+                  'Out': 1.0,
+                }),
+                'seconds_step': dict({
+                  'In': 0.1,
+                  'Out': 0.1,
+                }),
+              }),
+            ]),
+            'pre_infusion': list([
+            ]),
+          }),
+        }),
+      }),
+      dict({
+        'code': 'CMBrewByWeightDoses',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'Continuous',
+          ]),
+          'doses': dict({
+            'dose_1': dict({
+              'dose': 34.5,
+              'dose_max': 100.0,
+              'dose_min': 5.0,
+              'dose_step': 0,
+            }),
+            'dose_2': dict({
+              'dose': 17.5,
+              'dose_max': 100.0,
+              'dose_min': 5.0,
+              'dose_step': 0,
+            }),
+          }),
+          'mode': 'Continuous',
+          'scale_connected': False,
+        }),
+      }),
+      dict({
+        'code': 'CMBackFlush',
+        'index': 1,
+        'output': dict({
+          'last_cleaning_start_time': '2025-03-23T12:09:36.135000+00:00',
+          'status': 'Off',
+        }),
+      }),
+      dict({
+        'code': 'ThingScale',
+        'index': 2,
+        'output': dict({
+          'battery_level': 0.0,
+          'calibration_required': False,
+          'connected': False,
+          'name': 'LMZ-123A12',
+        }),
+      }),
+    ]),
+  })
+# ---
 # name: test_get_thing_settings
   dict({
     'actual_firmwares': list([

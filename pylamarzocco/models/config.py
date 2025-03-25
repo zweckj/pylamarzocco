@@ -255,10 +255,10 @@ class PrebrewInfusionTimeLists(DataClassJSONMixin):
     """Prebrew/-infusion configuration."""
 
     pre_infusion: list[PreExtractionInOutTimes] = field(
-        metadata=field_options(alias="PreInfusion")
+        metadata=field_options(alias="PreInfusion"), default_factory=list
     )
     pre_brewing: list[PreExtractionInOutTimes] = field(
-        metadata=field_options(alias="PreBrewing")
+        metadata=field_options(alias="PreBrewing"), default_factory=list
     )
 
 

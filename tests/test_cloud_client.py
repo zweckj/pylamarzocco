@@ -86,7 +86,7 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
     assert result == "new-token"
 
 
-@pytest.mark.parametrize("model", ["micra", "gs3av"])
+@pytest.mark.parametrize("model", ["micra", "gs3av", "mini"])
 async def test_get_thing_dashboard(
     mock_aioresponse: aioresponses, model: str, snapshot: SnapshotAssertion
 ) -> None:
