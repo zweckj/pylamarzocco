@@ -60,6 +60,8 @@ class WidgetType(StrEnum):
     G_MIRROR_DOSES = "GMirrorDoses"
     G_MORE_DOSE = "GMoreDose"
     G_GRIND_WITH = "GGrindWith"
+    # scale
+    THING_SCALE = "ThingScale"
     # statistic widgets
     COFFEE_AND_FLUSH_TREND = "COFFEE_AND_FLUSH_TREND"
     LAST_COFFEE = "LAST_COFFEE"

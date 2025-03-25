@@ -390,14 +390,20 @@ class DosePulsesType(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
-class DoseSettings(DataClassJSONMixin):
-    """Dose configuration."""
+class BaseDoseSettings(DataClassJSONMixin):
+    """Base dose settings"""
 
-    dose_index: DoseIndex = field(metadata=field_options(alias="doseIndex"))
     dose: float
     dose_min: float = field(metadata=field_options(alias="doseMin"))
     dose_max: float = field(metadata=field_options(alias="doseMax"))
     dose_step: int = field(metadata=field_options(alias="doseStep"))
+
+
+@dataclass(kw_only=True)
+class DoseSettings(BaseDoseSettings):
+    """Dose configuration."""
+
+    dose_index: DoseIndex = field(metadata=field_options(alias="doseIndex"))
 
 
 @dataclass(kw_only=True)
@@ -408,3 +414,40 @@ class HotWaterDose(BaseWidgetOutput):
     enabled: bool
     enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
     doses: list[DoseSettings] = field(default_factory=list)
+
+
+@dataclass(kw_only=True)
+class BrewByWeightDoses(BaseWidgetOutput):
+    """Settings for brew by weight."""
+
+    widget_type = WidgetType.CM_BREW_BY_WEIGHT_DOSES
+    scale_connected: bool = field(
+        metadata=field_options(alias="scaleConnected"), default=False
+    )
+    available_modes: list[DoseMode] = field(
+        metadata=field_options(alias="availableModes"), default_factory=list
+    )
+    mode: DoseMode
+    doses: BrewByWeightDoseSettings
+
+
+@dataclass(kw_only=True)
+class BrewByWeightDoseSettings(DataClassJSONMixin):
+    """Brew by weight doses."""
+
+    dose_1: BaseDoseSettings = field(metadata=field_options(alias="Dose1"))
+    dose_2: BaseDoseSettings = field(metadata=field_options(alias="Dose2"))
+
+
+@dataclass(kw_only=True)
+class ThingScale(BaseWidgetOutput):
+    """Settings for ThingScale."""
+
+    widget_type = WidgetType.THING_SCALE
+
+    name: str
+    connected: bool
+    battery_level: float = field(metadata=field_options(alias="batteryLevel"))
+    calibration_required: bool = field(
+        metadata=field_options(alias="calibrationRequired")
+    )
