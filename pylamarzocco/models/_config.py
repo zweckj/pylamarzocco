@@ -21,15 +21,15 @@ from pylamarzocco.const import (
     SteamTargetLevel,
     WidgetType,
 )
-from pylamarzocco.models.general import (
+
+from ._general import (
     BaseWidget,
     BaseWidgetOutput,
     CommandResponse,
     Thing,
     Widget,
 )
-
-from pylamarzocco.models.update import FirmwareSettings
+from ._update import FirmwareSettings
 
 
 @dataclass(kw_only=True)

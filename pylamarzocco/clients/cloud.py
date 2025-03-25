@@ -30,28 +30,27 @@ from pylamarzocco.const import (
     StompMessageType,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
-from pylamarzocco.models.authentication import (
+from pylamarzocco.models import (
     AccessToken,
-    RefreshTokenRequest,
-    SigninTokenRequest,
-)
-from pylamarzocco.models.config import (
+    CommandResponse,
     DashboardDeviceConfig,
     DashboardWSConfig,
+    PrebrewSettingTimes,
+    RefreshTokenRequest,
+    SecondsInOut,
+    SigninTokenRequest,
+    Statistics,
     Thing,
     ThingSettings,
-    PrebrewSettingTimes,
-    SecondsInOut,
+    UpdateDetails,
+    WakeUpScheduleSettings,
+    WebSocketDetails,
 )
-from pylamarzocco.models.general import CommandResponse, WebSocketDetails
-from pylamarzocco.models.schedule import WakeUpScheduleSettings
-from pylamarzocco.models.statistics import Statistics
 from pylamarzocco.util import (
     decode_stomp_ws_message,
     encode_stomp_ws_message,
     is_success,
 )
-from pylamarzocco.models.update import UpdateDetails
 
 _LOGGER = logging.getLogger(__name__)
 

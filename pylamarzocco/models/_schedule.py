@@ -10,7 +10,8 @@ from mashumaro.config import BaseConfig
 from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import SmartStandByType, WeekDay
-from pylamarzocco.models.general import CommandResponse, Thing
+
+from ._general import CommandResponse, Thing
 
 
 @dataclass(kw_only=True)

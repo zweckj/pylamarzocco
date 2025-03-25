@@ -1,8 +1,12 @@
 """Testing models serialization and deserialization."""
 
 from syrupy import SnapshotAssertion
-from pylamarzocco.models.config import DashboardWSConfig
-from pylamarzocco.models.schedule import SmartWakeUpScheduleWSConfig, SchedulingSettings
+
+from pylamarzocco.models import (
+    DashboardWSConfig,
+    SchedulingSettings,
+    SmartWakeUpScheduleWSConfig,
+)
 
 from .conftest import load_fixture
 

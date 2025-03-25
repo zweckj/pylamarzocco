@@ -5,7 +5,7 @@ import json
 from syrupy import SnapshotAssertion
 
 from pylamarzocco.const import StompMessageType
-from pylamarzocco.models.config import DashboardWSConfig
+from pylamarzocco.models import DashboardWSConfig
 from pylamarzocco.util import decode_stomp_ws_message, encode_stomp_ws_message
 
 from .conftest import load_fixture
@@ -13,7 +13,7 @@ from .conftest import load_fixture
 
 async def test_encode_stomp_ws_message(snapshot: SnapshotAssertion) -> None:
     """Test the encode_stomp_ws_message function."""
-    
+
     fixture = load_fixture("machine", "config_micra.json")
     device_config = DashboardWSConfig.from_dict(fixture)
     headers = {
@@ -21,7 +21,9 @@ async def test_encode_stomp_ws_message(snapshot: SnapshotAssertion) -> None:
         "id": "test-id",
         "subscription": "test-subscription",
     }
-    message = encode_stomp_ws_message(StompMessageType.MESSAGE, headers, json.dumps(fixture))
+    message = encode_stomp_ws_message(
+        StompMessageType.MESSAGE, headers, json.dumps(fixture)
+    )
     assert message == snapshot
 
     msg_type, headers_decoded, body = decode_stomp_ws_message(message)
@@ -30,4 +32,3 @@ async def test_encode_stomp_ws_message(snapshot: SnapshotAssertion) -> None:
     assert msg_type is StompMessageType.MESSAGE
     assert headers_decoded == headers
     assert DashboardWSConfig.from_json(body) == device_config
-

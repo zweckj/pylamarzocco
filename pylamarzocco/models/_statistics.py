@@ -9,8 +9,9 @@ from typing import Any
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
 
-from pylamarzocco.const import WidgetType, DoseIndex, DoseMode
-from pylamarzocco.models.general import Thing, Widget, BaseWidgetOutput
+from pylamarzocco.const import DoseIndex, DoseMode, WidgetType
+
+from ._general import BaseWidgetOutput, Thing, Widget
 
 
 @dataclass(kw_only=True)

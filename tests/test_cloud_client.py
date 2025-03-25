@@ -16,8 +16,7 @@ from pylamarzocco.const import (
     SteamTargetLevel,
     WeekDay,
 )
-from pylamarzocco.models.schedule import WakeUpScheduleSettings
-from pylamarzocco.models.update import UpdateDetails
+from pylamarzocco.models import WakeUpScheduleSettings
 
 from .conftest import load_fixture
 
