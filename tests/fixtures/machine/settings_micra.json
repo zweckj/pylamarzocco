@@ -19,8 +19,13 @@
       "buildVersion": "v5.0.9",
       "changeLog": "What’s new in this version:\n\n* New La Marzocco compatibility\n* Improved connectivity\n* Improved pairing process\n* Improved statistics\n* Boilers heating time\n* Last backflush date (GS3 MP excluded)\n* Automatic gateway updates option",
       "thingModelCode": "LineaMicra",
-      "status": "Updated",
-      "availableUpdate": null
+      "status": "ToUpdate",
+      "availableUpdate": {
+        "type": "Gateway",
+        "buildVersion": "v5.0.10",
+        "changeLog": "What’s new in this version:\n\n* fixed an issue that could cause the machine powers up outside scheduled time\n* minor improvements",
+        "thingModelCode": "LineaMicra"
+      }
     },
     {
       "type": "Machine",

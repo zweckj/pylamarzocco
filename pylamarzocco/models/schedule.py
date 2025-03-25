@@ -10,7 +10,7 @@ from mashumaro.config import BaseConfig
 from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import SmartStandByType, WeekDay
-from pylamarzocco.models.general import CommandResponse, Device
+from pylamarzocco.models.general import CommandResponse, Thing
 
 
 @dataclass(kw_only=True)
@@ -32,7 +32,7 @@ class WakeUpScheduleSettings(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
-class SchedulingSettings(Device):
+class SchedulingSettings(Thing):
     """Scheduling settings."""
 
     smart_wake_up_sleep_supported: bool = field(

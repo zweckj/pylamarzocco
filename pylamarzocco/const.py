@@ -161,3 +161,24 @@ class WeekDay(StrEnum):
     FRIDAY = "Friday"
     SATURDAY = "Saturday"
     SUNDAY = "Sunday"
+
+
+class UpdateStatus(StrEnum):
+    """Update statuses."""
+
+    TO_UPDATE = "ToUpdate"
+    UPDATED = "Updated"
+
+
+class UpdateCommandStatus(StrEnum):
+    """Update progress statuses."""
+
+    IN_PROGRESS = "InProgress"
+
+
+class UpdateProgressInfo(StrEnum):
+    """Update progress info."""
+
+    DOWNLOAD = "download"
+    REBOOTING = "rebooting"
+    STARTING_PROCESS = "starting process"

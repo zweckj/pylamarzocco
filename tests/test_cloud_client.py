@@ -17,6 +17,7 @@ from pylamarzocco.const import (
     WeekDay,
 )
 from pylamarzocco.models.schedule import WakeUpScheduleSettings
+from pylamarzocco.models.update import UpdateDetails
 
 from .conftest import load_fixture
 
@@ -389,3 +390,49 @@ async def test_set_wake_up_schedule(
     }
     assert result.status == "Pending"
     assert result.error_code is None
+
+
+async def test_get_update_details(
+    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+) -> None:
+    """Test getting the update details for a thing."""
+    serial = "MR123456"
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/update-fw"
+    mock_aioresponse.get(
+        url=url,
+        status=200,
+        payload={
+            "status": "ToUpdate",
+            "commandStatus": "InProgress",
+            "progressInfo": "download",
+            "progressPercentage": 10,
+        },
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.get_thing_firmware(serial)
+    assert result.to_dict() == snapshot
+
+
+async def test_start_update(
+    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+) -> None:
+    """Test getting the update details for a thing."""
+    serial = "MR123456"
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/update-fw"
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload={
+            "status": "ToUpdate",
+            "commandStatus": "InProgress",
+            "progressInfo": "starting process",
+            "progressPercentage": None,
+        },
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.update_firmware(serial)
+    assert result.to_dict() == snapshot

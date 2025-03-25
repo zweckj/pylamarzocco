@@ -38,8 +38,8 @@ from pylamarzocco.models.authentication import (
 from pylamarzocco.models.config import (
     DashboardDeviceConfig,
     DashboardWSConfig,
-    Device,
-    DeviceSettings,
+    Thing,
+    ThingSettings,
     PrebrewSettingTimes,
     SecondsInOut,
 )
@@ -51,6 +51,7 @@ from pylamarzocco.util import (
     encode_stomp_ws_message,
     is_success,
 )
+from pylamarzocco.models.update import UpdateDetails
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -175,11 +176,11 @@ class LaMarzoccoCloudClient:
         )
 
     # region config
-    async def list_things(self) -> list[Device]:
+    async def list_things(self) -> list[Thing]:
         """Get all things."""
         url = f"{CUSTOMER_APP_URL}/things"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
-        return [Device.from_dict(device) for device in result]
+        return [Thing.from_dict(device) for device in result]
 
     async def get_thing_dashboard(self, serial_number: str) -> DashboardDeviceConfig:
         """Get the dashboard of a thing."""
@@ -187,17 +188,24 @@ class LaMarzoccoCloudClient:
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return DashboardDeviceConfig.from_dict(result)
 
-    async def get_thing_settings(self, serial_number: str) -> DeviceSettings:
+    async def get_thing_settings(self, serial_number: str) -> ThingSettings:
         """Get the settings of a thing."""
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/settings"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
-        return DeviceSettings.from_dict(result)
+        return ThingSettings.from_dict(result)
 
     async def get_thing_statistics(self, serial_number: str) -> Statistics:
         """Get the statistics of a thing."""
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/stats"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return Statistics.from_dict(result)
+
+    async def get_thing_firmware(self, serial_number: str) -> UpdateDetails:
+        """Get the firmware settings of a thing."""
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/update-fw"
+        result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
+        return UpdateDetails.from_dict(result)
+
     # endregion
 
     # region websocket
@@ -284,16 +292,16 @@ class LaMarzoccoCloudClient:
             _LOGGER.warning("Websocket reconnected")
             self.websocket.disconnected = False
 
-    async def __handle_websocket_message(self, ws: ClientWebSocketResponse, msg: WSMessage) -> bool:
+    async def __handle_websocket_message(
+        self, ws: ClientWebSocketResponse, msg: WSMessage
+    ) -> bool:
         """Handle receiving a websocket message. Return True for disconnect."""
         if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
             _LOGGER.debug("Websocket disconnected gracefully")
             self.websocket.disconnected = True
             return True
         if msg.type == WSMsgType.ERROR:
-            _LOGGER.warning(
-                "Websocket disconnected with error %s", ws.exception()
-            )
+            _LOGGER.warning("Websocket disconnected with error %s", ws.exception())
             self.websocket.disconnected = True
             return True
         _LOGGER.debug("Received websocket message: %s", msg)
@@ -444,6 +452,15 @@ class LaMarzoccoCloudClient:
             url=url, method=HTTPMethod.POST, data=schedule.to_dict()
         )
         return CommandResponse.from_dict(response[0])
+
+    async def update_firmware(
+        self,
+        serial_number: str,
+    ) -> UpdateDetails:
+        """Install firmware update."""
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/update-fw"
+        response = await self._rest_api_call(url=url, method=HTTPMethod.POST)
+        return UpdateDetails.from_dict(response)
 
 
 # endregion

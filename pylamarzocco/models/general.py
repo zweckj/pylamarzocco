@@ -27,7 +27,7 @@ class CommandResponse(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
-class Device(DataClassJSONMixin):
+class Thing(DataClassJSONMixin):
     """Generic device information t"""
 
     serial_number: str = field(metadata=field_options(alias="serialNumber"))
@@ -79,6 +79,7 @@ class Widget(BaseWidget):
 @dataclass(kw_only=True)
 class BaseWidgetOutput(DataClassJSONMixin):
     """Widget configuration."""
+
 
 @dataclass
 class WebSocketDetails:

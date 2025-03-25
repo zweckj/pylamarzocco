@@ -15,7 +15,6 @@ from pylamarzocco.const import (
     DoseIndex,
     DoseIndexType,
     DoseMode,
-    FirmwareType,
     MachineMode,
     MachineState,
     PreExtractionMode,
@@ -26,9 +25,11 @@ from pylamarzocco.models.general import (
     BaseWidget,
     BaseWidgetOutput,
     CommandResponse,
-    Device,
+    Thing,
     Widget,
 )
+
+from pylamarzocco.models.update import FirmwareSettings
 
 
 @dataclass(kw_only=True)
@@ -55,7 +56,7 @@ class DashboardConfig(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
-class DashboardDeviceConfig(DashboardConfig, Device):
+class DashboardDeviceConfig(DashboardConfig, Thing):
     """Device configuration from API."""
 
 
@@ -277,21 +278,7 @@ class BackFlush(BaseWidgetOutput):
 
 
 @dataclass(kw_only=True)
-class FirmwareSettings(DataClassJSONMixin):
-    """Firmware settings configuration."""
-
-    type: FirmwareType
-    build_version: str = field(metadata=field_options(alias="buildVersion"))
-    change_log: str = field(metadata=field_options(alias="changeLog"))
-    thing_model_code: str = field(metadata=field_options(alias="thingModelCode"))
-    status: str
-    available_update: dict | None = field(
-        metadata=field_options(alias="availableUpdate"), default=None
-    )
-
-
-@dataclass(kw_only=True)
-class DeviceSettings(Device):
+class ThingSettings(Thing):
     """Device settings configuration."""
 
     actual_firmwares: list[FirmwareSettings] = field(

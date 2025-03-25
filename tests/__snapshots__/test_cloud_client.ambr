@@ -1057,7 +1057,17 @@
   dict({
     'actual_firmwares': list([
       dict({
-        'available_update': None,
+        'available_update': dict({
+          'build_version': 'v5.0.10',
+          'change_log': '''
+            What’s new in this version:
+            
+            * fixed an issue that could cause the machine powers up outside scheduled time
+            * minor improvements
+          ''',
+          'thing_model_code': 'LineaMicra',
+          'type': 'Gateway',
+        }),
         'build_version': 'v5.0.9',
         'change_log': '''
           What’s new in this version:
@@ -1070,7 +1080,7 @@
           * Last backflush date (GS3 MP excluded)
           * Automatic gateway updates option
         ''',
-        'status': 'Updated',
+        'status': 'ToUpdate',
         'thing_model_code': 'LineaMicra',
         'type': 'Gateway',
       }),
@@ -1110,6 +1120,14 @@
     'wifi_ssid': 'MyWifi',
   })
 # ---
+# name: test_get_update_details
+  dict({
+    'command_status': 'InProgress',
+    'progress_info': 'download',
+    'progress_percentage': 10,
+    'status': 'ToUpdate',
+  })
+# ---
 # name: test_list_things
   dict({
     'available_firmware_update': False,
@@ -1126,5 +1144,13 @@
     'require_firmware_update': False,
     'serial_number': 'MR123456',
     'type': 'CoffeeMachine',
+  })
+# ---
+# name: test_start_update
+  dict({
+    'command_status': 'InProgress',
+    'progress_info': 'starting process',
+    'progress_percentage': None,
+    'status': 'ToUpdate',
   })
 # ---
