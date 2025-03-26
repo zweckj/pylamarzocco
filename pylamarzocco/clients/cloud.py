@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from asyncio import Future, wait_for
 from collections.abc import Callable
 from http import HTTPMethod
 from typing import Any
@@ -23,6 +24,7 @@ from aiohttp.client_exceptions import ClientError, InvalidURL
 from pylamarzocco.const import (
     BASE_URL,
     CUSTOMER_APP_URL,
+    CommandStatus,
     DoseIndexType,
     PreExtractionMode,
     SmartStandByType,
@@ -56,6 +58,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 TOKEN_TIME_TO_REFRESH = 4 * 60 * 60  # 4 hours
+PENDING_COMMAND_TIMEOUT = 10
 
 
 class LaMarzoccoCloudClient:
@@ -81,6 +84,7 @@ class LaMarzoccoCloudClient:
         self.notification_callback: Callable[[DashboardWSConfig], Any] | None = (
             notification_callback
         )
+        self._pending_commands: dict[str, Future[CommandResponse]] = {}
 
     # region Authentication
     async def async_get_access_token(self) -> str:
@@ -319,11 +323,51 @@ class LaMarzoccoCloudClient:
         if message is None:
             return
         config = DashboardWSConfig.from_json(message)
+
+        # notify if there is the result for a pending command
+        for command in config.commands:
+            if command.id in self._pending_commands:
+                self._pending_commands[command.id].set_result(command)
+
+        # notify any external listeners
         if self.notification_callback is not None:
             self.notification_callback(config)
 
     # endregion
     # region commands
+
+    async def __execute_command(
+        self, serial_number: str, command: str, data: dict[str, Any] | None = None
+    ) -> bool:
+        """Execute a command on a machine."""
+        response = await self._rest_api_call(
+            url=f"{CUSTOMER_APP_URL}/things/{serial_number}/command/{command}",
+            method=HTTPMethod.POST,
+            data=data,
+        )
+        cr = CommandResponse.from_dict(response[0])
+        future: Future[CommandResponse] = Future()
+        self._pending_commands[cr.id] = future
+        try:
+            # Wait for the future to be completed or timeout
+            pending_result = await wait_for(future, PENDING_COMMAND_TIMEOUT)
+        except TimeoutError:
+            _LOGGER.debug("Timed out waiting for websocket condition")
+            return False
+        finally:
+            # Clean up the future if it's still in the dictionary
+            self._pending_commands.pop(cr.id, None)
+
+        if pending_result.status is CommandStatus.SUCCESS:
+            return True
+        _LOGGER.debug(
+            "Command to %s failed with status %s, error_details: %s",
+            command,
+            pending_result.status,
+            pending_result.error_code or "",
+        )
+        return False
+
     async def set_power(
         self,
         serial_number: str,
@@ -334,66 +378,64 @@ class LaMarzoccoCloudClient:
         mode = "BrewingMode" if enabled else "StandBy"
 
         data = {"mode": mode}
-        url = (
-            f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineChangeMode"
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineChangeMode", data
         )
-        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response[0])
 
     async def set_steam(
         self,
         serial_number: str,
         enabled: bool,
         boiler_index: int = 1,
-    ) -> CommandResponse:
+    ) -> bool:
         """Turn Steamboiler on or off"""
 
         data = {
             "boilerIndex": boiler_index,
             "enabled": enabled,
         }
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSteamBoilerEnabled"
-        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response[0])
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingSteamBoilerEnabled", data
+        )
 
     async def set_steam_target_level(
         self,
         serial_number: str,
         target_level: SteamTargetLevel,
         boiler_index: int = 1,
-    ) -> CommandResponse:
+    ) -> bool:
         """Set Steamboiler target level"""
 
         data = {
             "boilerIndex": boiler_index,
             "targetLevel": target_level.value,
         }
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSteamBoilerTargetLevel"
-        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response[0])
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingSteamBoilerTargetLevel", data
+        )
 
     async def start_backflush_cleaning(
         self,
         serial_number: str,
-    ) -> CommandResponse:
+    ) -> bool:
         """Start backflush cleaning"""
 
         data = {"enabled": True}
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineBackFlushStartCleaning"
-        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response[0])
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineBackFlushStartCleaning", data
+        )
 
     async def change_pre_extraction_mode(
         self, serial_number: str, prebrew_mode: PreExtractionMode
-    ) -> CommandResponse:
+    ) -> bool:
         """Change pre-extraction mode"""
 
         data = {
             "mode": prebrew_mode.value,
         }
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachinePreBrewingChangeMode"
-        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response[0])
+        return await self.__execute_command(
+            serial_number, "CoffeeMachinePreBrewingChangeMode", data
+        )
 
     async def change_pre_extraction_times(
         self,
@@ -402,7 +444,7 @@ class LaMarzoccoCloudClient:
         seconds_out: float,
         group_index: int = 1,
         dose_index: DoseIndexType = DoseIndexType.BY_GROUP,
-    ) -> CommandResponse:
+    ) -> bool:
         """Change pre-extraction times"""
 
         data = PrebrewSettingTimes(
@@ -413,44 +455,40 @@ class LaMarzoccoCloudClient:
             group_index=group_index,
             dose_index=dose_index,
         )
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachinePreBrewingChangeTimes"
-        response = await self._rest_api_call(
-            url=url, method=HTTPMethod.POST, data=data.to_dict()
+        return await self.__execute_command(
+            serial_number, "CoffeeMachinePreBrewingChangeTimes", data.to_dict()
         )
-        return CommandResponse.from_dict(response[0])
 
     async def set_smart_standby(
         self, serial_number: str, enabled: bool, minutes: int, after: SmartStandByType
-    ) -> CommandResponse:
+    ) -> bool:
         """Set smart standby"""
 
         data = {"enabled": enabled, "minutes": minutes, "after": after.value}
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSettingSmartStandBy"
-        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response[0])
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingSmartStandBy", data
+        )
 
     async def delete_wakeup_schedule(
         self,
         serial_number: str,
         schedule_id: str,
-    ) -> CommandResponse:
+    ) -> bool:
         """Delete a smart wakeup schedule"""
         data = {"id": schedule_id}
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineDeleteWakeUpSchedule"
-        response = await self._rest_api_call(url=url, method=HTTPMethod.POST, data=data)
-        return CommandResponse.from_dict(response[0])
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineDeleteWakeUpSchedule", data
+        )
 
     async def set_wakeup_schedule(
         self,
         serial_number: str,
         schedule: WakeUpScheduleSettings,
-    ) -> CommandResponse:
+    ) -> bool:
         """Set smart wakeup schedule"""
-        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/command/CoffeeMachineSetWakeUpSchedule"
-        response = await self._rest_api_call(
-            url=url, method=HTTPMethod.POST, data=schedule.to_dict()
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSetWakeUpSchedule", schedule.to_dict()
         )
-        return CommandResponse.from_dict(response[0])
 
     async def update_firmware(
         self,

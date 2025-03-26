@@ -67,6 +67,15 @@ class WidgetType(StrEnum):
     LAST_COFFEE = "LAST_COFFEE"
 
 
+class CommandStatus(StrEnum):
+    """Command statuses."""
+
+    SUCCESS = "Success"
+    ERROR = "Error"
+    TIMEOUT = "Timeout"
+    PENDING = "Pending"
+
+
 class SteamTargetLevel(StrEnum):
     """Steam target levels."""
 

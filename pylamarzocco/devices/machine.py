@@ -9,36 +9,8 @@ from copy import deepcopy
 from time import time
 from typing import Any
 
-from pylamarzocco.legacy.clients.bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.legacy.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.legacy.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.legacy.const import (
-    BoilerType,
-    FirmwareType,
-    MachineModel,
-    PhysicalKey,
-    PrebrewMode,
-    SmartStandbyMode,
-    SteamLevel,
-)
-from pylamarzocco.legacy.exceptions import ClientNotInitialized, UnknownWebSocketMessage
-from pylamarzocco.legacy.helpers import (
-    parse_boilers,
-    parse_brew_by_weight_settings,
-    parse_cloud_statistics,
-    parse_coffee_doses,
-    parse_preinfusion_settings,
-    parse_scale,
-    parse_smart_standby,
-    parse_wakeup_sleep_entries,
-)
-from pylamarzocco.legacy.devices.base import LaMarzoccoBaseDevice
-from pylamarzocco.legacy.models import (
-    LaMarzoccoCoffeeStatistics,
-    LaMarzoccoMachineConfig,
-    LaMarzoccoSmartStandby,
-    LaMarzoccoWakeUpSleepEntry,
-)
+from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
+from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,45 +22,10 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
         self,
         model: MachineModel,
         serial_number: str,
-        name: str,
         cloud_client: LaMarzoccoCloudClient | None = None,
-        local_client: LaMarzoccoLocalClient | None = None,
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
-        """Initializes a new LaMarzoccoCoffeeMachine instance"""
-
-        super().__init__(
-            model=model,
-            serial_number=serial_number,
-            name=name,
-            cloud_client=cloud_client,
-            local_client=local_client,
-            bluetooth_client=bluetooth_client,
-        )
-        self.config: LaMarzoccoMachineConfig = LaMarzoccoMachineConfig(
-            turned_on=False,
-            boilers={},
-            prebrew_mode=PrebrewMode.DISABLED,
-            plumbed_in=False,
-            prebrew_configuration={},
-            dose_hot_water=0,
-            doses={},
-            water_contact=False,
-            brew_active=False,
-            backflush_enabled=False,
-            brew_active_duration=0,
-            smart_standby=LaMarzoccoSmartStandby(
-                enabled=False,
-                minutes=10,
-                mode=SmartStandbyMode.POWER_ON,
-            ),
-            wake_up_sleep_entries={},
-        )
-        self.statistics: LaMarzoccoCoffeeStatistics = LaMarzoccoCoffeeStatistics(
-            drink_stats={},
-            continous=0,
-            total_flushes=0,
-        )
+        """Initializes a new LaMarzoccoMachine instance"""
 
         self._notify_callback: Callable[[], None] | None = None
         self._system_info: dict[str, Any] | None = None
@@ -569,7 +506,7 @@ class LaMarzoccoMachine(LaMarzoccoBaseDevice):
                 settings["preinfusionSettings"] = json.loads(msg["PreinfusionSettings"])
 
                 self.config.prebrew_mode, self.config.prebrew_configuration = (
-                    parse_preinfusion_settings(MachineModel(self.model),  settings)
+                    parse_preinfusion_settings(MachineModel(self.model), settings)
                 )
                 property_updated = True
 

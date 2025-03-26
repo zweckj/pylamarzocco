@@ -1,7 +1,8 @@
 """Testing the cloud client."""
 
+from collections.abc import Generator
 from http import HTTPMethod
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from aioresponses import aioresponses
@@ -11,12 +12,13 @@ from yarl import URL
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
 from pylamarzocco.const import (
     CUSTOMER_APP_URL,
+    CommandStatus,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
     WeekDay,
 )
-from pylamarzocco.models import WakeUpScheduleSettings
+from pylamarzocco.models import CommandResponse, WakeUpScheduleSettings
 
 from .conftest import load_fixture
 
@@ -27,6 +29,27 @@ MOCK_COMMAND_RESPONSE = [
         "error_code": None,
     }
 ]
+
+
+@pytest.fixture(name="mock_ws_command_response")
+def websocket_command_response() -> CommandResponse:
+    """Mock websocket command response."""
+    return CommandResponse(
+        id="mock-id",
+        status=CommandStatus.SUCCESS,
+    )
+
+
+@pytest.fixture(autouse=True, name="mock_wait_for_ws_command_response")
+def wait_for_ws_command_response(
+    mock_ws_command_response: CommandResponse,
+) -> Generator[AsyncMock]:
+    """Mock the wait for."""
+    with patch(
+        "pylamarzocco.clients.cloud.wait_for",
+        new=AsyncMock(return_value=mock_ws_command_response),
+    ) as mock_wait_for:
+        yield mock_wait_for
 
 
 async def test_access_token(mock_aioresponse: aioresponses) -> None:
@@ -169,12 +192,58 @@ async def test_set_power(mock_aioresponse: aioresponses) -> None:
     )
 
     client = LaMarzoccoCloudClient("test", "test")
+
     result = await client.set_power(serial, False)
 
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {"mode": "StandBy"}
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
+
+
+async def test_failing_response(
+    mock_aioresponse: aioresponses, mock_ws_command_response: CommandResponse
+) -> None:
+    """Tests failing response from websocket"""
+
+    serial = "MR123456"
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    mock_ws_command_response.status = CommandStatus.ERROR
+
+    client = LaMarzoccoCloudClient("test", "test")
+
+    result = await client.set_power(serial, False)
+    assert result is False
+
+
+async def test_pending_command_timeout(
+    mock_aioresponse: aioresponses, mock_wait_for_ws_command_response: AsyncMock
+) -> None:
+    """Tests failing response from websocket"""
+
+    serial = "MR123456"
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    mock_wait_for_ws_command_response.side_effect = TimeoutError
+
+    client = LaMarzoccoCloudClient("test", "test")
+
+    result = await client.set_power(serial, False)
+    assert result is False
 
 
 async def test_set_steam(mock_aioresponse: aioresponses) -> None:
@@ -198,8 +267,7 @@ async def test_set_steam(mock_aioresponse: aioresponses) -> None:
         "boilerIndex": 1,
         "enabled": True,
     }
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
 
 
 async def test_set_steam_target_level(mock_aioresponse: aioresponses) -> None:
@@ -222,8 +290,7 @@ async def test_set_steam_target_level(mock_aioresponse: aioresponses) -> None:
         "boilerIndex": 1,
         "targetLevel": "Level1",
     }
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
 
 
 async def test_start_backflush_cleaning(mock_aioresponse: aioresponses) -> None:
@@ -243,8 +310,7 @@ async def test_start_backflush_cleaning(mock_aioresponse: aioresponses) -> None:
     assert call.kwargs["json"] == {
         "enabled": True,
     }
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
 
 
 async def test_change_pre_extraction_mode(
@@ -270,8 +336,7 @@ async def test_change_pre_extraction_mode(
     assert call.kwargs["json"] == {
         "mode": "PreBrewing",
     }
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
 
 
 async def test_change_pre_extraction_times(
@@ -297,8 +362,7 @@ async def test_change_pre_extraction_times(
         "groupIndex": 1,
         "doseIndex": "ByGroup",
     }
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
 
 
 async def test_setting_smart_standby(
@@ -324,8 +388,7 @@ async def test_setting_smart_standby(
         "minutes": 20,
         "after": "LastBrewing",
     }
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
 
 
 async def test_set_wake_up_schedule(
@@ -367,8 +430,7 @@ async def test_set_wake_up_schedule(
         "steamBoiler": False,
     }
     assert call.kwargs["json"] == expected_output
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
 
     # existing schedule
     result = await client.set_wakeup_schedule(
@@ -387,8 +449,7 @@ async def test_set_wake_up_schedule(
         "id": "aBc23d",
         **expected_output,
     }
-    assert result.status == "Pending"
-    assert result.error_code is None
+    assert result is True
 
 
 async def test_get_update_details(

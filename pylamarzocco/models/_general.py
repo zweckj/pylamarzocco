@@ -12,7 +12,7 @@ from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
 from mashumaro.types import Discriminator
 
-from pylamarzocco.const import DeviceType, ModelCode, WidgetType
+from pylamarzocco.const import CommandStatus, DeviceType, ModelCode, WidgetType
 
 
 @dataclass(kw_only=True)
@@ -20,7 +20,7 @@ class CommandResponse(DataClassJSONMixin):
     """Response for change setting endpoint"""
 
     id: str
-    status: str
+    status: CommandStatus
     error_code: str | None = field(
         metadata=field_options(alias="errorCode"), default=None
     )
@@ -28,7 +28,7 @@ class CommandResponse(DataClassJSONMixin):
 
 @dataclass(kw_only=True)
 class Thing(DataClassJSONMixin):
-    """Generic device information t"""
+    """Generic device information."""
 
     serial_number: str = field(metadata=field_options(alias="serialNumber"))
     type: DeviceType

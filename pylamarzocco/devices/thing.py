@@ -1,60 +1,23 @@
 """Base class for all La Marzocco IoT devices."""
 
-import asyncio
-import logging
-from abc import abstractmethod
-from typing import Any
-
-from bleak import BleakError
-
-from pylamarzocco.legacy.clients.bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.legacy.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.legacy.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.legacy.const import FirmwareType
-from pylamarzocco.legacy.exceptions import (
-    AuthFail,
-    BluetoothConnectionFailed,
-    ClientNotInitialized,
-    RequestNotSuccessful,
-)
-from pylamarzocco.legacy.helpers import parse_firmware
-from pylamarzocco.legacy.models import (
-    LaMarzoccoDeviceConfig,
-    LaMarzoccoFirmware,
-    LaMarzoccoStatistics,
-)
+from pylamarzocco.models import Thing
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class LaMarzoccoBaseDevice:
+class LaMarzoccoThing:
     """Base class for all La Marzocco devices"""
 
-    _cloud_client: LaMarzoccoCloudClient | None
+    cloud_client: LaMarzoccoCloudClient | None
 
     def __init__(
         self,
-        model: str,
         serial_number: str,
         name: str,
         cloud_client: LaMarzoccoCloudClient | None = None,
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
         """Initializes a new LaMarzoccoMachine instance"""
-
-
-    @property
-    def cloud_client(self) -> LaMarzoccoCloudClient:
-        """Ensure that the cloud client is initialized."""
-
-        if self._cloud_client is None:
-            raise ClientNotInitialized("Cloud client not initialized")
-        return self._cloud_client
-
-    @property
-    def full_model_name(self) -> str:
-        """Return the full model name of the device."""
-        return self.model
 
     async def get_statistics(self) -> None:
         """Update the statistics"""
@@ -68,7 +31,7 @@ class LaMarzoccoBaseDevice:
         self.firmware = await self.cloud_client.get_firmware(self.serial_number)
 
     @abstractmethod
-    async def update_firmware(self, component: FirmwareType) -> bool:
+    async def update_firmware(self) -> None:
         """Update firmware"""
 
     async def _bluetooth_command_with_cloud_fallback(
