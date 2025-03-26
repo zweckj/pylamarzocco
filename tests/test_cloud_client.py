@@ -122,11 +122,12 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
 
 @pytest.mark.parametrize("model", ["micra", "gs3av", "mini"])
 async def test_get_thing_dashboard(
-    mock_aioresponse: aioresponses, model: str, snapshot: SnapshotAssertion
+    mock_aioresponse: aioresponses,
+    model: str,
+    serial: str,
+    snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting the dashboard for a thing."""
-
-    serial = "MR123456"
 
     mock_aioresponse.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
@@ -140,11 +141,9 @@ async def test_get_thing_dashboard(
 
 
 async def test_get_thing_settings(
-    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the settings for a thing."""
-
-    serial = "MR123456"
 
     mock_aioresponse.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/settings",
@@ -174,10 +173,9 @@ async def test_list_things(
 
 
 async def test_get_statistics(
-    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the list of things."""
-    serial = "MR123456"
 
     mock_aioresponse.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/stats",
@@ -190,10 +188,11 @@ async def test_get_statistics(
     assert result.to_dict() == snapshot
 
 
-async def test_set_power(mock_aioresponse: aioresponses) -> None:
+async def test_set_power(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
     """Test setting the power for a thing."""
-
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
@@ -213,10 +212,11 @@ async def test_set_power(mock_aioresponse: aioresponses) -> None:
 
 
 @pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
-async def test_set_power_with_ws_validation(mock_aioresponse: aioresponses) -> None:
+async def test_set_power_with_ws_validation(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
     """Test setting the power for a thing, validate the command from ws."""
-
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
@@ -239,10 +239,9 @@ async def test_set_power_with_ws_validation(mock_aioresponse: aioresponses) -> N
 async def test_failing_response_ws_validation(
     mock_aioresponse: aioresponses,
     mock_ws_command_response: CommandResponse,
+    serial: str,
 ) -> None:
     """Tests failing response from websocket"""
-
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
@@ -262,11 +261,11 @@ async def test_failing_response_ws_validation(
 
 @pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
 async def test_pending_command_ws_validation_timeout(
-    mock_aioresponse: aioresponses, mock_wait_for_ws_command_response: AsyncMock
+    mock_aioresponse: aioresponses,
+    mock_wait_for_ws_command_response: AsyncMock,
+    serial: str,
 ) -> None:
     """Tests failing response from websocket"""
-
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
@@ -285,11 +284,11 @@ async def test_pending_command_ws_validation_timeout(
 
 
 async def test_disconnected_ws_returns_true(
-    mock_aioresponse: aioresponses, mock_websocket: MagicMock
+    mock_aioresponse: aioresponses,
+    mock_websocket: MagicMock,
+    serial: str,
 ) -> None:
     """Test setting the power for a thing."""
-
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
@@ -310,10 +309,11 @@ async def test_disconnected_ws_returns_true(
     assert result is True
 
 
-async def test_set_steam(mock_aioresponse: aioresponses) -> None:
+async def test_set_steam(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
     """Test setting the steam for a thing."""
-
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerEnabled"
 
@@ -334,10 +334,11 @@ async def test_set_steam(mock_aioresponse: aioresponses) -> None:
     assert result is True
 
 
-async def test_set_steam_target_level(mock_aioresponse: aioresponses) -> None:
+async def test_set_steam_target_level(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
     """Test setting the steam target level for a thing."""
-
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerTargetLevel"
 
@@ -357,9 +358,11 @@ async def test_set_steam_target_level(mock_aioresponse: aioresponses) -> None:
     assert result is True
 
 
-async def test_start_backflush_cleaning(mock_aioresponse: aioresponses) -> None:
+async def test_start_backflush_cleaning(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
     """Test starting backflush cleaning for a thing."""
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBackFlushStartCleaning"
     mock_aioresponse.post(
@@ -379,9 +382,9 @@ async def test_start_backflush_cleaning(mock_aioresponse: aioresponses) -> None:
 
 async def test_change_pre_extraction_mode(
     mock_aioresponse: aioresponses,
+    serial: str,
 ) -> None:
     """Test changing the pre-extraction mode for a thing."""
-    serial = "MR123456"
 
     url = (
         f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingChangeMode"
@@ -405,9 +408,9 @@ async def test_change_pre_extraction_mode(
 
 async def test_change_pre_extraction_times(
     mock_aioresponse: aioresponses,
+    serial: str,
 ) -> None:
     """Test changing the pre-extraction times for a thing."""
-    serial = "MR123456"
 
     url = (
         f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingChangeTimes"
@@ -431,9 +434,9 @@ async def test_change_pre_extraction_times(
 
 async def test_setting_smart_standby(
     mock_aioresponse: aioresponses,
+    serial: str,
 ) -> None:
     """Test setting the smart standby for a thing."""
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSmartStandBy"
     mock_aioresponse.post(
@@ -457,9 +460,9 @@ async def test_setting_smart_standby(
 
 async def test_set_wake_up_schedule(
     mock_aioresponse: aioresponses,
+    serial: str,
 ) -> None:
     """Test setting the wake up schedule for a thing."""
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSetWakeUpSchedule"
     mock_aioresponse.post(
@@ -517,10 +520,9 @@ async def test_set_wake_up_schedule(
 
 
 async def test_get_update_details(
-    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the update details for a thing."""
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/update-fw"
     mock_aioresponse.get(
@@ -540,10 +542,9 @@ async def test_get_update_details(
 
 
 async def test_start_update(
-    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the update details for a thing."""
-    serial = "MR123456"
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/update-fw"
     mock_aioresponse.post(

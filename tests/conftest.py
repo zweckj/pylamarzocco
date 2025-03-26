@@ -38,3 +38,8 @@ def mock_access_token(mock_aioresponse: aioresponses) -> Generator[AsyncMock]:
         },
         repeat=True,
     )
+
+
+@pytest.fixture(name="serial")
+def mock_serial() -> str:
+    return "MR123456"
