@@ -1,8 +1,10 @@
 """Testing the cloud client."""
 
+from __future__ import annotations
+
 from collections.abc import Generator
 from http import HTTPMethod
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aioresponses import aioresponses
@@ -40,7 +42,7 @@ def websocket_command_response() -> CommandResponse:
     )
 
 
-@pytest.fixture(autouse=True, name="mock_wait_for_ws_command_response")
+@pytest.fixture(name="mock_wait_for_ws_command_response")
 def wait_for_ws_command_response(
     mock_ws_command_response: CommandResponse,
 ) -> Generator[AsyncMock]:
@@ -50,6 +52,16 @@ def wait_for_ws_command_response(
         new=AsyncMock(return_value=mock_ws_command_response),
     ) as mock_wait_for:
         yield mock_wait_for
+
+
+@pytest.fixture(name="mock_websocket")
+def websocket_mock() -> Generator[MagicMock]:
+    """Return a mocked websocket"""
+    mock_ws = MagicMock()
+    mock_ws.ws.closed = False
+
+    with patch("pylamarzocco.clients.cloud.WebSocketDetails", return_value=mock_ws):
+        yield mock_ws
 
 
 async def test_access_token(mock_aioresponse: aioresponses) -> None:
@@ -200,8 +212,33 @@ async def test_set_power(mock_aioresponse: aioresponses) -> None:
     assert result is True
 
 
-async def test_failing_response(
-    mock_aioresponse: aioresponses, mock_ws_command_response: CommandResponse
+@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
+async def test_set_power_with_ws_validation(mock_aioresponse: aioresponses) -> None:
+    """Test setting the power for a thing, validate the command from ws."""
+
+    serial = "MR123456"
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+
+    result = await client.set_power(serial, False)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"mode": "StandBy"}
+    assert result is True
+
+
+@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
+async def test_failing_response_ws_validation(
+    mock_aioresponse: aioresponses,
+    mock_ws_command_response: CommandResponse,
 ) -> None:
     """Tests failing response from websocket"""
 
@@ -223,7 +260,8 @@ async def test_failing_response(
     assert result is False
 
 
-async def test_pending_command_timeout(
+@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
+async def test_pending_command_ws_validation_timeout(
     mock_aioresponse: aioresponses, mock_wait_for_ws_command_response: AsyncMock
 ) -> None:
     """Tests failing response from websocket"""
@@ -244,6 +282,32 @@ async def test_pending_command_timeout(
 
     result = await client.set_power(serial, False)
     assert result is False
+
+
+async def test_disconnected_ws_returns_true(
+    mock_aioresponse: aioresponses, mock_websocket: MagicMock
+) -> None:
+    """Test setting the power for a thing."""
+
+    serial = "MR123456"
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+
+    mock_websocket.ws.closed = True
+
+    result = await client.set_power(serial, False)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"mode": "StandBy"}
+    assert result is True
 
 
 async def test_set_steam(mock_aioresponse: aioresponses) -> None:
