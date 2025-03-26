@@ -15,6 +15,7 @@ from pylamarzocco.const import (
     DoseIndex,
     DoseIndexType,
     DoseMode,
+    FirmwareType,
     MachineMode,
     MachineState,
     PreExtractionMode,
@@ -315,6 +316,13 @@ class ThingSettings(Thing):
         metadata=field_options(alias="autoUpdateSupported"), default=False
     )
     auto_update: bool = field(metadata=field_options(alias="autoUpdate"), default=False)
+    firmwares: dict[FirmwareType, FirmwareSettings] = field(default_factory=dict)
+
+    @classmethod
+    def __post_deserialize__(cls, obj: ThingSettings) -> ThingSettings:
+        # move the firmware to a dict with type as key
+        obj.firmwares = {firmware.type: firmware for firmware in obj.actual_firmwares}
+        return obj
 
 
 @dataclass(kw_only=True)

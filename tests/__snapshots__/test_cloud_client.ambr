@@ -1454,6 +1454,44 @@
     'cropster_active': False,
     'cropster_supported': False,
     'factory_reset_supported': True,
+    'firmwares': dict({
+      'Gateway': dict({
+        'available_update': dict({
+          'build_version': 'v5.0.10',
+          'change_log': '''
+            What’s new in this version:
+            
+            * fixed an issue that could cause the machine powers up outside scheduled time
+            * minor improvements
+          ''',
+          'thing_model_code': 'LineaMicra',
+          'type': 'Gateway',
+        }),
+        'build_version': 'v5.0.9',
+        'change_log': '''
+          What’s new in this version:
+          
+          * New La Marzocco compatibility
+          * Improved connectivity
+          * Improved pairing process
+          * Improved statistics
+          * Boilers heating time
+          * Last backflush date (GS3 MP excluded)
+          * Automatic gateway updates option
+        ''',
+        'status': 'ToUpdate',
+        'thing_model_code': 'LineaMicra',
+        'type': 'Gateway',
+      }),
+      'Machine': dict({
+        'available_update': None,
+        'build_version': 'v1.17',
+        'change_log': 'None',
+        'status': 'Updated',
+        'thing_model_code': 'LineaMicra',
+        'type': 'Machine',
+      }),
+    }),
     'hemro_active': False,
     'hemro_supported': False,
     'image_url': 'https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-bianco.png',
