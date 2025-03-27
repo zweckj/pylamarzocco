@@ -6,7 +6,9 @@ import logging
 
 from pylamarzocco.models import ThingSchedulingSettings
 
-from ._thing import LaMarzoccoThing, cloud_only
+from pylamarzocco.const import SteamTargetLevel, ModelCode
+
+from ._thing import LaMarzoccoThing, cloud_only, models_supported
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,3 +39,18 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             enabled (bool): True to turn on, False to turn off.
         """
         await self._bluetooth_command_with_cloud_fallback("set_steam", enabled=enabled)
+
+    @cloud_only
+    @models_supported((ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R))
+    async def set_steam_level(self, level: SteamTargetLevel) -> None:
+        """Set the steam target level."""
+        assert self.cloud_client
+        await self.cloud_client.set_steam_target_level(self.serial_number, level)
+
+    @cloud_only
+    async def set_coffee_target_temperature(self, temperature: float) -> None:
+        """Set the coffee target temperature of the machine."""
+        assert self.cloud_client
+        await self.cloud_client.set_coffee_target_temperature(
+            self.serial_number, temperature
+        )

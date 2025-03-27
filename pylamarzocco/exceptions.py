@@ -25,3 +25,7 @@ class CloudOnlyFunctionality(Exception):
         super().__init__(
             "Functionality is cloud only, but cloud client not initialized."
         )
+
+
+class UnsupportedModel(Exception):
+    """Raised when a certain functionality is only available on certain models."""

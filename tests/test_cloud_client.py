@@ -58,7 +58,7 @@ def wait_for_ws_command_response(
 def websocket_mock() -> Generator[MagicMock]:
     """Return a mocked websocket"""
     mock_ws = MagicMock()
-    mock_ws.ws.closed = False
+    mock_ws.connected = True
 
     with patch("pylamarzocco.clients._cloud.WebSocketDetails", return_value=mock_ws):
         yield mock_ws
@@ -156,7 +156,7 @@ async def test_get_thing_settings(
     assert result.to_dict() == snapshot
 
 
-async def test_get_thing_scheudle(
+async def test_get_thing_schedule(
     mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the schedule for a thing."""
@@ -316,7 +316,7 @@ async def test_disconnected_ws_returns_true(
 
     client = LaMarzoccoCloudClient("test", "test")
 
-    mock_websocket.ws.closed = True
+    mock_websocket.connected = False
 
     result = await client.set_power(serial, False)
 
@@ -346,6 +346,31 @@ async def test_set_steam(
     assert call.kwargs["json"] == {
         "boilerIndex": 1,
         "enabled": True,
+    }
+    assert result is True
+
+
+async def test_set_coffee_temperature(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the steam for a thing."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingCoffeeBoilerTargetTemperature"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.set_coffee_target_temperature(serial, 94.584)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "boilerIndex": 1,
+        "targetTemperature": 94.6,
     }
     assert result is True
 

@@ -1404,7 +1404,7 @@
     ]),
   })
 # ---
-# name: test_get_thing_scheudle
+# name: test_get_thing_schedule
   dict({
     'available_firmware_update': False,
     'ble_auth_token': None,

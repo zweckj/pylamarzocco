@@ -81,10 +81,30 @@ class BaseWidgetOutput(DataClassJSONMixin):
     """Widget configuration."""
 
 
-@dataclass
 class WebSocketDetails:
     """Hold the websocket connection."""
 
-    ws: ClientWebSocketResponse | None = field(default=None)
-    disconnected: bool = field(default=True)
-    disconnect_callback: Callable[[], Awaitable] | None = field(default=None)
+    def __init__(
+        self,
+        ws: ClientWebSocketResponse | None = None,
+        disconnect_callback: Callable[[], Awaitable] | None = None,
+    ):
+        """Initialize the class.
+
+        Args:
+            disconnect_callback: Callback to call to actively disconnect from WS
+        """
+        self._disconnect_callback: Callable[[], Awaitable] | None = disconnect_callback
+        self._ws = ws
+
+    @property
+    def connected(self) -> bool:
+        """Return the connection status of the ws."""
+        if self._ws is None:
+            return False
+        return not self._ws.closed
+
+    async def disconnect(self) -> None:
+        """Disconnect from the websocket."""
+        if self._disconnect_callback:
+            await self._disconnect_callback()

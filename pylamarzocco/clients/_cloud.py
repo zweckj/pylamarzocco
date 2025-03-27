@@ -80,6 +80,7 @@ class LaMarzoccoCloudClient:
         self._access_token: AccessToken | None = None
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
+        self.websocket_disconnected = True  # used for logging disconnect once
 
     # region Authentication
     async def async_get_access_token(self) -> str:
@@ -233,14 +234,14 @@ class LaMarzoccoCloudClient:
                     ):
                         break
         except TimeoutError as err:
-            if not self.websocket.disconnected:
+            if not self.websocket_disconnected:
                 _LOGGER.warning("Websocket disconnected: Connection timed out")
-                self.websocket.disconnected = True
+                self.websocket_disconnected = True
             _LOGGER.debug("Websocket timeout: %s", err)
         except ClientConnectionError as err:
-            if not self.websocket.disconnected:
+            if not self.websocket_disconnected:
                 _LOGGER.warning("Websocket disconnected: Could not connect: %s", err)
-                self.websocket.disconnected = True
+                self.websocket_disconnected = True
             _LOGGER.debug("Websocket disconnected: Could not connect: %s", err)
         except InvalidURL:
             _LOGGER.error("Invalid URL for websocket.")
@@ -251,7 +252,6 @@ class LaMarzoccoCloudClient:
         serial_number: str,
     ) -> None:
         """Setup the websocket connection."""
-        self.websocket.ws = ws
 
         connect_msg = encode_stomp_ws_message(
             StompMessageType.CONNECT,
@@ -297,10 +297,10 @@ class LaMarzoccoCloudClient:
             await ws.send_str(disconnect_msg)
             await ws.close()
 
-        self.websocket.disconnect_callback = disconnect_websocket
-        if self.websocket.disconnected:
+        self.websocket = WebSocketDetails(ws, disconnect_websocket)
+        if self.websocket_disconnected:
             _LOGGER.warning("Websocket reconnected")
-            self.websocket.disconnected = False
+            self.websocket_disconnected = False
 
     async def __handle_websocket_message(
         self,
@@ -312,11 +312,11 @@ class LaMarzoccoCloudClient:
         """Handle receiving a websocket message. Return True for disconnect."""
         if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
             _LOGGER.debug("Websocket disconnected gracefully")
-            self.websocket.disconnected = True
+            self.websocket_disconnected = True
             return True
         if msg.type == WSMsgType.ERROR:
             _LOGGER.warning("Websocket disconnected with error %s", ws.exception())
-            self.websocket.disconnected = True
+            self.websocket_disconnected = True
             return True
         _LOGGER.debug("Received websocket message: %s", msg)
         try:
@@ -366,7 +366,7 @@ class LaMarzoccoCloudClient:
         self._pending_commands[cr.id] = future
 
         # if the websocket is closed we don't want to wait for confirmation
-        if self.websocket.ws is None or self.websocket.ws.closed:
+        if not self.websocket.connected:
             return True
 
         try:
@@ -434,6 +434,18 @@ class LaMarzoccoCloudClient:
         }
         return await self.__execute_command(
             serial_number, "CoffeeMachineSettingSteamBoilerTargetLevel", data
+        )
+
+    async def set_coffee_target_temperature(
+        self, serial_number: str, target_temperature: float, boiler_index: int = 1
+    ) -> bool:
+        """Set the target temperature for the coffee boiler."""
+        data = {
+            "boilerIndex": boiler_index,
+            "targetTemperature": round(target_temperature, 1),
+        }
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingCoffeeBoilerTargetTemperature", data
         )
 
     async def start_backflush_cleaning(
