@@ -21,6 +21,7 @@ from pylamarzocco.models import (
     ThingSettings,
     ThingStatistics,
     WebSocketDetails,
+    UpdateDetails,
 )
 
 from pylamarzocco.const import ModelCode
@@ -174,6 +175,12 @@ class LaMarzoccoThing:
             self.serial_number
         )
 
+    @cloud_only
+    async def get_firmware(self) -> UpdateDetails:
+        """Get the firmware details for a thing."""
+        assert self._cloud_client
+        return await self._cloud_client.get_thing_firmware(self.serial_number)
+
     def _websocket_dashboard_update_received(
         self, config: ThingDashboardWebsocketConfig
     ) -> None:
@@ -200,6 +207,12 @@ class LaMarzoccoThing:
         await self._cloud_client.websocket_connect(
             self.serial_number, self._websocket_dashboard_update_received
         )
+
+    @cloud_only
+    async def update_firmware(self) -> None:
+        """Start the firmware update process"""
+        assert self._cloud_client
+        await self._cloud_client.update_firmware(self.serial_number)
 
     def to_dict(self) -> dict[Any, Any]:
         """Return self in dict represenation."""

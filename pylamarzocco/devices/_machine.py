@@ -4,8 +4,18 @@ from __future__ import annotations
 
 import logging
 
-from pylamarzocco.const import ModelCode, SteamTargetLevel
-from pylamarzocco.models import ThingSchedulingSettings
+from pylamarzocco.const import (
+    ModelCode,
+    SteamTargetLevel,
+    PreExtractionMode,
+    SmartStandByType,
+)
+from pylamarzocco.models import (
+    ThingSchedulingSettings,
+    PrebrewSettingTimes,
+    SecondsInOut,
+    WakeUpScheduleSettings,
+)
 
 from ._thing import LaMarzoccoThing, cloud_only, models_supported
 
@@ -53,3 +63,56 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         await self._cloud_client.set_coffee_target_temperature(
             self.serial_number, temperature
         )
+
+    @cloud_only
+    async def start_backflush(self) -> None:
+        """Trigger the backflush."""
+        assert self._cloud_client
+        await self._cloud_client.start_backflush_cleaning()
+
+    @cloud_only
+    async def set_pre_extraction_mode(self, mode: PreExtractionMode) -> None:
+        """Set the preextraction mode (prebrew/preinfusion)."""
+        assert self._cloud_client
+        await self._cloud_client.change_pre_extraction_mode(self.serial_number, mode)
+
+    @cloud_only
+    async def set_pre_extraction_times(
+        self, seconds_on: float, seconds_off: float
+    ) -> None:
+        """Set the times for pre-extraction."""
+        assert self._cloud_client
+        await self._cloud_client.change_pre_extraction_times(
+            self.serial_number,
+            PrebrewSettingTimes(
+                times=SecondsInOut(seconds_in=seconds_on, seconds_out=seconds_off)
+            ),
+        )
+
+    @cloud_only
+    async def set_smart_standby(
+        self, enabled: bool, minutes: int, after: SmartStandByType
+    ) -> None:
+        """Set the smart standby mode."""
+        assert self._cloud_client
+        await self._cloud_client.set_smart_standby(
+            self.serial_number, enabled, minutes, after
+        )
+
+    @cloud_only
+    async def delete_wakeup_schedule(
+        self,
+        schedule_id: str,
+    ) -> None:
+        """Delete an existing schedule."""
+        assert self._cloud_client
+        await self._cloud_client.delete_wakeup_schedule(self.serial_number, schedule_id)
+
+    @cloud_only
+    async def set_wakeup_schedule(
+        self,
+        schedule: WakeUpScheduleSettings,
+    ) -> None:
+        """Set an existing or a new schedule."""
+        assert self._cloud_client
+        await self._cloud_client.set_wakeup_schedule(self.serial_number, schedule)
