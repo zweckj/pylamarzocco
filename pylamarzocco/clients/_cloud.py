@@ -73,18 +73,16 @@ class LaMarzoccoCloudClient:
         client: ClientSession | None = None,
         notification_callback: Callable[[DashboardWSConfig], Any] | None = None,
     ) -> None:
-        if client is None:
-            self._client = ClientSession()
-        else:
-            self._client = client
+        """Set the cloud client up."""
+        self._client = ClientSession() if client is None else client
         self._username = username
         self._password = password
         self._access_token: AccessToken | None = None
+        self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
         self.notification_callback: Callable[[DashboardWSConfig], Any] | None = (
             notification_callback
         )
-        self._pending_commands: dict[str, Future[CommandResponse]] = {}
 
     # region Authentication
     async def async_get_access_token(self) -> str:
@@ -358,10 +356,11 @@ class LaMarzoccoCloudClient:
             pending_result = await wait_for(future, PENDING_COMMAND_TIMEOUT)
         except TimeoutError:
             _LOGGER.debug("Timed out waiting for websocket condition")
-            return False
-        finally:
-            # Clean up the future if it's still in the dictionary
             self._pending_commands.pop(cr.id, None)
+            return False
+
+        # Clean up the future if it's still in the dictionary
+        self._pending_commands.pop(cr.id, None)
 
         if pending_result.status is CommandStatus.SUCCESS:
             return True
@@ -393,7 +392,7 @@ class LaMarzoccoCloudClient:
         enabled: bool,
         boiler_index: int = 1,
     ) -> bool:
-        """Turn Steamboiler on or off"""
+        """Turn steam boiler on or off"""
 
         data = {
             "boilerIndex": boiler_index,
@@ -409,7 +408,7 @@ class LaMarzoccoCloudClient:
         target_level: SteamTargetLevel,
         boiler_index: int = 1,
     ) -> bool:
-        """Set Steamboiler target level"""
+        """Set steam boiler target level"""
 
         data = {
             "boilerIndex": boiler_index,

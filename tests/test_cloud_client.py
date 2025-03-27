@@ -11,7 +11,7 @@ from aioresponses import aioresponses
 from syrupy import SnapshotAssertion
 from yarl import URL
 
-from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
+from pylamarzocco.clients import LaMarzoccoCloudClient
 from pylamarzocco.const import (
     CUSTOMER_APP_URL,
     CommandStatus,

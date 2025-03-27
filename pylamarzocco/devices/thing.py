@@ -1,6 +1,13 @@
 """Base class for all La Marzocco IoT devices."""
 
-from pylamarzocco.models import Thing
+import logging
+from typing import Any
+
+from bleak.exc import BleakError
+
+from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
+from pylamarzocco.exceptions import BluetoothConnectionFailed
+from pylamarzocco.models import DashboardConfig, ThingSettings, Statistics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -8,31 +15,19 @@ _LOGGER = logging.getLogger(__name__)
 class LaMarzoccoThing:
     """Base class for all La Marzocco devices"""
 
-    cloud_client: LaMarzoccoCloudClient | None
+    dashboard: DashboardConfig
 
     def __init__(
         self,
         serial_number: str,
-        name: str,
         cloud_client: LaMarzoccoCloudClient | None = None,
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
-        """Initializes a new LaMarzoccoMachine instance"""
+        """Initializes a new LaMarzocco thing."""
 
-    async def get_statistics(self) -> None:
-        """Update the statistics"""
-
-        raw_statistics = await self.cloud_client.get_statistics(self.serial_number)
-        self.parse_statistics(raw_statistics)
-
-    async def get_firmware(self) -> None:
-        """Update the firmware"""
-
-        self.firmware = await self.cloud_client.get_firmware(self.serial_number)
-
-    @abstractmethod
-    async def update_firmware(self) -> None:
-        """Update firmware"""
+        self.serial_number = serial_number
+        self.cloud_client = cloud_client
+        self.bluetooth_client = bluetooth_client
 
     async def _bluetooth_command_with_cloud_fallback(
         self,
@@ -42,8 +37,8 @@ class LaMarzoccoThing:
         """Send a command to the machine via Bluetooth, falling back to cloud if necessary."""
 
         # First, try with bluetooth
-        if self._bluetooth_client is not None:
-            func = getattr(self._bluetooth_client, command)
+        if self.bluetooth_client is not None:
+            func = getattr(self.bluetooth_client, command)
             try:
                 _LOGGER.debug(
                     "Sending command %s over bluetooth with params %s",
@@ -54,7 +49,7 @@ class LaMarzoccoThing:
             except (BleakError, BluetoothConnectionFailed) as exc:
                 msg = "Could not send command to bluetooth device, even though initalized."
 
-                if self._cloud_client is None:
+                if self.cloud_client is None:
                     _LOGGER.error(
                         "%s Cloud client not initialized, cannot fallback. Full error %s",
                         msg,
@@ -68,18 +63,21 @@ class LaMarzoccoThing:
                 return True
 
         # no bluetooth or failed, try with cloud
-        if self._cloud_client is not None:
+        if self.cloud_client is not None:
             _LOGGER.debug(
                 "Sending command %s over cloud with params %s",
                 command,
                 str(kwargs),
             )
-            func = getattr(self._cloud_client, command)
+            func = getattr(self.cloud_client, command)
             kwargs["serial_number"] = self.serial_number
             if await func(**kwargs):
                 return True
         return False
 
-    def __str__(self) -> str:
-        config = dict(vars(self.config).items())
-        return str(config)
+    async def get_dashboard(self) -> None:
+        self.dashboard = await self.cloud_client.get_thing_dashboard(self.serial_number)
+
+    def to_dict(self) -> dict[Any, Any]:
+        """Return self in dict represenation."""
+        return self.config.to_dict()
