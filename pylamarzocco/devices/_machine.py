@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import logging
 
+from pylamarzocco.const import ModelCode, SteamTargetLevel
 from pylamarzocco.models import ThingSchedulingSettings
-
-from pylamarzocco.const import SteamTargetLevel, ModelCode
 
 from ._thing import LaMarzoccoThing, cloud_only, models_supported
 
@@ -21,8 +20,8 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     @cloud_only
     async def get_schedule(self) -> None:
         """Get the schedule for this machine."""
-        assert self.cloud_client
-        self.schedule = await self.cloud_client.get_thing_schedule(self.serial_number)
+        assert self._cloud_client
+        self.schedule = await self._cloud_client.get_thing_schedule(self.serial_number)
 
     async def set_power(self, enabled: bool) -> None:
         """Set the power of the machine.
@@ -44,13 +43,13 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     @models_supported((ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R))
     async def set_steam_level(self, level: SteamTargetLevel) -> None:
         """Set the steam target level."""
-        assert self.cloud_client
-        await self.cloud_client.set_steam_target_level(self.serial_number, level)
+        assert self._cloud_client
+        await self._cloud_client.set_steam_target_level(self.serial_number, level)
 
     @cloud_only
     async def set_coffee_target_temperature(self, temperature: float) -> None:
         """Set the coffee target temperature of the machine."""
-        assert self.cloud_client
-        await self.cloud_client.set_coffee_target_temperature(
+        assert self._cloud_client
+        await self._cloud_client.set_coffee_target_temperature(
             self.serial_number, temperature
         )
