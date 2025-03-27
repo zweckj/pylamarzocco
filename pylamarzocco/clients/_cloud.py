@@ -474,23 +474,12 @@ class LaMarzoccoCloudClient:
     async def change_pre_extraction_times(
         self,
         serial_number: str,
-        seconds_in: float,
-        seconds_out: float,
-        group_index: int = 1,
-        dose_index: DoseIndexType = DoseIndexType.BY_GROUP,
+        times: PrebrewSettingTimes,
     ) -> bool:
         """Change pre-extraction times"""
 
-        data = PrebrewSettingTimes(
-            times=SecondsInOut(
-                seconds_in=round(seconds_in, 1),
-                seconds_out=round(seconds_out, 1),
-            ),
-            group_index=group_index,
-            dose_index=dose_index,
-        )
         return await self.__execute_command(
-            serial_number, "CoffeeMachinePreBrewingChangeTimes", data.to_dict()
+            serial_number, "CoffeeMachinePreBrewingChangeTimes", times.to_dict()
         )
 
     async def set_smart_standby(

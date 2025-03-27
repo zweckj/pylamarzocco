@@ -20,7 +20,12 @@ from pylamarzocco.const import (
     SteamTargetLevel,
     WeekDay,
 )
-from pylamarzocco.models import CommandResponse, WakeUpScheduleSettings
+from pylamarzocco.models import (
+    CommandResponse,
+    PrebrewSettingTimes,
+    SecondsInOut,
+    WakeUpScheduleSettings,
+)
 
 from .conftest import load_fixture
 
@@ -463,7 +468,10 @@ async def test_change_pre_extraction_times(
     )
 
     client = LaMarzoccoCloudClient("test", "test")
-    result = await client.change_pre_extraction_times(serial, 5.12, 5.03)
+    result = await client.change_pre_extraction_times(
+        serial,
+        PrebrewSettingTimes(times=SecondsInOut(seconds_in=5.12, seconds_out=5.03)),
+    )
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {
         "times": {"In": 5.1, "Out": 5.0},

@@ -336,6 +336,11 @@ class PrebrewSettingTimes(DataClassJSONMixin):
         metadata=field_options(alias="doseIndex"), default=DoseIndexType.BY_GROUP
     )
 
+    def __pre_serialize__(self) -> PrebrewSettingTimes:
+        self.times.seconds_in = round(self.times.seconds_in, 1)
+        self.times.seconds_out = round(self.times.seconds_out, 1)
+        return self
+
     class Config(BaseConfig):
         """Config for Mashumaro serialization."""
 
