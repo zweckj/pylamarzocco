@@ -1,5 +1,8 @@
 """Base class for all La Marzocco IoT devices."""
 
+from __future__ import annotations
+
+import asyncio
 import logging
 from typing import Any
 
@@ -7,7 +10,7 @@ from bleak.exc import BleakError
 
 from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.exceptions import BluetoothConnectionFailed
-from pylamarzocco.models import DashboardConfig, ThingSettings, Statistics
+from pylamarzocco.models import DashboardDeviceConfig, ThingSettings, ThingStatistics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -15,7 +18,9 @@ _LOGGER = logging.getLogger(__name__)
 class LaMarzoccoThing:
     """Base class for all La Marzocco devices"""
 
-    dashboard: DashboardConfig
+    dashboard: DashboardDeviceConfig
+    settings: ThingSettings
+    statistics: ThingStatistics
 
     def __init__(
         self,
@@ -28,6 +33,20 @@ class LaMarzoccoThing:
         self.serial_number = serial_number
         self.cloud_client = cloud_client
         self.bluetooth_client = bluetooth_client
+
+    @classmethod
+    async def create(
+        cls,
+        serial_number: str,
+        cloud_client: LaMarzoccoCloudClient | None = None,
+        bluetooth_client: LaMarzoccoBluetoothClient | None = None,
+    ) -> LaMarzoccoThing:
+        """Initialize a client with all data."""
+
+        self = cls(serial_number, cloud_client, bluetooth_client)
+        await asyncio.gather(
+            self.get_dashboard(), self.get_settings(), self.get_statistics()
+        )
 
     async def _bluetooth_command_with_cloud_fallback(
         self,
@@ -76,8 +95,19 @@ class LaMarzoccoThing:
         return False
 
     async def get_dashboard(self) -> None:
+        """Get the dashboard for a thing."""
         self.dashboard = await self.cloud_client.get_thing_dashboard(self.serial_number)
+
+    async def get_settings(self) -> None:
+        """Get the dashboard for a thing."""
+        self.settings = await self.cloud_client.get_thing_settings(self.serial_number)
+
+    async def get_statistics(self) -> None:
+        """Get the statistics for a thing."""
+        self.statistics = await self.cloud_client.get_thing_statistics(
+            self.serial_number
+        )
 
     def to_dict(self) -> dict[Any, Any]:
         """Return self in dict represenation."""
-        return self.config.to_dict()
+        return self.dashboard.to_dict()

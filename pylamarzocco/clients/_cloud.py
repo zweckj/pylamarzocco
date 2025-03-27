@@ -41,7 +41,7 @@ from pylamarzocco.models import (
     RefreshTokenRequest,
     SecondsInOut,
     SigninTokenRequest,
-    Statistics,
+    ThingStatistics,
     Thing,
     ThingSettings,
     UpdateDetails,
@@ -195,11 +195,11 @@ class LaMarzoccoCloudClient:
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return ThingSettings.from_dict(result)
 
-    async def get_thing_statistics(self, serial_number: str) -> Statistics:
+    async def get_thing_statistics(self, serial_number: str) -> ThingStatistics:
         """Get the statistics of a thing."""
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/stats"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
-        return Statistics.from_dict(result)
+        return ThingStatistics.from_dict(result)
 
     async def get_thing_firmware(self, serial_number: str) -> UpdateDetails:
         """Get the firmware settings of a thing."""

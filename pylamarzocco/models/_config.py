@@ -23,14 +23,14 @@ from pylamarzocco.const import (
     WidgetType,
 )
 
-from ._general import (
+from . import (
     BaseWidget,
     BaseWidgetOutput,
     CommandResponse,
+    FirmwareSettings,
     Thing,
     Widget,
 )
-from ._update import FirmwareSettings
 
 
 @dataclass(kw_only=True)

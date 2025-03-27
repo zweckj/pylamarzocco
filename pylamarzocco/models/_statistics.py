@@ -11,11 +11,11 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import DoseIndex, DoseMode, WidgetType
 
-from ._general import BaseWidgetOutput, Thing, Widget
+from . import BaseWidgetOutput, Thing, Widget
 
 
 @dataclass(kw_only=True)
-class Statistics(Thing):
+class ThingStatistics(Thing):
     """Statistics model."""
 
     firmwares: str | None = field(

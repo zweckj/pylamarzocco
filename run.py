@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 from pylamarzocco.devices.base import LaMarzoccoBaseDevice
-from pylamarzocco.devices.machine import LaMarzoccoMachine
+from pylamarzocco.devices._machine import LaMarzoccoMachine
 from pylamarzocco.const import MachineModel
 from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
 from pylamarzocco.clients.cloud import LaMarzoccoCloudClient

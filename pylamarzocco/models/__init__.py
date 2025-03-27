@@ -51,7 +51,7 @@ from ._statistics import (
     CoffeeHistoryEvent,
     LastCoffee,
     LastCoffeeList,
-    Statistics,
+    ThingStatistics,
 )
 from ._update import FirmwareSettings, FirmwareVersion, UpdateDetails
 
@@ -96,12 +96,12 @@ __all__ = [
     "SigninTokenRequest",
     "SmartWakeUpScheduleWSConfig",
     "SmartWakeUpSleepSettings",
-    "Statistics",
     "SteamBoilerLevel",
     "SteamBoilerTemperature",
     "Thing",
     "ThingScale",
     "ThingSettings",
+    "ThingStatistics",
     "UpdateDetails",
     "WakeUpScheduleSettings",
     "WebSocketDetails",

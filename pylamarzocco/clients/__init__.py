@@ -1,7 +1,7 @@
 """Initialize the client."""
 
-from .bluetooth import LaMarzoccoBluetoothClient
-from .cloud import LaMarzoccoCloudClient
+from ._bluetooth import LaMarzoccoBluetoothClient
+from ._cloud import LaMarzoccoCloudClient
 
 
 __all__ = [

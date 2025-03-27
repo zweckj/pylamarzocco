@@ -11,7 +11,7 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import SmartStandByType, WeekDay
 
-from ._general import CommandResponse, Thing
+from . import CommandResponse, Thing
 
 
 @dataclass(kw_only=True)
