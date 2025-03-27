@@ -11,7 +11,7 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import SmartStandByType, WeekDay
 
-from . import CommandResponse, Thing
+from ._general import CommandResponse, Thing
 
 
 @dataclass(kw_only=True)
@@ -74,7 +74,7 @@ class SmartWakeUpSleepSettings(DataClassJSONMixin):
 
 # ws SUBSCRIBE /ws/sn/SERIAL/scheduling
 @dataclass(kw_only=True)
-class SmartWakeUpScheduleWSConfig(DataClassJSONMixin):
+class SmartWakeUpScheduleWebsocketConfig(DataClassJSONMixin):
     """Smart wake up schedule settings from websocket."""
 
     connected: bool

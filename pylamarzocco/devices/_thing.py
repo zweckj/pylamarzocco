@@ -5,12 +5,18 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import Any
+from collections.abc import Callable
 
 from bleak.exc import BleakError
 
 from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.exceptions import BluetoothConnectionFailed
-from pylamarzocco.models import DashboardDeviceConfig, ThingSettings, ThingStatistics
+from pylamarzocco.models import (
+    ThingDashboardConfig,
+    ThingDashboardWebsocketConfig,
+    ThingSettings,
+    ThingStatistics,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 class LaMarzoccoThing:
     """Base class for all La Marzocco devices"""
 
-    dashboard: DashboardDeviceConfig
+    dashboard: ThingDashboardConfig
     settings: ThingSettings
     statistics: ThingStatistics
 
@@ -33,6 +39,9 @@ class LaMarzoccoThing:
         self.serial_number = serial_number
         self.cloud_client = cloud_client
         self.bluetooth_client = bluetooth_client
+        self._update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = (
+            None
+        )
 
     @classmethod
     async def create(
@@ -47,6 +56,7 @@ class LaMarzoccoThing:
         await asyncio.gather(
             self.get_dashboard(), self.get_settings(), self.get_statistics()
         )
+        return self
 
     async def _bluetooth_command_with_cloud_fallback(
         self,
@@ -106,6 +116,31 @@ class LaMarzoccoThing:
         """Get the statistics for a thing."""
         self.statistics = await self.cloud_client.get_thing_statistics(
             self.serial_number
+        )
+
+    def _websocket_dashboard_update_received(
+        self, config: ThingDashboardWebsocketConfig
+    ) -> None:
+        """Handler for receiving a websocket message."""
+        self.dashboard.widgets = config.widgets
+        self.dashboard.config = config.config
+
+        if self._update_callback is not None:
+            self._update_callback(config)
+
+    async def connect_dashboard_websocket(
+        self,
+        update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = None,
+    ) -> None:
+        """Connect to the cloud websocket for the dashboard.
+
+        Args:
+            update_callback: Optional callback to be called when update is received
+        """
+        self._update_callback = update_callback
+
+        await self.cloud_client.websocket_connect(
+            self.serial_number, self._websocket_dashboard_update_received
         )
 
     def to_dict(self) -> dict[Any, Any]:

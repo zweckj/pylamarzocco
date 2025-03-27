@@ -48,7 +48,7 @@ def wait_for_ws_command_response(
 ) -> Generator[AsyncMock]:
     """Mock the wait for."""
     with patch(
-        "pylamarzocco.clients.cloud.wait_for",
+        "pylamarzocco.clients._cloud.wait_for",
         new=AsyncMock(return_value=mock_ws_command_response),
     ) as mock_wait_for:
         yield mock_wait_for
@@ -60,7 +60,7 @@ def websocket_mock() -> Generator[MagicMock]:
     mock_ws = MagicMock()
     mock_ws.ws.closed = False
 
-    with patch("pylamarzocco.clients.cloud.WebSocketDetails", return_value=mock_ws):
+    with patch("pylamarzocco.clients._cloud.WebSocketDetails", return_value=mock_ws):
         yield mock_ws
 
 
@@ -114,7 +114,7 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
         },
     )
 
-    with patch("pylamarzocco.clients.cloud.TOKEN_TIME_TO_REFRESH", new=432001):
+    with patch("pylamarzocco.clients._cloud.TOKEN_TIME_TO_REFRESH", new=432001):
         result = await client.async_get_access_token()
 
     assert result == "new-token"

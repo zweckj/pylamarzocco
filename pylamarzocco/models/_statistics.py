@@ -11,7 +11,7 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import DoseIndex, DoseMode, WidgetType
 
-from . import BaseWidgetOutput, Thing, Widget
+from ._general import BaseWidgetOutput, Thing, Widget
 
 
 @dataclass(kw_only=True)

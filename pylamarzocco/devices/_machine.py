@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import logging
-from collections.abc import Callable
 
-from typing import Any
-
-from pylamarzocco.clients import LaMarzoccoCloudClient, LaMarzoccoBluetoothClient
 from . import LaMarzoccoThing
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,10 +20,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         """
         await self._bluetooth_command_with_cloud_fallback("set_power", enabled=enabled)
 
-    async def set_steam(
-        self,
-        enabled: bool,
-    ) -> None:
+    async def set_steam(self, enabled: bool) -> None:
         """Set the steam of the machine.
 
         Args:

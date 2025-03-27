@@ -23,18 +23,19 @@ from pylamarzocco.const import (
     WidgetType,
 )
 
-from . import (
+from ._general import (
     BaseWidget,
     BaseWidgetOutput,
     CommandResponse,
-    FirmwareSettings,
     Thing,
     Widget,
 )
 
+from ._update import FirmwareSettings
+
 
 @dataclass(kw_only=True)
-class DashboardConfig(DataClassJSONMixin):
+class ThingConfig(DataClassJSONMixin):
     """Dashboard config with widgets."""
 
     widgets: list[Widget] = field(default_factory=list)
@@ -50,19 +51,19 @@ class DashboardConfig(DataClassJSONMixin):
         return d
 
     @classmethod
-    def __post_deserialize__(cls, obj: DashboardConfig) -> DashboardConfig:
+    def __post_deserialize__(cls, obj: ThingConfig) -> ThingConfig:
         # move the widgets to a dict with type as key for easy access to config
         obj.config = {widget.code: widget.output for widget in obj.widgets}
         return obj
 
 
 @dataclass(kw_only=True)
-class DashboardDeviceConfig(DashboardConfig, Thing):
+class ThingDashboardConfig(ThingConfig, Thing):
     """Device configuration from API."""
 
 
 @dataclass(kw_only=True)
-class DashboardWSConfig(DashboardConfig):
+class ThingDashboardWebsocketConfig(ThingConfig):
     """Device configuration from WS."""
 
     connected: bool

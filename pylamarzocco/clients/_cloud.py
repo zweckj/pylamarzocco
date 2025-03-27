@@ -35,14 +35,14 @@ from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models import (
     AccessToken,
     CommandResponse,
-    DashboardDeviceConfig,
-    DashboardWSConfig,
     PrebrewSettingTimes,
     RefreshTokenRequest,
     SecondsInOut,
-    SigninTokenRequest,
-    ThingStatistics,
     Thing,
+    SigninTokenRequest,
+    ThingDashboardConfig,
+    ThingDashboardWebsocketConfig,
+    ThingStatistics,
     ThingSettings,
     UpdateDetails,
     WakeUpScheduleSettings,
@@ -71,7 +71,8 @@ class LaMarzoccoCloudClient:
         username: str,
         password: str,
         client: ClientSession | None = None,
-        notification_callback: Callable[[DashboardWSConfig], Any] | None = None,
+        notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
+        | None = None,
     ) -> None:
         """Set the cloud client up."""
         self._client = ClientSession() if client is None else client
@@ -80,9 +81,6 @@ class LaMarzoccoCloudClient:
         self._access_token: AccessToken | None = None
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
-        self.notification_callback: Callable[[DashboardWSConfig], Any] | None = (
-            notification_callback
-        )
 
     # region Authentication
     async def async_get_access_token(self) -> str:
@@ -183,11 +181,11 @@ class LaMarzoccoCloudClient:
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return [Thing.from_dict(device) for device in result]
 
-    async def get_thing_dashboard(self, serial_number: str) -> DashboardDeviceConfig:
+    async def get_thing_dashboard(self, serial_number: str) -> ThingDashboardConfig:
         """Get the dashboard of a thing."""
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/dashboard"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
-        return DashboardDeviceConfig.from_dict(result)
+        return ThingDashboardConfig.from_dict(result)
 
     async def get_thing_settings(self, serial_number: str) -> ThingSettings:
         """Get the settings of a thing."""
@@ -213,6 +211,8 @@ class LaMarzoccoCloudClient:
     async def websocket_connect(
         self,
         serial_number: str,
+        notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
+        | None = None,
     ) -> None:
         """Connect to the websocket of the machine."""
 
@@ -223,7 +223,9 @@ class LaMarzoccoCloudClient:
             ) as ws:
                 await self.__setup_websocket_connection(ws, serial_number)
                 async for msg in ws:
-                    if await self.__handle_websocket_message(ws, msg):
+                    if await self.__handle_websocket_message(
+                        ws, msg, notification_callback
+                    ):
                         break
         except TimeoutError as err:
             if not self.websocket.disconnected:
@@ -239,7 +241,9 @@ class LaMarzoccoCloudClient:
             _LOGGER.error("Invalid URL for websocket.")
 
     async def __setup_websocket_connection(
-        self, ws: ClientWebSocketResponse, serial_number: str
+        self,
+        ws: ClientWebSocketResponse,
+        serial_number: str,
     ) -> None:
         """Setup the websocket connection."""
         self.websocket.ws = ws
@@ -294,7 +298,11 @@ class LaMarzoccoCloudClient:
             self.websocket.disconnected = False
 
     async def __handle_websocket_message(
-        self, ws: ClientWebSocketResponse, msg: WSMessage
+        self,
+        ws: ClientWebSocketResponse,
+        msg: WSMessage,
+        notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
+        | None = None,
     ) -> bool:
         """Handle receiving a websocket message. Return True for disconnect."""
         if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
@@ -311,16 +319,21 @@ class LaMarzoccoCloudClient:
             if msg_type is not StompMessageType.MESSAGE:
                 _LOGGER.warning("Non MESSAGE-type message: %s", msg.data)
             else:
-                self.__parse_websocket_message(data)
+                self.__parse_websocket_message(data, notification_callback)
         except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.exception("Error during callback: %s", ex)
         return False
 
-    def __parse_websocket_message(self, message: str | None) -> None:
+    def __parse_websocket_message(
+        self,
+        message: str | None,
+        notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
+        | None = None,
+    ) -> None:
         """Parse the websocket message."""
         if message is None:
             return
-        config = DashboardWSConfig.from_json(message)
+        config = ThingDashboardWebsocketConfig.from_json(message)
 
         # notify if there is the result for a pending command
         for command in config.commands:
@@ -328,8 +341,8 @@ class LaMarzoccoCloudClient:
                 self._pending_commands[command.id].set_result(command)
 
         # notify any external listeners
-        if self.notification_callback is not None:
-            self.notification_callback(config)
+        if notification_callback is not None:
+            notification_callback(config)
 
     # endregion
     # region commands
@@ -376,7 +389,7 @@ class LaMarzoccoCloudClient:
         self,
         serial_number: str,
         enabled: bool,
-    ) -> CommandResponse:
+    ) -> bool:
         """Turn power of machine on or off"""
 
         mode = "BrewingMode" if enabled else "StandBy"
