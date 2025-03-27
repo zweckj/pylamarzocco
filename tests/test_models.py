@@ -3,7 +3,6 @@
 from syrupy import SnapshotAssertion
 
 from pylamarzocco.models import (
-    SchedulingSettings,
     SmartWakeUpScheduleWebsocketConfig,
     ThingDashboardWebsocketConfig,
 )
@@ -17,14 +16,6 @@ async def test_device_config(snapshot: SnapshotAssertion) -> None:
     fixture = load_fixture("machine", "config_micra.json")
     device = ThingDashboardWebsocketConfig.from_dict(fixture)
     assert device.to_dict() == snapshot
-
-
-async def test_scheduling_config(snapshot: SnapshotAssertion) -> None:
-    """Test the config model serialization."""
-
-    fixture = load_fixture("machine", "schedule.json")
-    schedule = SchedulingSettings.from_dict(fixture)
-    assert schedule.to_dict() == snapshot
 
 
 async def test_scheduling_websocket_config(snapshot: SnapshotAssertion) -> None:

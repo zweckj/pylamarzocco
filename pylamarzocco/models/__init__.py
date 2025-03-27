@@ -41,7 +41,7 @@ from ._general import (
     Widget,
 )
 from ._schedule import (
-    SchedulingSettings,
+    ThingSchedulingSettings,
     SmartWakeUpScheduleWebsocketConfig,
     SmartWakeUpSleepSettings,
     WakeUpScheduleSettings,
@@ -91,7 +91,7 @@ __all__ = [
     "PrebrewInfusionTimeLists",
     "PrebrewSettingTimes",
     "RefreshTokenRequest",
-    "SchedulingSettings",
+    "ThingSchedulingSettings",
     "SecondsInOut",
     "SigninTokenRequest",
     "SmartWakeUpScheduleWebsocketConfig",

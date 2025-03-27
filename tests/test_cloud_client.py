@@ -156,6 +156,22 @@ async def test_get_thing_settings(
     assert result.to_dict() == snapshot
 
 
+async def test_get_thing_scheudle(
+    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
+) -> None:
+    """Test getting the schedule for a thing."""
+
+    mock_aioresponse.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/scheduling",
+        status=200,
+        payload=load_fixture("machine", "schedule.json"),
+    )
+
+    client = LaMarzoccoCloudClient("test", "test")
+    result = await client.get_thing_schedule(serial)
+    assert result.to_dict() == snapshot
+
+
 async def test_list_things(
     mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
 ) -> None:

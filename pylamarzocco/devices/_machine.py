@@ -4,13 +4,23 @@ from __future__ import annotations
 
 import logging
 
-from . import LaMarzoccoThing
+from pylamarzocco.models import ThingSchedulingSettings
+
+from ._thing import LaMarzoccoThing, cloud_only
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class LaMarzoccoMachine(LaMarzoccoThing):
     """Class for La Marzocco coffee machine"""
+
+    schedule: ThingSchedulingSettings
+
+    @cloud_only
+    async def get_schedule(self) -> None:
+        """Get the schedule for this machine."""
+        assert self.cloud_client
+        self.schedule = await self.cloud_client.get_thing_schedule(self.serial_number)
 
     async def set_power(self, enabled: bool) -> None:
         """Set the power of the machine.

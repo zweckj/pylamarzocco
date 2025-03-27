@@ -1404,6 +1404,55 @@
     ]),
   })
 # ---
+# name: test_get_thing_scheudle
+  dict({
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'connected': True,
+    'connection_date': '2025-03-21T03:00:19.892000+00:00',
+    'image_url': 'https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-bianco.png',
+    'location': None,
+    'model_code': 'LINEAMICRA',
+    'model_name': 'LINEA MICRA',
+    'name': 'MR123456',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'MR123456',
+    'smart_wake_up_sleep': dict({
+      'schedules': list([
+        dict({
+          'days': list([
+            'Tuesday',
+          ]),
+          'enabled': True,
+          'id': 'KofUy56',
+          'offTimeMinutes': 514,
+          'onTimeMinutes': 0,
+          'steamBoiler': True,
+        }),
+        dict({
+          'days': list([
+            'Monday',
+          ]),
+          'enabled': False,
+          'id': 'd1XUDAP',
+          'offTimeMinutes': 1439,
+          'onTimeMinutes': 60,
+          'steamBoiler': False,
+        }),
+      ]),
+      'smart_stand_by_after': 'PowerOn',
+      'smart_stand_by_enabled': True,
+      'smart_stand_by_minutes': 10,
+      'smart_stand_by_minutes_max': 30,
+      'smart_stand_by_minutes_min': 1,
+      'smart_stand_by_minutes_step': 1,
+    }),
+    'smart_wake_up_sleep_supported': True,
+    'type': 'CoffeeMachine',
+  })
+# ---
 # name: test_get_thing_settings
   dict({
     'actual_firmwares': list([

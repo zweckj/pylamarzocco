@@ -33,7 +33,7 @@ class WakeUpScheduleSettings(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
-class SchedulingSettings(Thing):
+class ThingSchedulingSettings(Thing):
     """Scheduling settings."""
 
     smart_wake_up_sleep_supported: bool = field(

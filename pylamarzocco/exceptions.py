@@ -17,5 +17,11 @@ class UnknownWebSocketMessage(Exception):
     """Error to indicate we received an unknown websocket message"""
 
 
-class ClientNotInitialized(Exception):
+class CloudOnlyFunctionality(Exception):
     """Error to indicate the client is not initialized"""
+
+    def __init__(self) -> None:
+        """Initialize the exception."""
+        super().__init__(
+            "Functionality is cloud only, but cloud client not initialized."
+        )

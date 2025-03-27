@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
+from functools import wraps
+from typing import Any, Concatenate
 
 from bleak.exc import BleakError
 
 from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
-from pylamarzocco.exceptions import BluetoothConnectionFailed
+from pylamarzocco.exceptions import BluetoothConnectionFailed, CloudOnlyFunctionality
 from pylamarzocco.models import (
     ThingDashboardConfig,
     ThingDashboardWebsocketConfig,
@@ -19,6 +20,20 @@ from pylamarzocco.models import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def cloud_only[_R, **P](
+    func: Callable[Concatenate[LaMarzoccoThing, P], Coroutine[Any, Any, _R]],
+) -> Callable[Concatenate[LaMarzoccoThing, P], Coroutine[Any, Any, _R]]:
+    """Decorator to mark functionality that is only available on the cloud."""
+
+    @wraps(func)
+    async def wrapper(self: LaMarzoccoThing, *args: P.args, **kwargs: P.kwargs):
+        if self.cloud_client is None:
+            raise CloudOnlyFunctionality()
+        return await func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class LaMarzoccoThing:
@@ -34,7 +49,10 @@ class LaMarzoccoThing:
         cloud_client: LaMarzoccoCloudClient | None = None,
         bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
-        """Initializes a new LaMarzocco thing."""
+        """Initializes a new La Marzocco thing."""
+
+        if cloud_client is None and bluetooth_client is None:
+            raise ValueError("Need to pass at least one client")
 
         self.serial_number = serial_number
         self.cloud_client = cloud_client
@@ -42,21 +60,6 @@ class LaMarzoccoThing:
         self._update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = (
             None
         )
-
-    @classmethod
-    async def create(
-        cls,
-        serial_number: str,
-        cloud_client: LaMarzoccoCloudClient | None = None,
-        bluetooth_client: LaMarzoccoBluetoothClient | None = None,
-    ) -> LaMarzoccoThing:
-        """Initialize a client with all data."""
-
-        self = cls(serial_number, cloud_client, bluetooth_client)
-        await asyncio.gather(
-            self.get_dashboard(), self.get_settings(), self.get_statistics()
-        )
-        return self
 
     async def _bluetooth_command_with_cloud_fallback(
         self,
@@ -104,16 +107,22 @@ class LaMarzoccoThing:
                 return True
         return False
 
+    @cloud_only  # TODO: Get this also from BT
     async def get_dashboard(self) -> None:
         """Get the dashboard for a thing."""
+        assert self.cloud_client
         self.dashboard = await self.cloud_client.get_thing_dashboard(self.serial_number)
 
+    @cloud_only
     async def get_settings(self) -> None:
         """Get the dashboard for a thing."""
+        assert self.cloud_client
         self.settings = await self.cloud_client.get_thing_settings(self.serial_number)
 
+    @cloud_only
     async def get_statistics(self) -> None:
         """Get the statistics for a thing."""
+        assert self.cloud_client
         self.statistics = await self.cloud_client.get_thing_statistics(
             self.serial_number
         )
@@ -128,6 +137,7 @@ class LaMarzoccoThing:
         if self._update_callback is not None:
             self._update_callback(config)
 
+    @cloud_only
     async def connect_dashboard_websocket(
         self,
         update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = None,

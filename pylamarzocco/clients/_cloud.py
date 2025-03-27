@@ -44,6 +44,7 @@ from pylamarzocco.models import (
     ThingDashboardWebsocketConfig,
     ThingStatistics,
     ThingSettings,
+    ThingSchedulingSettings,
     UpdateDetails,
     WakeUpScheduleSettings,
     WebSocketDetails,
@@ -71,8 +72,6 @@ class LaMarzoccoCloudClient:
         username: str,
         password: str,
         client: ClientSession | None = None,
-        notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
-        | None = None,
     ) -> None:
         """Set the cloud client up."""
         self._client = ClientSession() if client is None else client
@@ -204,6 +203,12 @@ class LaMarzoccoCloudClient:
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/update-fw"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return UpdateDetails.from_dict(result)
+
+    async def get_thing_schedule(self, serial_number: str) -> ThingSchedulingSettings:
+        """Get the schedule of a thing."""
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/scheduling"
+        result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
+        return ThingSchedulingSettings.from_dict(result)
 
     # endregion
 
