@@ -1,4 +1,7 @@
-"""Init the devices module."""
+"""Init the devices module.
+
+Currently not in use
+"""
 
 from ._machine import LaMarzoccoMachine
 from ._thing import LaMarzoccoThing
