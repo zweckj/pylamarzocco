@@ -55,12 +55,16 @@ from ._statistics import (
 )
 from ._update import FirmwareSettings, FirmwareVersion, UpdateDetails
 
+from ._bluetooth import BluetoothBoilerDetails, BluetoothMachineCapabilities
+
 __all__ = [
     "AccessToken",
     "BackFlush",
     "BaseDoseSettings",
     "BaseWidget",
     "BaseWidgetOutput",
+    "BluetoothBoilerDetails",
+    "BluetoothMachineCapabilities",
     "BrewByWeightDoseSettings",
     "BrewByWeightDoses",
     "CoffeeAndFlushTrend",

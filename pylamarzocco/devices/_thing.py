@@ -7,11 +7,8 @@ from collections.abc import Callable, Coroutine
 from functools import wraps
 from typing import Any, Concatenate
 
-from bleak.exc import BleakError
-
-from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
+from pylamarzocco.clients import LaMarzoccoCloudClient
 from pylamarzocco.exceptions import (
-    BluetoothConnectionFailed,
     CloudOnlyFunctionality,
     UnsupportedModel,
 )
@@ -86,16 +83,11 @@ class LaMarzoccoThing:
         self,
         serial_number: str,
         _cloud_client: LaMarzoccoCloudClient | None = None,
-        _bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
         """Initializes a new La Marzocco thing."""
 
-        if _cloud_client is None and _bluetooth_client is None:
-            raise ValueError("Need to pass at least one client")
-
         self.serial_number = serial_number
         self._cloud_client = _cloud_client
-        self._bluetooth_client = _bluetooth_client
         self._update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = (
             None
         )
@@ -107,53 +99,7 @@ class LaMarzoccoThing:
             return WebSocketDetails()
         return self._cloud_client.websocket
 
-    async def _bluetooth_command_with_cloud_fallback(
-        self,
-        command: str,
-        **kwargs,
-    ) -> bool:
-        """Send a command to the machine via Bluetooth, falling back to cloud if necessary."""
-
-        # First, try with bluetooth
-        if self._bluetooth_client is not None:
-            func = getattr(self._bluetooth_client, command)
-            try:
-                _LOGGER.debug(
-                    "Sending command %s over bluetooth with params %s",
-                    command,
-                    str(kwargs),
-                )
-                await func(**kwargs)
-            except (BleakError, BluetoothConnectionFailed) as exc:
-                msg = "Could not send command to bluetooth device, even though initalized."
-
-                if self._cloud_client is None:
-                    _LOGGER.error(
-                        "%s Cloud client not initialized, cannot fallback. Full error %s",
-                        msg,
-                        exc,
-                    )
-                    return False
-
-                _LOGGER.warning("%s Falling back to cloud", msg)
-                _LOGGER.debug("Full error: %s", exc)
-            else:
-                return True
-
-        # no bluetooth or failed, try with cloud
-        if self._cloud_client is not None:
-            _LOGGER.debug(
-                "Sending command %s over cloud with params %s",
-                command,
-                str(kwargs),
-            )
-            func = getattr(self._cloud_client, command)
-            kwargs["serial_number"] = self.serial_number
-            if await func(**kwargs):
-                return True
-        return False
-
-    @cloud_only  # TODO: Get this also from BT
+    @cloud_only
     async def get_dashboard(self) -> None:
         """Get the dashboard for a thing."""
         assert self._cloud_client

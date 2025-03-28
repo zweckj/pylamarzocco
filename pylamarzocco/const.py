@@ -191,3 +191,10 @@ class UpdateProgressInfo(StrEnum):
     DOWNLOAD = "download"
     REBOOTING = "rebooting"
     STARTING_PROCESS = "starting process"
+
+
+class BoilerType(StrEnum):
+    """La Marzocco Coffee Machine Boilers."""
+
+    COFFEE = "CoffeeBoiler1"
+    STEAM = "SteamBoiler"
