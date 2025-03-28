@@ -152,7 +152,14 @@ class LaMarzoccoBluetoothClient:
         self, client: BleakClient, characteristic: str = READ_CHARACTERISTIC
     ) -> str:
         """Read a bluetooth message of type T."""
-        result = await client.read_gatt_char(characteristic)
+
+        read_characteristic = client.services.get_characteristic(characteristic)
+        if read_characteristic is None:
+            raise BluetoothConnectionFailed(
+                f"Could not find auth characteristic {characteristic} on machine."
+            )
+
+        result = await client.read_gatt_char(read_characteristic)
         return result.decode()
 
     async def _write_bluetooth_message(
