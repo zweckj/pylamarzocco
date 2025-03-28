@@ -10,7 +10,11 @@ from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDe
 
 from pylamarzocco.const import BoilerType, MachineMode, SmartStandByType
 from pylamarzocco.exceptions import BluetoothConnectionFailed
-from pylamarzocco.models import BluetoothBoilerDetails, BluetoothMachineCapabilities
+from pylamarzocco.models import (
+    BluetoothBoilerDetails,
+    BluetoothMachineCapabilities,
+    BluetoothSmartStandbyDetails,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -75,7 +79,7 @@ class LaMarzoccoBluetoothClient:
         """Read the current machine mode"""
         return MachineMode(await self._read_value_from_machine("machineMode"))
 
-    async def get_machine_capabilities(self) -> str:
+    async def get_machine_capabilities(self) -> BluetoothMachineCapabilities:
         """Get general machine information."""
         capabilities = await self._read_value_from_machine("machineCapabilities")
         return BluetoothMachineCapabilities.from_dict(capabilities[0])
@@ -88,6 +92,11 @@ class LaMarzoccoBluetoothClient:
         """Get the boiler status."""
         boilers = await self._read_value_from_machine("boilers")
         return [BluetoothBoilerDetails.from_dict(boiler) for boiler in boilers]
+
+    async def get_smart_standby_settings(self) -> BluetoothSmartStandbyDetails:
+        """Get the smart standby settings."""
+        data = await self._read_value_from_machine("smartStandBy")
+        return BluetoothSmartStandbyDetails.from_dict(data[0])
 
     async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""

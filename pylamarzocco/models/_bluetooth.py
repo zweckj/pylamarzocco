@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
 
-from pylamarzocco.const import MachineMode, BoilerType
+from pylamarzocco.const import MachineMode, BoilerType, SmartStandByType
 
 
 @dataclass(kw_only=True)
@@ -36,3 +36,11 @@ class BluetoothBoilerDetails(DataClassJSONMixin):
     is_enabled: bool = field(metadata=field_options(alias="isEnabled"))
     target: int
     current: 45
+
+@dataclass(kw_only=True)
+class BluetoothSmartStandbyDetails(DataClassJSONMixin):
+    """Details for smart standby."""
+
+    mode: SmartStandByType
+    minutes: int
+    enabled: str
