@@ -25,7 +25,6 @@ from pylamarzocco.const import (
     BASE_URL,
     CUSTOMER_APP_URL,
     CommandStatus,
-    DoseIndexType,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -37,7 +36,6 @@ from pylamarzocco.models import (
     CommandResponse,
     PrebrewSettingTimes,
     RefreshTokenRequest,
-    SecondsInOut,
     Thing,
     SigninTokenRequest,
     ThingDashboardConfig,
@@ -80,7 +78,7 @@ class LaMarzoccoCloudClient:
         self._access_token: AccessToken | None = None
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
-        self.websocket_disconnected = True  # used for logging disconnect once
+        self.websocket_disconnected = False  # used for logging disconnect once
 
     # region Authentication
     async def async_get_access_token(self) -> str:

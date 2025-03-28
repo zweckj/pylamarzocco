@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from pylamarzocco.const import (
     ModelCode,
-    SteamTargetLevel,
     PreExtractionMode,
     SmartStandByType,
+    SteamTargetLevel,
 )
 from pylamarzocco.models import (
-    ThingSchedulingSettings,
     PrebrewSettingTimes,
     SecondsInOut,
+    ThingSchedulingSettings,
     WakeUpScheduleSettings,
 )
 
@@ -118,3 +119,10 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         """Set an existing or a new schedule."""
         assert self._cloud_client
         await self._cloud_client.set_wakeup_schedule(self.serial_number, schedule)
+
+    def to_dict(self) -> dict[Any, Any]:
+        """Return self in dict represenation."""
+        return {
+            **super().to_dict(),
+            "schedule": self.schedule.to_dict() if self.schedule else None,
+        }

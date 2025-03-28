@@ -7,7 +7,8 @@ from collections.abc import Callable, Coroutine
 from functools import wraps
 from typing import Any, Concatenate
 
-from pylamarzocco.clients import LaMarzoccoCloudClient
+from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
+from pylamarzocco.const import ModelCode
 from pylamarzocco.exceptions import (
     CloudOnlyFunctionality,
     UnsupportedModel,
@@ -17,11 +18,9 @@ from pylamarzocco.models import (
     ThingDashboardWebsocketConfig,
     ThingSettings,
     ThingStatistics,
-    WebSocketDetails,
     UpdateDetails,
+    WebSocketDetails,
 )
-
-from pylamarzocco.const import ModelCode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,11 +82,13 @@ class LaMarzoccoThing:
         self,
         serial_number: str,
         _cloud_client: LaMarzoccoCloudClient | None = None,
+        _bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
         """Initializes a new La Marzocco thing."""
 
         self.serial_number = serial_number
         self._cloud_client = _cloud_client
+        self._bluetooth_client = _bluetooth_client
         self._update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = (
             None
         )
@@ -162,4 +163,11 @@ class LaMarzoccoThing:
 
     def to_dict(self) -> dict[Any, Any]:
         """Return self in dict represenation."""
-        return self.dashboard.to_dict()
+        return {
+            "serial_number": self.serial_number,
+            "dashboard": self.dashboard.to_dict() if self.dashboard else None,
+            "settings": self.settings.to_dict() if self.settings else None,
+            "statistics": self.statistics.to_dict()
+            if self.statistics
+            else None,
+        }
