@@ -67,7 +67,8 @@ class LaMarzoccoBluetoothClient:
         Only possible when machine is in pairing mode.
         """
         async with BleakClient(address) as client:
-            return await client.read_gatt_char(GET_TOKEN_CHARACTERISTIC)
+            token = await client.read_gatt_char(GET_TOKEN_CHARACTERISTIC)
+            return token.decode()
 
     @property
     def address(self) -> str:
@@ -160,7 +161,7 @@ class LaMarzoccoBluetoothClient:
     async def _read_bluetooth_message(
         self, client: BleakClient, characteristic: str = READ_CHARACTERISTIC
     ) -> str:
-        """Read a bluetooth message of type T."""
+        """Read a bluetooth message."""
 
         read_characteristic = client.services.get_characteristic(characteristic)
         if read_characteristic is None:

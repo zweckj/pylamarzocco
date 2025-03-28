@@ -5,7 +5,10 @@ from .clients import (
     LaMarzoccoCloudClient,
 )
 
+from .devices import LaMarzoccoMachine
+
 __all__ = [
     "LaMarzoccoBluetoothClient",
     "LaMarzoccoCloudClient",
+    "LaMarzoccoMachine",
 ]

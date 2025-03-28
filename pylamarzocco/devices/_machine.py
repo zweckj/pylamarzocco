@@ -39,7 +39,8 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         Args:
             power (bool): True to turn on, False to turn off.
         """
-        await self._bluetooth_command_with_cloud_fallback("set_power", enabled=enabled)
+        assert self._cloud_client
+        await self._cloud_client.set_power(self.serial_number, enabled)
 
     async def set_steam(self, enabled: bool) -> None:
         """Set the steam of the machine.
@@ -47,7 +48,8 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         Args:
             enabled (bool): True to turn on, False to turn off.
         """
-        await self._bluetooth_command_with_cloud_fallback("set_steam", enabled=enabled)
+        assert self._cloud_client
+        await self._cloud_client.set_steam(self.serial_number, enabled)
 
     @cloud_only
     @models_supported((ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R))
@@ -68,7 +70,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     async def start_backflush(self) -> None:
         """Trigger the backflush."""
         assert self._cloud_client
-        await self._cloud_client.start_backflush_cleaning()
+        await self._cloud_client.start_backflush_cleaning(self.serial_number)
 
     @cloud_only
     async def set_pre_extraction_mode(self, mode: PreExtractionMode) -> None:
