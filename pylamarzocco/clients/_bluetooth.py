@@ -96,7 +96,7 @@ class LaMarzoccoBluetoothClient:
     async def get_smart_standby_settings(self) -> BluetoothSmartStandbyDetails:
         """Get the smart standby settings."""
         data = await self._read_value_from_machine("smartStandBy")
-        return BluetoothSmartStandbyDetails.from_dict(data[0])
+        return BluetoothSmartStandbyDetails.from_dict(data)
 
     async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""

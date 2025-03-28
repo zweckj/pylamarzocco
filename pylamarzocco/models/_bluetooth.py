@@ -35,7 +35,7 @@ class BluetoothBoilerDetails(DataClassJSONMixin):
     id: BoilerType
     is_enabled: bool = field(metadata=field_options(alias="isEnabled"))
     target: int
-    current: 45
+    current: int
 
 @dataclass(kw_only=True)
 class BluetoothSmartStandbyDetails(DataClassJSONMixin):
