@@ -12,7 +12,7 @@ from pylamarzocco.const import MachineMode, ModelName, BoilerType, SmartStandByT
 class BluetoothMachineCapabilities(DataClassJSONMixin):
     """Machine capabilities for Bluetooth communication."""
 
-    family: ModelName
+    family: ModelName = field(metadata=field_options(deserialize=ModelName.from_string))
     groups_number: int = field(metadata=field_options(alias="groupsNumber"))
     coffee_boilers_number: int = field(
         metadata=field_options(alias="coffeeBoilersNumber")
@@ -43,4 +43,4 @@ class BluetoothSmartStandbyDetails(DataClassJSONMixin):
 
     mode: SmartStandByType
     minutes: int
-    enabled: str
+    enabled: bool
