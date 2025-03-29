@@ -199,3 +199,9 @@ class BoilerType(StrEnum):
 
     COFFEE = "CoffeeBoiler1"
     STEAM = "SteamBoiler"
+
+class BackFlushStatus(StrEnum):
+    """Back flush statuses."""
+
+    REQUESTED = "Requested"
+    OFF = "Off"

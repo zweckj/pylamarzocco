@@ -11,6 +11,7 @@ from mashumaro.config import BaseConfig
 from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import (
+    BackFlushStatus,
     BoilerStatus,
     DoseIndex,
     DoseIndexType,
@@ -269,7 +270,7 @@ class BackFlush(BaseWidgetOutput):
     """Backflush configuration."""
 
     widget_type = WidgetType.CM_BACK_FLUSH
-    status: str
+    status: BackFlushStatus
     last_cleaning_start_time: datetime | None = field(
         metadata=field_options(
             alias="lastCleaningStartTime",
