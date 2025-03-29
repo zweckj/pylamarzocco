@@ -74,10 +74,6 @@ def models_supported[T: "LaMarzoccoThing", _R, **P](
 class LaMarzoccoThing:
     """Base class for all La Marzocco devices"""
 
-    dashboard: ThingDashboardConfig
-    settings: ThingSettings
-    statistics: ThingStatistics
-
     def __init__(
         self,
         serial_number: str,
@@ -92,6 +88,9 @@ class LaMarzoccoThing:
         self._update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = (
             None
         )
+        self.dashboard = ThingDashboardConfig(serial_number=serial_number)
+        self.settings = ThingSettings(serial_number=serial_number)
+        self.statistics = ThingStatistics(serial_number=serial_number)
 
     @property
     def websocket(self) -> WebSocketDetails:
@@ -167,7 +166,5 @@ class LaMarzoccoThing:
             "serial_number": self.serial_number,
             "dashboard": self.dashboard.to_dict() if self.dashboard else None,
             "settings": self.settings.to_dict() if self.settings else None,
-            "statistics": self.statistics.to_dict()
-            if self.statistics
-            else None,
+            "statistics": self.statistics.to_dict() if self.statistics else None,
         }

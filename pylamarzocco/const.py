@@ -1,4 +1,5 @@
 """Constants for La Marzocco Cloud."""
+from __future__ import annotations
 
 from enum import StrEnum
 
@@ -111,6 +112,31 @@ class ModelCode(StrEnum):
     GS3_MP = "GS3MP"
     GS3_AV = "GS3AV"
 
+class ModelName(StrEnum):
+    """Model codes."""
+
+    LINEA_MINI = "Linea Mini"
+    LINEA_MICRA = "Linea Micra"
+    LINEA_MINI_R = "Linea Mini R"
+    GS3 = "GS3"
+    GS3_MP = "GS3 MP"
+    GS3_AV = "GS3 AV" 
+
+    @classmethod
+    def from_string(cls, name: str) -> ModelName:
+        """Convert a string to a ModelName enum."""
+        mapping = {
+            "GS3MP": "GS3 MP",
+            "GS3AV": "GS3 AV",
+            "LINEAMINIR": "Linea Mini R",
+            "LINEAMICRA": "Linea Micra",
+            "LINEAMINI": "Linea Mini",
+            "MICRA": "Linea Micra",
+        }
+        if (key := ''.join(name.upper().split())) not in mapping:
+            raise ValueError(f"Invalid model name: {name}")
+        return cls(mapping[key])
+
 
 class FirmwareType(StrEnum):
     """Firmware types."""
@@ -205,3 +231,11 @@ class BackFlushStatus(StrEnum):
 
     REQUESTED = "Requested"
     OFF = "Off"
+
+class BluetoothReadSetting(StrEnum):
+    """Declare what to read from the Bluetooth device."""
+    MACHINE_CAPABILITIES = "machineCapabilities"
+    MACHINE_MODE = "machineMode"
+    TANK_STATUS = "tankStatus"
+    BOILERS = "boilers"
+    SMART_STAND_BY = "smartStandBy"

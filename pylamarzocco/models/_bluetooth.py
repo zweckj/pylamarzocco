@@ -5,14 +5,14 @@ from dataclasses import dataclass, field
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
 
-from pylamarzocco.const import MachineMode, BoilerType, SmartStandByType
+from pylamarzocco.const import MachineMode, ModelName, BoilerType, SmartStandByType
 
 
 @dataclass(kw_only=True)
 class BluetoothMachineCapabilities(DataClassJSONMixin):
     """Machine capabilities for Bluetooth communication."""
 
-    family: str
+    family: ModelName
     groups_number: int = field(metadata=field_options(alias="groupsNumber"))
     coffee_boilers_number: int = field(
         metadata=field_options(alias="coffeeBoilersNumber")

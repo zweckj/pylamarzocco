@@ -37,7 +37,8 @@ class ThingSchedulingSettings(Thing):
     """Scheduling settings."""
 
     smart_wake_up_sleep_supported: bool = field(
-        metadata=field_options(alias="smartWakeUpSleepSupported")
+        metadata=field_options(alias="smartWakeUpSleepSupported"),
+        default=True,
     )
     smart_wake_up_sleep: SmartWakeUpSleepSettings | None = field(
         metadata=field_options(alias="smartWakeUpSleep"),

@@ -12,7 +12,13 @@ from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
 from mashumaro.types import Discriminator
 
-from pylamarzocco.const import CommandStatus, DeviceType, ModelCode, WidgetType
+from pylamarzocco.const import (
+    CommandStatus,
+    DeviceType,
+    ModelCode,
+    ModelName,
+    WidgetType,
+)
 
 
 @dataclass(kw_only=True)
@@ -31,19 +37,29 @@ class Thing(DataClassJSONMixin):
     """Generic device information."""
 
     serial_number: str = field(metadata=field_options(alias="serialNumber"))
-    type: DeviceType
-    name: str
+    type: DeviceType = field(default=DeviceType.MACHINE)
+    name: str = field(default="")
     location: str | None = field(default=None)
-    model_code: ModelCode = field(metadata=field_options(alias="modelCode"))
-    model_name: str = field(metadata=field_options(alias="modelName"))
-    connected: bool
+    model_code: ModelCode = field(
+        metadata=field_options(alias="modelCode"), default=ModelCode.LINEA_MICRA
+    )
+    model_name: ModelName = field(
+        metadata=field_options(
+            alias="modelName", deserialize=lambda n: ModelName.from_string(str(n))
+        ),
+        default=ModelName.LINEA_MICRA,
+    )
+    connected: bool = field(default=False)
     connection_date: datetime = field(
         metadata=field_options(
             alias="connectionDate",
             deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
-        )
+        ),
+        default=datetime.now(timezone.utc),
     )
-    offline_mode: bool = field(metadata=field_options(alias="offlineMode"))
+    offline_mode: bool = field(
+        metadata=field_options(alias="offlineMode"), default=False
+    )
     require_firmware_update: bool = field(
         metadata=field_options(alias="requireFirmwareUpdate"), default=False
     )
@@ -53,7 +69,7 @@ class Thing(DataClassJSONMixin):
     coffee_station: dict | None = field(
         metadata=field_options(alias="coffeeStation"), default=None
     )
-    image_url: str = field(metadata=field_options(alias="imageUrl"))
+    image_url: str = field(metadata=field_options(alias="imageUrl"), default="")
     ble_auth_token: str | None = field(
         metadata=field_options(alias="bleAuthToken"), default=None
     )

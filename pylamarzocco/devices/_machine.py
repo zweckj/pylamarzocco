@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
     ModelCode,
     PreExtractionMode,
@@ -26,7 +27,15 @@ _LOGGER = logging.getLogger(__name__)
 class LaMarzoccoMachine(LaMarzoccoThing):
     """Class for La Marzocco coffee machine"""
 
-    schedule: ThingSchedulingSettings
+    def __init__(
+        self,
+        serial_number: str,
+        _cloud_client: LaMarzoccoCloudClient | None = None,
+        _bluetooth_client: LaMarzoccoBluetoothClient | None = None,
+    ) -> None:
+        """Set up machine."""
+        super().__init__(serial_number, _cloud_client, _bluetooth_client)
+        self.schedule = ThingSchedulingSettings(serial_number=serial_number)
 
     @cloud_only
     async def get_schedule(self) -> None:
