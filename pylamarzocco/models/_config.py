@@ -452,3 +452,11 @@ class ThingScale(BaseWidgetOutput):
     calibration_required: bool = field(
         metadata=field_options(alias="calibrationRequired")
     )
+
+
+@dataclass(kw_only=True)
+class NoWater(BaseWidgetOutput):
+    """No water status."""
+
+    widget_type = WidgetType.CM_NO_WATER
+    allarm: bool

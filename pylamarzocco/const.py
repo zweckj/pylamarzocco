@@ -157,6 +157,7 @@ class BoilerStatus(StrEnum):
     STAND_BY = "StandBy"
     HEATING = "HeatingUp"
     READY = "Ready"
+    NO_WATER = "NoWater"
     OFF = "Off"
 
 
