@@ -459,4 +459,4 @@ class NoWater(BaseWidgetOutput):
     """No water status."""
 
     widget_type = WidgetType.CM_NO_WATER
-    allarm: bool = field(metadata=field_options(alias="allarm"))
+    allarm: bool
