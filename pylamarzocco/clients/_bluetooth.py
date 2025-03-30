@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from types import TracebackType
+from typing import Any, Type
 
 from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
 
@@ -34,6 +35,8 @@ BT_MODEL_PREFIXES = ("MICRA", "MINI", "GS3")
 class LaMarzoccoBluetoothClient:
     """Class to interact with machine via Bluetooth."""
 
+    _client: BleakClient
+
     def __init__(
         self,
         address_or_ble_device: BLEDevice | str,
@@ -47,6 +50,22 @@ class LaMarzoccoBluetoothClient:
             else address_or_ble_device
         )
         self._address_or_ble_device = address_or_ble_device
+
+    async def __aenter__(self) -> LaMarzoccoBluetoothClient:
+        """Connect to the machine."""
+        self._client = BleakClient(self._address_or_ble_device)
+        await self._client.connect()
+        await self._authenticate()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Type[BaseException],
+        exc_val: BaseException,
+        exc_tb: TracebackType,
+    ) -> None:
+        """Disconnect from the machine."""
+        await self._client.disconnect()
 
     @staticmethod
     async def discover_devices(
@@ -81,48 +100,36 @@ class LaMarzoccoBluetoothClient:
 
         return self._address
 
-    async def get_machine_mode(self, client: BleakClient) -> MachineMode:
+    async def get_machine_mode(self) -> MachineMode:
         """Read the current machine mode"""
         return MachineMode(
-            await self.__read_value_from_machine(
-                client, BluetoothReadSetting.MACHINE_MODE
-            )
+            await self.__read_value_from_machine(BluetoothReadSetting.MACHINE_MODE)
         )
 
-    async def get_machine_capabilities(
-        self, client: BleakClient
-    ) -> BluetoothMachineCapabilities:
+    async def get_machine_capabilities(self) -> BluetoothMachineCapabilities:
         """Get general machine information."""
         capabilities = await self.__read_value_from_machine(
-            client, BluetoothReadSetting.MACHINE_CAPABILITIES
+            BluetoothReadSetting.MACHINE_CAPABILITIES
         )
         return BluetoothMachineCapabilities.from_dict(capabilities[0])
 
-    async def get_tank_status(self, client: BleakClient) -> bool:
+    async def get_tank_status(self) -> bool:
         """Get the current tank status."""
         return bool(
-            await self.__read_value_from_machine(
-                client, BluetoothReadSetting.TANK_STATUS
-            )
+            await self.__read_value_from_machine(BluetoothReadSetting.TANK_STATUS)
         )
 
-    async def get_boilers(self, client: BleakClient) -> list[BluetoothBoilerDetails]:
+    async def get_boilers(self) -> list[BluetoothBoilerDetails]:
         """Get the boiler status."""
-        boilers = await self.__read_value_from_machine(
-            client, BluetoothReadSetting.BOILERS
-        )
+        boilers = await self.__read_value_from_machine(BluetoothReadSetting.BOILERS)
         return [BluetoothBoilerDetails.from_dict(boiler) for boiler in boilers]
 
-    async def get_smart_standby_settings(
-        self, client: BleakClient
-    ) -> BluetoothSmartStandbyDetails:
+    async def get_smart_standby_settings(self) -> BluetoothSmartStandbyDetails:
         """Get the smart standby settings."""
-        data = await self.__read_value_from_machine(
-            client, BluetoothReadSetting.SMART_STAND_BY
-        )
+        data = await self.__read_value_from_machine(BluetoothReadSetting.SMART_STAND_BY)
         return BluetoothSmartStandbyDetails.from_dict(data)
 
-    async def set_power(self, client: BleakClient, enabled: bool) -> None:
+    async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""
         mode = "BrewingMode" if enabled else "StandBy"
         data = {
@@ -131,21 +138,19 @@ class LaMarzoccoBluetoothClient:
                 "mode": mode,
             },
         }
-        await self._write_bluetooth_json_message(client, data)
+        await self.__write_bluetooth_json_message(data)
 
     async def set_smart_standby(
-        self, client: BleakClient, enabled: bool, mode: SmartStandByType, minutes: int
+        self, enabled: bool, mode: SmartStandByType, minutes: int
     ) -> None:
         """Set the smart standby settings."""
         data = {
             "name": "SettingSmartStandby",
             "parameter": {"minutes": minutes, "mode": mode.value, "enabled": enabled},
         }
-        await self._write_bluetooth_json_message(client, data)
+        await self.__write_bluetooth_json_message(data)
 
-    async def set_temp(
-        self, client: BleakClient, boiler: BoilerType, temperature: float
-    ) -> None:
+    async def set_temp(self, boiler: BoilerType, temperature: float) -> None:
         """Set boiler temperature (in Celsius)"""
 
         data = {
@@ -155,19 +160,21 @@ class LaMarzoccoBluetoothClient:
                 "value": temperature,
             },
         }
-        await self._write_bluetooth_json_message(client, data)
+        await self.__write_bluetooth_json_message(data)
 
-    async def authenticate(self, client: BleakClient) -> None:
+    async def _authenticate(self) -> None:
         """Build authentication string and send it to the machine."""
 
-        auth_characteristic = client.services.get_characteristic(AUTH_CHARACTERISTIC)
+        auth_characteristic = self._client.services.get_characteristic(
+            AUTH_CHARACTERISTIC
+        )
         if auth_characteristic is None:
             raise BluetoothConnectionFailed(
                 f"Could not find auth characteristic {AUTH_CHARACTERISTIC} on machine."
             )
 
         try:
-            await client.write_gatt_char(
+            await self._client.write_gatt_char(
                 char_specifier=auth_characteristic,
                 data=bytes(self._ble_token, "utf-8"),
                 response=True,
@@ -177,29 +184,26 @@ class LaMarzoccoBluetoothClient:
                 f"Failed to connect to machine with Bluetooth: {e}"
             ) from e
 
-    async def __read_value_from_machine(
-        self, client: BleakClient, setting: BluetoothReadSetting
-    ) -> Any:
-        await self._write_bluetooth_message(client, setting.value, READ_CHARACTERISTIC)
-        return json.loads(await self._read_bluetooth_message(client))
+    async def __read_value_from_machine(self, setting: BluetoothReadSetting) -> Any:
+        await self.__write_bluetooth_message(setting.value, READ_CHARACTERISTIC)
+        return json.loads(await self._read_bluetooth_message())
 
     async def _read_bluetooth_message(
-        self, client: BleakClient, characteristic: str = READ_CHARACTERISTIC
+        self, characteristic: str = READ_CHARACTERISTIC
     ) -> str:
         """Read a bluetooth message."""
 
-        read_characteristic = client.services.get_characteristic(characteristic)
+        read_characteristic = self._client.services.get_characteristic(characteristic)
         if read_characteristic is None:
             raise BluetoothConnectionFailed(
                 f"Could not find auth characteristic {characteristic} on machine."
             )
 
-        result = await client.read_gatt_char(read_characteristic)
+        result = await self._client.read_gatt_char(read_characteristic)
         return result.decode()
 
-    async def _write_bluetooth_message(
+    async def __write_bluetooth_message(
         self,
-        client: BleakClient,
         message: bytes | str,
         characteristic: str = WRITE_CHARACTERISTIC,
     ) -> None:
@@ -214,28 +218,28 @@ class LaMarzoccoBluetoothClient:
 
         _logger.debug("Sending bluetooth message: %s to %s", message, characteristic)
 
-        settings_characteristic = client.services.get_characteristic(characteristic)
+        settings_characteristic = self._client.services.get_characteristic(
+            characteristic
+        )
         if settings_characteristic is None:
             raise BluetoothConnectionFailed(
                 f"Could not find characteristic {characteristic} on machine."
             )
 
-        await client.write_gatt_char(
+        await self._client.write_gatt_char(
             char_specifier=settings_characteristic,
             data=message,
             response=True,
         )
 
-    async def _write_bluetooth_json_message(
+    async def __write_bluetooth_json_message(
         self,
-        client: BleakClient,
         data: dict[str, Any],
         characteristic: str = WRITE_CHARACTERISTIC,
     ) -> None:
         """Write a json message to the machine."""
 
-        await self._write_bluetooth_message(
-            client=client,
+        await self.__write_bluetooth_message(
             characteristic=characteristic,
             message=json.dumps(data, separators=(",", ":")),
         )
