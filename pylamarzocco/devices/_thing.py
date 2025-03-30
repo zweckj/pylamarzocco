@@ -77,14 +77,14 @@ class LaMarzoccoThing:
     def __init__(
         self,
         serial_number: str,
-        _cloud_client: LaMarzoccoCloudClient | None = None,
-        _bluetooth_client: LaMarzoccoBluetoothClient | None = None,
+        cloud_client: LaMarzoccoCloudClient | None = None,
+        bluetooth_client: LaMarzoccoBluetoothClient | None = None,
     ) -> None:
         """Initializes a new La Marzocco thing."""
 
         self.serial_number = serial_number
-        self._cloud_client = _cloud_client
-        self._bluetooth_client = _bluetooth_client
+        self._cloud_client = cloud_client
+        self._bluetooth_client = bluetooth_client
         self._update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = (
             None
         )
