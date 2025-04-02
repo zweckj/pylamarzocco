@@ -33,6 +33,38 @@ class WakeUpScheduleSettings(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
+class SmartWakeUpSleepSettings(DataClassJSONMixin):
+    """Smart wake up sleep settings."""
+
+    smart_stand_by_enabled: bool = field(
+        metadata=field_options(alias="smartStandByEnabled"),
+        default=False,
+    )
+    smart_stand_by_minutes: int = field(
+        metadata=field_options(alias="smartStandByMinutes"),
+        default=0,
+    )
+    smart_stand_by_minutes_min: int = field(
+        metadata=field_options(alias="smartStandByMinutesMin"),
+        default=0,
+    )
+    smart_stand_by_minutes_max: int = field(
+        metadata=field_options(alias="smartStandByMinutesMax"),
+        default=0,
+    )
+    smart_stand_by_minutes_step: int = field(
+        metadata=field_options(alias="smartStandByMinutesStep"),
+        default=0,
+    )
+    smart_stand_by_after: SmartStandByType = field(
+        metadata=field_options(alias="smartStandByAfter"),
+        default=SmartStandByType.POWER_ON,
+    )
+    schedules: list[WakeUpScheduleSettings] = field(
+        default_factory=list,
+    )
+
+@dataclass(kw_only=True)
 class ThingSchedulingSettings(Thing):
     """Scheduling settings."""
 
@@ -40,36 +72,9 @@ class ThingSchedulingSettings(Thing):
         metadata=field_options(alias="smartWakeUpSleepSupported"),
         default=True,
     )
-    smart_wake_up_sleep: SmartWakeUpSleepSettings | None = field(
+    smart_wake_up_sleep: SmartWakeUpSleepSettings = field(
         metadata=field_options(alias="smartWakeUpSleep"),
-        default=None,
-    )
-
-
-@dataclass(kw_only=True)
-class SmartWakeUpSleepSettings(DataClassJSONMixin):
-    """Smart wake up sleep settings."""
-
-    smart_stand_by_enabled: bool = field(
-        metadata=field_options(alias="smartStandByEnabled")
-    )
-    smart_stand_by_minutes: int = field(
-        metadata=field_options(alias="smartStandByMinutes")
-    )
-    smart_stand_by_minutes_min: int = field(
-        metadata=field_options(alias="smartStandByMinutesMin")
-    )
-    smart_stand_by_minutes_max: int = field(
-        metadata=field_options(alias="smartStandByMinutesMax")
-    )
-    smart_stand_by_minutes_step: int = field(
-        metadata=field_options(alias="smartStandByMinutesStep")
-    )
-    smart_stand_by_after: SmartStandByType = field(
-        metadata=field_options(alias="smartStandByAfter")
-    )
-    schedules: list[WakeUpScheduleSettings] = field(
-        default_factory=list,
+        default_factory=SmartWakeUpSleepSettings,
     )
 
 
