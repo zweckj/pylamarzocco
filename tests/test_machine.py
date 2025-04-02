@@ -9,7 +9,7 @@ from pylamarzocco import (
     LaMarzoccoCloudClient,
     LaMarzoccoMachine,
 )
-from pylamarzocco.const import BoilerType, SteamTargetLevel
+from pylamarzocco.const import BoilerType, SteamTargetLevel, SmartStandByType
 from pylamarzocco.exceptions import BluetoothConnectionFailed
 
 
@@ -121,6 +121,38 @@ async def test_set_coffee_temp_cloud_fallback(
     )
     mock_cloud_client.set_coffee_target_temperature.assert_called_once_with(
         serial_number="MR123456", target_temperature=93
+    )
+
+
+async def test_set_smart_standby(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test the set_smart_standby method."""
+    assert await mock_machine.set_smart_standby(True, 30, SmartStandByType.POWER_ON)
+    mock_bluetooth_client.set_smart_standby.assert_called_once_with(
+        enabled=True, minutes=30, mode=SmartStandByType.POWER_ON
+    )
+
+
+async def test_set_smart_standby_cloud_fallback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_smart_standby method without Bluetooth."""
+    mock_bluetooth_client.set_smart_standby.side_effect = BluetoothConnectionFailed(
+        "Bluetooth error"
+    )
+    assert await mock_machine.set_smart_standby(True, 30, SmartStandByType.POWER_ON)
+    mock_bluetooth_client.set_smart_standby.assert_called_once_with(
+        enabled=True, minutes=30, mode=SmartStandByType.POWER_ON
+    )
+    mock_cloud_client.set_smart_standby.assert_called_once_with(
+        serial_number="MR123456",
+        enabled=True,
+        minutes=30,
+        after=SmartStandByType.POWER_ON,
     )
 
 

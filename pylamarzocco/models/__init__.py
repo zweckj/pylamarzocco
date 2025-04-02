@@ -14,6 +14,7 @@ from ._config import (
     InOutTime,
     MachineStatus,
     NextStatus,
+    NoWater,
     PreBrewInfusionTime,
     PrebrewInfusionTimeLists,
     PreBrewing,
@@ -55,7 +56,11 @@ from ._statistics import (
 )
 from ._update import FirmwareSettings, FirmwareVersion, UpdateDetails
 
-from ._bluetooth import BluetoothBoilerDetails, BluetoothMachineCapabilities, BluetoothSmartStandbyDetails
+from ._bluetooth import (
+    BluetoothBoilerDetails,
+    BluetoothMachineCapabilities,
+    BluetoothSmartStandbyDetails,
+)
 
 __all__ = [
     "AccessToken",
@@ -85,6 +90,7 @@ __all__ = [
     "LastCoffee",
     "LastCoffeeList",
     "MachineStatus",
+    "NoWater",
     "NextStatus",
     "PreBrewInfusionTime",
     "PreBrewing",

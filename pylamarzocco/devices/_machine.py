@@ -90,7 +90,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     async def set_coffee_target_temperature(self, temperature: float) -> bool:
         """Set the coffee target temperature of the machine."""
-        
+
         return await self.__bluetooth_command_with_cloud_fallback(
             command="set_temp",
             bluetooth_kwargs={
@@ -128,14 +128,22 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             ),
         )
 
-    @cloud_only
     async def set_smart_standby(
-        self, enabled: bool, minutes: int, after: SmartStandByType
+        self, enabled: bool, minutes: int, mode: SmartStandByType
     ) -> bool:
         """Set the smart standby mode."""
-        assert self._cloud_client
-        return await self._cloud_client.set_smart_standby(
-            self.serial_number, enabled, minutes, after
+        return await self.__bluetooth_command_with_cloud_fallback(
+            command="set_smart_standby",
+            bluetooth_kwargs={
+                "enabled": enabled,
+                "mode": mode,
+                "minutes": minutes,
+            },
+            cloud_kwargs={
+                "enabled": enabled,
+                "minutes": minutes,
+                "after": mode,
+            },
         )
 
     @cloud_only
