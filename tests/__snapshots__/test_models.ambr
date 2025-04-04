@@ -417,6 +417,28 @@
           'steamBoiler': False,
         }),
       ]),
+      'schedules_dict': dict({
+        'KofUy56': dict({
+          'days': list([
+            'Tuesday',
+          ]),
+          'enabled': True,
+          'id': 'KofUy56',
+          'offTimeMinutes': 514,
+          'onTimeMinutes': 0,
+          'steamBoiler': True,
+        }),
+        'd1XUDAP': dict({
+          'days': list([
+            'Monday',
+          ]),
+          'enabled': False,
+          'id': 'd1XUDAP',
+          'offTimeMinutes': 1439,
+          'onTimeMinutes': 60,
+          'steamBoiler': False,
+        }),
+      }),
       'smart_stand_by_after': 'PowerOn',
       'smart_stand_by_enabled': True,
       'smart_stand_by_minutes': 10,

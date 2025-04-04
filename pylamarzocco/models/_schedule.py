@@ -63,6 +63,17 @@ class SmartWakeUpSleepSettings(DataClassJSONMixin):
     schedules: list[WakeUpScheduleSettings] = field(
         default_factory=list,
     )
+    schedules_dict: dict[str, WakeUpScheduleSettings] = field(
+        default_factory=dict,
+    )
+
+    @classmethod
+    def __post_deserialize__(cls, obj: SmartWakeUpSleepSettings) -> SmartWakeUpSleepSettings:
+        # move the firmware to a dict with type as key
+        obj.schedules_dict = {schedule.identifier: schedule for schedule in obj.schedules if schedule.identifier}
+        return obj
+
+
 
 @dataclass(kw_only=True)
 class ThingSchedulingSettings(Thing):
