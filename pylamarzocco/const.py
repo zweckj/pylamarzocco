@@ -1,4 +1,5 @@
 """Constants for La Marzocco Cloud."""
+
 from __future__ import annotations
 
 from enum import StrEnum
@@ -13,6 +14,7 @@ class MachineMode(StrEnum):
     """Machine states."""
 
     BREWING_MODE = "BrewingMode"
+    ECO_MODE = "EcoMode"
     STANDBY = "StandBy"
 
 
@@ -112,6 +114,7 @@ class ModelCode(StrEnum):
     GS3_MP = "GS3MP"
     GS3_AV = "GS3AV"
 
+
 class ModelName(StrEnum):
     """Model codes."""
 
@@ -120,7 +123,7 @@ class ModelName(StrEnum):
     LINEA_MINI_R = "Linea Mini R"
     GS3 = "GS3"
     GS3_MP = "GS3 MP"
-    GS3_AV = "GS3 AV" 
+    GS3_AV = "GS3 AV"
 
     @classmethod
     def from_string(cls, name: str) -> ModelName:
@@ -133,7 +136,7 @@ class ModelName(StrEnum):
             "LINEAMINI": "Linea Mini",
             "MICRA": "Linea Micra",
         }
-        if (key := ''.join(name.upper().split())) not in mapping:
+        if (key := "".join(name.upper().split())) not in mapping:
             raise ValueError(f"Invalid model name: {name}")
         return cls(mapping[key])
 
@@ -226,14 +229,17 @@ class BoilerType(StrEnum):
     COFFEE = "CoffeeBoiler1"
     STEAM = "SteamBoiler"
 
+
 class BackFlushStatus(StrEnum):
     """Back flush statuses."""
 
     REQUESTED = "Requested"
     OFF = "Off"
 
+
 class BluetoothReadSetting(StrEnum):
     """Declare what to read from the Bluetooth device."""
+
     MACHINE_CAPABILITIES = "machineCapabilities"
     MACHINE_MODE = "machineMode"
     TANK_STATUS = "tankStatus"
