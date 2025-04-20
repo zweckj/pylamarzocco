@@ -48,6 +48,7 @@ from ._schedule import (
     WakeUpScheduleSettings,
 )
 from ._statistics import (
+    CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
     CoffeeHistoryEvent,
     LastCoffee,
@@ -73,6 +74,7 @@ __all__ = [
     "BluetoothSmartStandbyDetails",
     "BrewByWeightDoseSettings",
     "BrewByWeightDoses",
+    "CoffeeAndFlushCounter",
     "CoffeeAndFlushTrend",
     "CoffeeBoiler",
     "CoffeeHistoryEvent",

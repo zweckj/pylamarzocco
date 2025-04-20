@@ -68,6 +68,7 @@ class WidgetType(StrEnum):
     # statistic widgets
     COFFEE_AND_FLUSH_TREND = "COFFEE_AND_FLUSH_TREND"
     LAST_COFFEE = "LAST_COFFEE"
+    COFFEE_AND_FLUSH_COUNTER = "COFFEE_AND_FLUSH_COUNTER"
 
 
 class CommandStatus(StrEnum):

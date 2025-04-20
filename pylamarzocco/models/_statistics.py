@@ -105,3 +105,16 @@ class LastCoffee(DataClassJSONMixin):
         metadata=field_options(alias="doseValueNumerator"),
         default=None,
     )
+
+
+@dataclass(kw_only=True)
+class CoffeeAndFlushCounter(BaseWidgetOutput):
+    """Coffee counter statistics."""
+
+    widget_type = WidgetType.COFFEE_AND_FLUSH_COUNTER
+    total_coffee: int = field(
+        metadata=field_options(alias="totalCoffee"),
+    )
+    total_flush: int = field(
+        metadata=field_options(alias="totalFlush"),
+    )

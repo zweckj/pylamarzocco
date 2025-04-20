@@ -9,14 +9,17 @@ from bleak.exc import BleakError
 
 from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
+    BoilerType,
     ModelCode,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
-    BoilerType,
 )
 from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
+    CoffeeAndFlushCounter,
+    CoffeeAndFlushTrend,
+    LastCoffeeList,
     PrebrewSettingTimes,
     SecondsInOut,
     ThingSchedulingSettings,
@@ -242,3 +245,36 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             if await func(**cl_kwargs):
                 return True
         return False
+
+    @cloud_only
+    async def get_coffee_and_flush_trend(
+        self, days: int, timezone: str
+    ) -> CoffeeAndFlushTrend:
+        """Get the last coffee and flush trend of a thing."""
+        assert self._cloud_client
+        return await self._cloud_client.get_thing_coffee_and_flush_trend(
+            serial_number=self.serial_number,
+            days=days,
+            timezone=timezone,
+        )
+
+    @cloud_only
+    async def get_last_coffee(
+        self, serial_number: str, days: int
+    ) -> LastCoffeeList:
+        """Get the last coffee."""
+        assert self._cloud_client
+        return await self._cloud_client.get_thing_last_coffee(
+            serial_number=serial_number,
+            days=days,
+        )
+
+    @cloud_only
+    async def get_coffee_and_flush_counter(
+        self, serial_number: str
+    ) -> CoffeeAndFlushCounter:
+        """Get the coffee and flush counter."""
+        assert self._cloud_client
+        return await self._cloud_client.get_thing_coffee_and_flush_counter(
+            serial_number=serial_number,
+        )

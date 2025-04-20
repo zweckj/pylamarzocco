@@ -170,6 +170,14 @@
           }
         ]
       }
-    }
+    },
+    {
+      "code": "COFFEE_AND_FLUSH_COUNTER",
+      "index": 1,
+      "output": {
+          "totalCoffee": 1620,
+          "totalFlush": 1366
+      }
+  }
   ]
 }

@@ -29,6 +29,7 @@ from pylamarzocco.const import (
     SmartStandByType,
     SteamTargetLevel,
     StompMessageType,
+    WidgetType,
 )
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models import (
@@ -43,6 +44,9 @@ from pylamarzocco.models import (
     ThingStatistics,
     ThingSettings,
     ThingSchedulingSettings,
+    CoffeeAndFlushCounter,
+    CoffeeAndFlushTrend,
+    LastCoffeeList,
     UpdateDetails,
     WakeUpScheduleSettings,
     WebSocketDetails,
@@ -208,6 +212,53 @@ class LaMarzoccoCloudClient:
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/scheduling"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
         return ThingSchedulingSettings.from_dict(result)
+
+    async def _get_thing_extended_statistics(
+        self, serial_number: str, widget: WidgetType, **kwargs: dict[str, Any]
+    ) -> dict:
+        """Get the extended statistics of a thing."""
+        url = f"{CUSTOMER_APP_URL}/things/{serial_number}/stats/{widget}/1"
+
+        # Append query parameters if kwargs is provided
+        if kwargs:
+            query_params = "&".join(f"{key}={value}" for key, value in kwargs.items())
+            url = f"{url}?{query_params}"
+
+        result = await self._rest_api_call(url=url, method=HTTPMethod.GET, timeout=10)
+        return result["output"]
+
+    async def get_thing_coffee_and_flush_trend(
+        self, serial_number: str, days: int, timezone: str
+    ) -> CoffeeAndFlushTrend:
+        """Get the last coffee and flush trend of a thing."""
+        result = await self._get_thing_extended_statistics(
+            serial_number=serial_number,
+            widget=WidgetType.COFFEE_AND_FLUSH_TREND,
+            days=days,
+            timezone=timezone,
+        )
+        return CoffeeAndFlushTrend.from_dict(result)
+
+    async def get_thing_last_coffee(
+        self, serial_number: str, days: int
+    ) -> LastCoffeeList:
+        """Get the last coffee of a thing."""
+        result = await self._get_thing_extended_statistics(
+            serial_number=serial_number,
+            widget=WidgetType.LAST_COFFEE,
+            days=days,
+        )
+        return LastCoffeeList.from_dict(result)
+
+    async def get_thing_coffee_and_flush_counter(
+        self, serial_number: str
+    ) -> CoffeeAndFlushCounter:
+        """Get the coffee and flush counter of a thing."""
+        result = await self._get_thing_extended_statistics(
+            serial_number=serial_number,
+            widget=WidgetType.COFFEE_AND_FLUSH_COUNTER,
+        )
+        return CoffeeAndFlushCounter.from_dict(result)
 
     # endregion
 
