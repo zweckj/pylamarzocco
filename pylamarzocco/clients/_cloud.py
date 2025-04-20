@@ -214,7 +214,7 @@ class LaMarzoccoCloudClient:
         return ThingSchedulingSettings.from_dict(result)
 
     async def _get_thing_extended_statistics(
-        self, serial_number: str, widget: WidgetType, **kwargs: dict[str, Any]
+        self, serial_number: str, widget: WidgetType, **kwargs: Any
     ) -> dict:
         """Get the extended statistics of a thing."""
         url = f"{CUSTOMER_APP_URL}/things/{serial_number}/stats/{widget}/1"
