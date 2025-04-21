@@ -275,6 +275,7 @@ class LaMarzoccoCloudClient:
             async with await self._client.ws_connect(
                 f"wss://{BASE_URL}/ws/connect",
                 timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
+                heartbeat=15,
             ) as ws:
                 await self.__setup_websocket_connection(ws, serial_number)
                 async for msg in ws:
