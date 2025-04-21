@@ -14,6 +14,7 @@ from pylamarzocco.const import (
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
+    WidgetType,
 )
 from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
@@ -252,29 +253,39 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     ) -> CoffeeAndFlushTrend:
         """Get the last coffee and flush trend of a thing."""
         assert self._cloud_client
-        return await self._cloud_client.get_thing_coffee_and_flush_trend(
-            serial_number=self.serial_number,
-            days=days,
-            timezone=timezone,
+        coffee_and_flush_trend = (
+            await self._cloud_client.get_thing_coffee_and_flush_trend(
+                serial_number=self.serial_number,
+                days=days,
+                timezone=timezone,
+            )
         )
+        self.statistics.widgets[WidgetType.COFFEE_AND_FLUSH_TREND] = (
+            coffee_and_flush_trend
+        )
+        return coffee_and_flush_trend
 
     @cloud_only
-    async def get_last_coffee(
-        self, serial_number: str, days: int
-    ) -> LastCoffeeList:
+    async def get_last_coffee(self, days: int) -> LastCoffeeList:
         """Get the last coffee."""
         assert self._cloud_client
-        return await self._cloud_client.get_thing_last_coffee(
-            serial_number=serial_number,
+        last_coffee_list = await self._cloud_client.get_thing_last_coffee(
+            serial_number=self.serial_number,
             days=days,
         )
+        self.statistics.widgets[WidgetType.LAST_COFFEE] = last_coffee_list
+        return last_coffee_list
 
     @cloud_only
-    async def get_coffee_and_flush_counter(
-        self, serial_number: str
-    ) -> CoffeeAndFlushCounter:
+    async def get_coffee_and_flush_counter(self) -> CoffeeAndFlushCounter:
         """Get the coffee and flush counter."""
         assert self._cloud_client
-        return await self._cloud_client.get_thing_coffee_and_flush_counter(
-            serial_number=serial_number,
+        coffee_and_flush_counter = (
+            await self._cloud_client.get_thing_coffee_and_flush_counter(
+                serial_number=self.serial_number,
+            )
         )
+        self.statistics.widgets[WidgetType.COFFEE_AND_FLUSH_COUNTER] = (
+            coffee_and_flush_counter
+        )
+        return coffee_and_flush_counter

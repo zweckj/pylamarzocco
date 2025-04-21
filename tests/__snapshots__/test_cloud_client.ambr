@@ -185,6 +185,155 @@
     ]),
     'serial_number': 'MR123456',
     'type': 'CoffeeMachine',
+    'widgets': dict({
+      'COFFEE_AND_FLUSH_COUNTER': dict({
+        'total_coffee': 1620,
+        'total_flush': 1366,
+      }),
+      'COFFEE_AND_FLUSH_TREND': dict({
+        'coffees': list([
+          dict({
+            'timestamp': '2025-03-14T23:00:00+00:00',
+            'value': 2,
+          }),
+          dict({
+            'timestamp': '2025-03-15T23:00:00+00:00',
+            'value': 2,
+          }),
+          dict({
+            'timestamp': '2025-03-16T23:00:00+00:00',
+            'value': 2,
+          }),
+          dict({
+            'timestamp': '2025-03-17T23:00:00+00:00',
+            'value': 2,
+          }),
+          dict({
+            'timestamp': '2025-03-18T23:00:00+00:00',
+            'value': 4,
+          }),
+          dict({
+            'timestamp': '2025-03-19T23:00:00+00:00',
+            'value': 3,
+          }),
+          dict({
+            'timestamp': '2025-03-20T23:00:00+00:00',
+            'value': 1,
+          }),
+        ]),
+        'days': 7,
+        'timezone': 'Europe/Berlin',
+      }),
+      'LAST_COFFEE': dict({
+        'last_coffees': list([
+          dict({
+            'dose_index': 'Continuous',
+            'dose_mode': 'Continuous',
+            'dose_value_numerator': None,
+            'extraction_seconds': 30.44,
+            'time': '2025-03-21T05:41:19.203000+00:00',
+          }),
+          dict({
+            'dose_index': 'Continuous',
+            'dose_mode': 'Continuous',
+            'dose_value_numerator': None,
+            'extraction_seconds': 10.8,
+            'time': '2025-03-20T16:57:07.722000+00:00',
+          }),
+          dict({
+            'dose_index': 'Continuous',
+            'dose_mode': 'Continuous',
+            'dose_value_numerator': None,
+            'extraction_seconds': 12.457,
+            'time': '2025-03-20T05:33:46.919000+00:00',
+          }),
+          dict({
+            'dose_index': 'Continuous',
+            'dose_mode': 'Continuous',
+            'dose_value_numerator': None,
+            'extraction_seconds': 23.504,
+            'time': '2025-03-20T05:31:42.812000+00:00',
+          }),
+          dict({
+            'dose_index': 'Continuous',
+            'dose_mode': 'Continuous',
+            'dose_value_numerator': None,
+            'extraction_seconds': 16.031,
+            'time': '2025-03-19T14:57:35.439000+00:00',
+          }),
+          dict({
+            'dose_index': 'Continuous',
+            'dose_mode': 'Continuous',
+            'dose_value_numerator': None,
+            'extraction_seconds': 27.413,
+            'time': '2025-03-19T14:55:42.154000+00:00',
+          }),
+          dict({
+            'dose_index': 'Continuous',
+            'dose_mode': 'Continuous',
+            'dose_value_numerator': None,
+            'extraction_seconds': 14.182,
+            'time': '2025-03-19T06:06:19.903000+00:00',
+          }),
+          dict({
+            'dose_index': 'Continuous',
+            'dose_mode': 'Continuous',
+            'dose_value_numerator': None,
+            'extraction_seconds': 23.228,
+            'time': '2025-03-19T06:03:55.304000+00:00',
+          }),
+          dict({
+            'dose_index': 'DoseA',
+            'dose_mode': 'PulsesType',
+            'dose_value_numerator': None,
+            'extraction_seconds': 12.98,
+            'time': '2025-03-18T05:51:38.548000+00:00',
+          }),
+          dict({
+            'dose_index': 'DoseA',
+            'dose_mode': 'PulsesType',
+            'dose_value_numerator': None,
+            'extraction_seconds': 26.99,
+            'time': '2025-03-18T05:50:06.774000+00:00',
+          }),
+          dict({
+            'dose_index': 'DoseA',
+            'dose_mode': 'PulsesType',
+            'dose_value_numerator': None,
+            'extraction_seconds': 11.069,
+            'time': '2025-03-17T05:43:39.197000+00:00',
+          }),
+          dict({
+            'dose_index': 'DoseA',
+            'dose_mode': 'PulsesType',
+            'dose_value_numerator': None,
+            'extraction_seconds': 35.472,
+            'time': '2025-03-17T05:42:03.385000+00:00',
+          }),
+          dict({
+            'dose_index': 'DoseA',
+            'dose_mode': 'PulsesType',
+            'dose_value_numerator': None,
+            'extraction_seconds': 11.494,
+            'time': '2025-03-16T06:23:48.119000+00:00',
+          }),
+          dict({
+            'dose_index': 'DoseA',
+            'dose_mode': 'PulsesType',
+            'dose_value_numerator': None,
+            'extraction_seconds': 39.915,
+            'time': '2025-03-16T06:22:27.433000+00:00',
+          }),
+          dict({
+            'dose_index': 'DoseA',
+            'dose_mode': 'PulsesType',
+            'dose_value_numerator': None,
+            'extraction_seconds': 13.891,
+            'time': '2025-03-15T05:51:30.205000+00:00',
+          }),
+        ]),
+      }),
+    }),
   })
 # ---
 # name: test_get_thing_dashboard[gs3av]

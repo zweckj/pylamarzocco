@@ -40,6 +40,8 @@ class ThingStatistics(Thing):
         default_factory=list,
     )
 
+    widgets: dict[WidgetType, BaseWidgetOutput] = field(default_factory=dict)
+
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
         # move code to widget_type for mashumaro annotated serialization
@@ -48,6 +50,12 @@ class ThingStatistics(Thing):
             widget["output"]["widget_type"] = widget["code"]
         d["selectedWidgets"] = widgets
         return d
+
+    @classmethod
+    def __post_deserialize__(cls, obj: ThingStatistics) -> ThingStatistics:
+        # move the firmware to a dict with type as key
+        obj.widgets = {widget.code: widget.output for widget in obj.selected_widgets}
+        return obj
 
 
 @dataclass(kw_only=True)
