@@ -60,7 +60,7 @@ from pylamarzocco.util import (
 _LOGGER = logging.getLogger(__name__)
 
 
-TOKEN_TIME_TO_REFRESH = 4 * 60 * 60  # 4 hours
+TOKEN_TIME_TO_REFRESH = 10 * 60  # 10 minutes before expiration
 PENDING_COMMAND_TIMEOUT = 10
 
 
@@ -90,7 +90,7 @@ class LaMarzoccoCloudClient:
         if self._access_token is None or self._access_token.expires_at < time.time():
             self._access_token = await self._async_sign_in()
 
-        if self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH:
+        elif self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH:
             self._access_token = await self._async_refresh_token()
 
         return self._access_token.access_token
@@ -171,9 +171,12 @@ class LaMarzoccoCloudClient:
             _LOGGER.debug("Request to %s successful", json_response)
             return json_response
 
+        if response.status == 401:
+            raise AuthFail("Authentication failed.")
+
         raise RequestNotSuccessful(
-            f"Request to endpoint {response.url} failed with status code {response.status}"
-            + f"response: {await response.text()}"
+            f"Request to endpoint {response.url} failed with status code {response.status}.\n"
+            + f"Full response: {await response.text()}"
         )
 
     # region config

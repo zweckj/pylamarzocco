@@ -7,8 +7,7 @@ from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.mixins.json import DataClassJSONMixin
 
-from pylamarzocco.const import TOKEN_EXPIRATION
-
+TOKEN_EXPIRATION = 60 * 60 # 1 hour
 
 @dataclass(kw_only=True, frozen=True)
 class AccessToken(DataClassJSONMixin):

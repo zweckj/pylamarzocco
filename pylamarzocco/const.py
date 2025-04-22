@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-TOKEN_EXPIRATION = 60 * 60 * 24 * 5  # 5 days
-
 BASE_URL = "lion.lamarzocco.io"
 CUSTOMER_APP_URL = f"https://{BASE_URL}/api/customer-app"
 
