@@ -141,6 +141,7 @@ class LaMarzoccoThing:
     async def connect_dashboard_websocket(
         self,
         update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = None,
+        disconnect_callback: Callable[[], Any] | None = None,
     ) -> None:
         """Connect to the cloud websocket for the dashboard.
 
@@ -151,7 +152,9 @@ class LaMarzoccoThing:
         self._update_callback = update_callback
 
         await self._cloud_client.websocket_connect(
-            self.serial_number, self._websocket_dashboard_update_received
+            self.serial_number,
+            self._websocket_dashboard_update_received,
+            disconnect_callback,
         )
 
     @cloud_only
