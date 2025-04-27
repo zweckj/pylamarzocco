@@ -82,7 +82,6 @@ class LaMarzoccoCloudClient:
         self._access_token: AccessToken | None = None
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
-        self.websocket_disconnected = False  # used for logging disconnect once
 
     # region Authentication
     async def async_get_access_token(self) -> str:
@@ -271,6 +270,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
         | None = None,
+        disconnect_callback: Callable[[], Any] | None = None,
     ) -> None:
         """Connect to the websocket of the machine."""
 
@@ -286,18 +286,16 @@ class LaMarzoccoCloudClient:
                         ws, msg, notification_callback
                     ):
                         break
-        except TimeoutError as err:
-            if not self.websocket_disconnected:
-                _LOGGER.warning("Websocket disconnected: Connection timed out")
-                self.websocket_disconnected = True
-            _LOGGER.debug("Websocket timeout: %s", err)
+        except TimeoutError:
+            _LOGGER.warning("Websocket disconnected: Connection timed out")
         except ClientConnectionError as err:
-            if not self.websocket_disconnected:
-                _LOGGER.warning("Websocket disconnected: Could not connect: %s", err)
-                self.websocket_disconnected = True
-            _LOGGER.debug("Websocket disconnected: Could not connect: %s", err)
+            _LOGGER.error("Websocket disconnected: Could not connect: %s", err)
         except InvalidURL:
             _LOGGER.error("Invalid URL for websocket.")
+        finally:
+            if disconnect_callback is not None:
+                disconnect_callback()
+
 
     async def __setup_websocket_connection(
         self,
@@ -351,9 +349,6 @@ class LaMarzoccoCloudClient:
             await ws.close()
 
         self.websocket = WebSocketDetails(ws, disconnect_websocket)
-        if self.websocket_disconnected:
-            _LOGGER.warning("Websocket reconnected")
-            self.websocket_disconnected = False
 
     async def __handle_websocket_message(
         self,
@@ -365,11 +360,9 @@ class LaMarzoccoCloudClient:
         """Handle receiving a websocket message. Return True for disconnect."""
         if msg.type in (WSMsgType.CLOSING, WSMsgType.CLOSED):
             _LOGGER.debug("Websocket disconnected gracefully")
-            self.websocket_disconnected = True
             return True
         if msg.type == WSMsgType.ERROR:
             _LOGGER.warning("Websocket disconnected with error %s", ws.exception())
-            self.websocket_disconnected = True
             return True
         _LOGGER.debug("Received websocket message: %s", msg)
         try:
