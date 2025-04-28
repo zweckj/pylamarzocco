@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -271,31 +272,41 @@ class LaMarzoccoCloudClient:
         notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
         | None = None,
         disconnect_callback: Callable[[], Any] | None = None,
+        auto_reconnect: bool = True,
     ) -> None:
         """Connect to the websocket of the machine."""
-
-        try:
-            async with await self._client.ws_connect(
-                f"wss://{BASE_URL}/ws/connect",
-                timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
-                heartbeat=15,
-            ) as ws:
-                await self.__setup_websocket_connection(ws, serial_number)
-                async for msg in ws:
-                    if await self.__handle_websocket_message(
-                        ws, msg, notification_callback
-                    ):
-                        break
-        except TimeoutError:
-            _LOGGER.warning("Websocket disconnected: Connection timed out")
-        except ClientConnectionError as err:
-            _LOGGER.error("Websocket disconnected: Could not connect: %s", err)
-        except InvalidURL:
-            _LOGGER.error("Invalid URL for websocket.")
-        finally:
-            if disconnect_callback is not None:
-                disconnect_callback()
-
+        while auto_reconnect:
+            try:
+                async with await self._client.ws_connect(
+                    f"wss://{BASE_URL}/ws/connect",
+                    timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
+                    heartbeat=15,
+                ) as ws:
+                    try:
+                        await self.__setup_websocket_connection(ws, serial_number)
+                        async for msg in ws:
+                            if await self.__handle_websocket_message(
+                                ws, msg, notification_callback
+                            ):
+                                break
+                    except asyncio.CancelledError:
+                        _LOGGER.debug("WebSocket cancellation requested")
+                        await self.websocket.disconnect()
+                        raise
+            except TimeoutError:
+                _LOGGER.warning("Websocket disconnected: Connection timed out")
+            except ClientConnectionError as err:
+                _LOGGER.error("Websocket disconnected: Could not connect: %s", err)
+                auto_reconnect = False
+            except InvalidURL:
+                _LOGGER.error("Invalid URL for websocket.")
+                auto_reconnect = False
+            except asyncio.CancelledError:
+                _LOGGER.debug("WebSocket cancellation successful")
+                auto_reconnect = False
+            finally:
+                if disconnect_callback is not None:
+                    disconnect_callback()
 
     async def __setup_websocket_connection(
         self,
