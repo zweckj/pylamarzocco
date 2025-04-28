@@ -272,6 +272,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
         | None = None,
+        connect_callback: Callable[[], Any] | None = None,
         disconnect_callback: Callable[[], Any] | None = None,
         auto_reconnect: bool = True,
     ) -> None:
@@ -285,6 +286,8 @@ class LaMarzoccoCloudClient:
                 ) as ws:
                     try:
                         await self.__setup_websocket_connection(ws, serial_number)
+                        if connect_callback is not None:
+                            connect_callback()
                         async for msg in ws:
                             if await self.__handle_websocket_message(
                                 ws, msg, notification_callback
