@@ -168,7 +168,8 @@ class LaMarzoccoCloudClient:
         # ensure status code indicates success
         if is_success(response):
             json_response = await response.json()
-            _LOGGER.debug("Request to %s successful", json_response)
+            _LOGGER.debug("Request to %s successful", url)
+            _LOGGER.debug("Response: %s", json_response)
             return json_response
 
         if response.status == 401:
