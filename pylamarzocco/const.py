@@ -112,6 +112,8 @@ class ModelCode(StrEnum):
     GS3 = "GS3"
     GS3_MP = "GS3MP"
     GS3_AV = "GS3AV"
+    PICO_GRINDER = "PICOGRINDER"
+    SWAN_GRINDER = "SWANGRINDER"
 
 
 class ModelName(StrEnum):
@@ -123,6 +125,8 @@ class ModelName(StrEnum):
     GS3 = "GS3"
     GS3_MP = "GS3 MP"
     GS3_AV = "GS3 AV"
+    PICO_GRINDER = "Pico"
+    SWAN_GRINDER = "Swan"
 
     @classmethod
     def from_string(cls, name: str) -> ModelName:
@@ -134,6 +138,8 @@ class ModelName(StrEnum):
             "LINEAMICRA": "Linea Micra",
             "LINEAMINI": "Linea Mini",
             "MICRA": "Linea Micra",
+            "PICOGRINDER": "Pico",
+            "SWANGRINDER": "Swan",
         }
         if (key := "".join(name.upper().split())) not in mapping:
             raise ValueError(f"Invalid model name: {name}")
