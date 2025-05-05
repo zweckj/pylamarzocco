@@ -1,0 +1,234 @@
+{
+  "connected": true,
+  "removedWidgets": [
+    {
+      "code": "CMMachineGroupStatus",
+      "index": 1
+    },
+    {
+      "code": "CMSteamBoilerTemperature",
+      "index": 1
+    },
+    {
+      "code": "CMGroupDoses",
+      "index": 1
+    },
+    {
+      "code": "CMPreInfusionEnable",
+      "index": 1
+    },
+    {
+      "code": "CMPreInfusion",
+      "index": 1
+    },
+    {
+      "code": "CMBrewByWeightDoses",
+      "index": 1
+    },
+    {
+      "code": "CMCupWarmer",
+      "index": 1
+    },
+    {
+      "code": "CMHotWaterDose",
+      "index": 1
+    },
+    {
+      "code": "CMAutoFlush",
+      "index": 1
+    },
+    {
+      "code": "CMRinseFlush",
+      "index": 1
+    },
+    {
+      "code": "CMSteamFlush",
+      "index": 1
+    },
+    {
+      "code": "CMNoWater",
+      "index": 1
+    },
+    {
+      "code": "GMachineStatus",
+      "index": 1
+    },
+    {
+      "code": "GDoses",
+      "index": 1
+    },
+    {
+      "code": "GSingleDoseMode",
+      "index": 1
+    },
+    {
+      "code": "GBaristaLight",
+      "index": 1
+    },
+    {
+      "code": "GHopperOpened",
+      "index": 1
+    },
+    {
+      "code": "GMirrorDoses",
+      "index": 1
+    },
+    {
+      "code": "GMoreDose",
+      "index": 1
+    },
+    {
+      "code": "GGrindWith",
+      "index": 1
+    }
+  ],
+  "connectionDate": 1742439620235,
+  "widgets": [
+    {
+      "code": "CMMachineStatus",
+      "index": 1,
+      "output": {
+        "status": "StandBy",
+        "availableModes": ["BrewingMode", "StandBy"],
+        "mode": "StandBy",
+        "nextStatus": { "status": "StandBy", "startTime": 1742490427722 },
+        "brewingStartTime": null
+      }
+    },
+    {
+      "code": "CMCoffeeBoiler",
+      "index": 1,
+      "output": {
+        "status": "StandBy",
+        "enabled": true,
+        "enabledSupported": false,
+        "targetTemperature": 94.0,
+        "targetTemperatureMin": 80,
+        "targetTemperatureMax": 100,
+        "targetTemperatureStep": 0.1,
+        "readyStartTime": null
+      }
+    },
+    {
+      "code": "CMSteamBoilerLevel",
+      "index": 1,
+      "output": {
+        "status": "StandBy",
+        "enabled": true,
+        "enabledSupported": true,
+        "targetLevel": "Level3",
+        "targetLevelSupported": true,
+        "readyStartTime": null
+      }
+    },
+    {
+      "code": "CMPreExtraction",
+      "index": 1,
+      "output": {
+        "availableModes": ["PreBrewing", "PreInfusion", "Disabled"],
+        "mode": "PreInfusion",
+        "times": {
+          "In": {
+            "seconds": 0.0,
+            "secondsMin": {
+              "PreInfusion": 2,
+              "PreBrewing": 2
+            },
+            "secondsMax": {
+              "PreInfusion": 9,
+              "PreBrewing": 9
+            },
+            "secondsStep": {
+              "PreInfusion": 0.1,
+              "PreBrewing": 0.1
+            }
+          },
+          "Out": {
+            "seconds": 4.0,
+            "secondsMin": {
+              "PreInfusion": 1,
+              "PreBrewing": 1
+            },
+            "secondsMax": {
+              "PreInfusion": 25,
+              "PreBrewing": 9
+            },
+            "secondsStep": {
+              "PreInfusion": 0.1,
+              "PreBrewing": 0.1
+            }
+          }
+        }
+      }
+    },
+    {
+      "code": "CMPreBrewing",
+      "index": 1,
+      "output": {
+        "availableModes": ["PreBrewing", "PreInfusion", "Disabled"],
+        "mode": "PreInfusion",
+        "times": {
+          "PreBrewing": [
+            {
+              "doseIndex": "ByGroup",
+              "seconds": {
+                "In": 5.0,
+                "Out": 5.0
+              },
+              "secondsMin": {
+                "In": 1,
+                "Out": 1
+              },
+              "secondsMax": {
+                "In": 9,
+                "Out": 9
+              },
+              "secondsStep": {
+                "In": 0.1,
+                "Out": 0.1
+              }
+            }
+          ],
+          "PreInfusion": [
+            {
+              "doseIndex": "ByGroup",
+              "seconds": {
+                "In": 0.0,
+                "Out": 4.0
+              },
+              "secondsMin": {
+                "In": 1,
+                "Out": 1
+              },
+              "secondsMax": {
+                "In": 25,
+                "Out": 25
+              },
+              "secondsStep": {
+                "In": 0.1,
+                "Out": 0.1
+              }
+            }
+          ]
+        },
+        "doseIndexSupported": false
+      }
+    },
+    {
+      "code": "CMBackFlush",
+      "index": 1,
+      "output": {
+        "lastCleaningStartTime": null,
+        "status": "Off"
+      }
+    }
+  ],
+  "uuid": "227e486d-583d-4e69-8113-2e89ac0bce53",
+  "commands": [
+    {
+      "id": "14939275-fdc3-4aaf-85be-1a1a7d418188",
+      "status": "Success",
+      "errorCode": null
+    }
+  ]
+}

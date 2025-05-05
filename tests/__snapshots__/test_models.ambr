@@ -1,0 +1,452 @@
+# serializer version: 1
+# name: test_device_config
+  dict({
+    'commands': list([
+      dict({
+        'error_code': None,
+        'id': '14939275-fdc3-4aaf-85be-1a1a7d418188',
+        'status': 'Success',
+      }),
+    ]),
+    'config': dict({
+      'CMBackFlush': dict({
+        'last_cleaning_start_time': None,
+        'status': 'Off',
+      }),
+      'CMCoffeeBoiler': dict({
+        'enabled': True,
+        'enabled_supported': False,
+        'ready_start_time': None,
+        'status': 'StandBy',
+        'target_temperature': 94.0,
+        'target_temperature_max': 100,
+        'target_temperature_min': 80,
+        'target_temperature_step': 0.1,
+      }),
+      'CMMachineStatus': dict({
+        'available_modes': list([
+          'BrewingMode',
+          'StandBy',
+        ]),
+        'brewing_start_time': None,
+        'mode': 'StandBy',
+        'next_status': dict({
+          'start_time': '2025-03-20T17:07:07.722000+00:00',
+          'status': 'StandBy',
+        }),
+        'status': 'StandBy',
+      }),
+      'CMPreBrewing': dict({
+        'available_modes': list([
+          'PreBrewing',
+          'PreInfusion',
+          'Disabled',
+        ]),
+        'dose_index_supported': False,
+        'mode': 'PreInfusion',
+        'times': dict({
+          'pre_brewing': list([
+            dict({
+              'dose_index': 'ByGroup',
+              'seconds': dict({
+                'In': 5.0,
+                'Out': 5.0,
+              }),
+              'seconds_max': dict({
+                'In': 9.0,
+                'Out': 9.0,
+              }),
+              'seconds_min': dict({
+                'In': 1.0,
+                'Out': 1.0,
+              }),
+              'seconds_step': dict({
+                'In': 0.1,
+                'Out': 0.1,
+              }),
+            }),
+          ]),
+          'pre_infusion': list([
+            dict({
+              'dose_index': 'ByGroup',
+              'seconds': dict({
+                'In': 0.0,
+                'Out': 4.0,
+              }),
+              'seconds_max': dict({
+                'In': 25.0,
+                'Out': 25.0,
+              }),
+              'seconds_min': dict({
+                'In': 1.0,
+                'Out': 1.0,
+              }),
+              'seconds_step': dict({
+                'In': 0.1,
+                'Out': 0.1,
+              }),
+            }),
+          ]),
+        }),
+      }),
+      'CMPreExtraction': dict({
+        'available_modes': list([
+          'PreBrewing',
+          'PreInfusion',
+          'Disabled',
+        ]),
+        'mode': 'PreInfusion',
+        'times': dict({
+          'time_in': dict({
+            'seconds': 0.0,
+            'seconds_max': dict({
+              'pre_brewing': 9.0,
+              'pre_infusion': 9.0,
+            }),
+            'seconds_min': dict({
+              'pre_brewing': 2.0,
+              'pre_infusion': 2.0,
+            }),
+            'seconds_step': dict({
+              'pre_brewing': 0.1,
+              'pre_infusion': 0.1,
+            }),
+          }),
+          'time_out': dict({
+            'seconds': 4.0,
+            'seconds_max': dict({
+              'pre_brewing': 9.0,
+              'pre_infusion': 25.0,
+            }),
+            'seconds_min': dict({
+              'pre_brewing': 1.0,
+              'pre_infusion': 1.0,
+            }),
+            'seconds_step': dict({
+              'pre_brewing': 0.1,
+              'pre_infusion': 0.1,
+            }),
+          }),
+        }),
+      }),
+      'CMSteamBoilerLevel': dict({
+        'enabled': True,
+        'enabled_supported': True,
+        'ready_start_time': None,
+        'status': 'StandBy',
+        'target_level': 'Level3',
+        'target_level_supported': True,
+      }),
+    }),
+    'connected': True,
+    'connection_date': 1742439620235,
+    'removed_widgets': list([
+      dict({
+        'code': 'CMMachineGroupStatus',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMSteamBoilerTemperature',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMGroupDoses',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMPreInfusionEnable',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMPreInfusion',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMBrewByWeightDoses',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMCupWarmer',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMHotWaterDose',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMAutoFlush',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMRinseFlush',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMSteamFlush',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMNoWater',
+        'index': 1,
+      }),
+      dict({
+        'code': 'GMachineStatus',
+        'index': 1,
+      }),
+      dict({
+        'code': 'GDoses',
+        'index': 1,
+      }),
+      dict({
+        'code': 'GSingleDoseMode',
+        'index': 1,
+      }),
+      dict({
+        'code': 'GBaristaLight',
+        'index': 1,
+      }),
+      dict({
+        'code': 'GHopperOpened',
+        'index': 1,
+      }),
+      dict({
+        'code': 'GMirrorDoses',
+        'index': 1,
+      }),
+      dict({
+        'code': 'GMoreDose',
+        'index': 1,
+      }),
+      dict({
+        'code': 'GGrindWith',
+        'index': 1,
+      }),
+    ]),
+    'uuid': '227e486d-583d-4e69-8113-2e89ac0bce53',
+    'widgets': list([
+      dict({
+        'code': 'CMMachineStatus',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'BrewingMode',
+            'StandBy',
+          ]),
+          'brewing_start_time': None,
+          'mode': 'StandBy',
+          'next_status': dict({
+            'start_time': '2025-03-20T17:07:07.722000+00:00',
+            'status': 'StandBy',
+          }),
+          'status': 'StandBy',
+        }),
+      }),
+      dict({
+        'code': 'CMCoffeeBoiler',
+        'index': 1,
+        'output': dict({
+          'enabled': True,
+          'enabled_supported': False,
+          'ready_start_time': None,
+          'status': 'StandBy',
+          'target_temperature': 94.0,
+          'target_temperature_max': 100,
+          'target_temperature_min': 80,
+          'target_temperature_step': 0.1,
+        }),
+      }),
+      dict({
+        'code': 'CMSteamBoilerLevel',
+        'index': 1,
+        'output': dict({
+          'enabled': True,
+          'enabled_supported': True,
+          'ready_start_time': None,
+          'status': 'StandBy',
+          'target_level': 'Level3',
+          'target_level_supported': True,
+        }),
+      }),
+      dict({
+        'code': 'CMPreExtraction',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'PreBrewing',
+            'PreInfusion',
+            'Disabled',
+          ]),
+          'mode': 'PreInfusion',
+          'times': dict({
+            'time_in': dict({
+              'seconds': 0.0,
+              'seconds_max': dict({
+                'pre_brewing': 9.0,
+                'pre_infusion': 9.0,
+              }),
+              'seconds_min': dict({
+                'pre_brewing': 2.0,
+                'pre_infusion': 2.0,
+              }),
+              'seconds_step': dict({
+                'pre_brewing': 0.1,
+                'pre_infusion': 0.1,
+              }),
+            }),
+            'time_out': dict({
+              'seconds': 4.0,
+              'seconds_max': dict({
+                'pre_brewing': 9.0,
+                'pre_infusion': 25.0,
+              }),
+              'seconds_min': dict({
+                'pre_brewing': 1.0,
+                'pre_infusion': 1.0,
+              }),
+              'seconds_step': dict({
+                'pre_brewing': 0.1,
+                'pre_infusion': 0.1,
+              }),
+            }),
+          }),
+        }),
+      }),
+      dict({
+        'code': 'CMPreBrewing',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'PreBrewing',
+            'PreInfusion',
+            'Disabled',
+          ]),
+          'dose_index_supported': False,
+          'mode': 'PreInfusion',
+          'times': dict({
+            'pre_brewing': list([
+              dict({
+                'dose_index': 'ByGroup',
+                'seconds': dict({
+                  'In': 5.0,
+                  'Out': 5.0,
+                }),
+                'seconds_max': dict({
+                  'In': 9.0,
+                  'Out': 9.0,
+                }),
+                'seconds_min': dict({
+                  'In': 1.0,
+                  'Out': 1.0,
+                }),
+                'seconds_step': dict({
+                  'In': 0.1,
+                  'Out': 0.1,
+                }),
+              }),
+            ]),
+            'pre_infusion': list([
+              dict({
+                'dose_index': 'ByGroup',
+                'seconds': dict({
+                  'In': 0.0,
+                  'Out': 4.0,
+                }),
+                'seconds_max': dict({
+                  'In': 25.0,
+                  'Out': 25.0,
+                }),
+                'seconds_min': dict({
+                  'In': 1.0,
+                  'Out': 1.0,
+                }),
+                'seconds_step': dict({
+                  'In': 0.1,
+                  'Out': 0.1,
+                }),
+              }),
+            ]),
+          }),
+        }),
+      }),
+      dict({
+        'code': 'CMBackFlush',
+        'index': 1,
+        'output': dict({
+          'last_cleaning_start_time': None,
+          'status': 'Off',
+        }),
+      }),
+    ]),
+  })
+# ---
+# name: test_scheduling_websocket_config
+  dict({
+    'auto_on_off': None,
+    'auto_on_off_supported': False,
+    'auto_stand_by': None,
+    'auto_stand_by_supported': False,
+    'commands': list([
+      dict({
+        'error_code': None,
+        'id': '16c2df41-ca86-4995-98e6-9b892e9aaafd',
+        'status': 'Success',
+      }),
+    ]),
+    'connected': True,
+    'connection_date': '2025-03-21T03:00:19.892000+00:00',
+    'smart_wake_up_sleep': dict({
+      'schedules': list([
+        dict({
+          'days': list([
+            'Tuesday',
+          ]),
+          'enabled': True,
+          'id': 'KofUy56',
+          'offTimeMinutes': 514,
+          'onTimeMinutes': 0,
+          'steamBoiler': True,
+        }),
+        dict({
+          'days': list([
+            'Monday',
+          ]),
+          'enabled': False,
+          'id': 'd1XUDAP',
+          'offTimeMinutes': 1439,
+          'onTimeMinutes': 60,
+          'steamBoiler': False,
+        }),
+      ]),
+      'schedules_dict': dict({
+        'KofUy56': dict({
+          'days': list([
+            'Tuesday',
+          ]),
+          'enabled': True,
+          'id': 'KofUy56',
+          'offTimeMinutes': 514,
+          'onTimeMinutes': 0,
+          'steamBoiler': True,
+        }),
+        'd1XUDAP': dict({
+          'days': list([
+            'Monday',
+          ]),
+          'enabled': False,
+          'id': 'd1XUDAP',
+          'offTimeMinutes': 1439,
+          'onTimeMinutes': 60,
+          'steamBoiler': False,
+        }),
+      }),
+      'smart_stand_by_after': 'PowerOn',
+      'smart_stand_by_enabled': True,
+      'smart_stand_by_minutes': 10,
+      'smart_stand_by_minutes_max': 30,
+      'smart_stand_by_minutes_min': 1,
+      'smart_stand_by_minutes_step': 1,
+    }),
+    'smart_wake_up_sleep_supported': True,
+    'weekly_supported': False,
+  })
+# ---

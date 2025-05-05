@@ -1,8 +1,8 @@
 [project]
 name = "pylamarzocco"
-version = "1.4.9"
+version = "2.0.0"
 license = { text = "MIT" }
-description = "A Python implementation of the new La Marzocco API"
+description = "A Python implementation of the La Marzocco API"
 readme = "README.md"
 authors = [
     { name = "Josef Zweck", email = "24647999+zweckj@users.noreply.github.com" },
@@ -20,7 +20,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = ["bleak >= 0.20.0", "aiohttp >= 3.8"]
+dependencies = ["bleak >= 0.20.0", "aiohttp >= 3.8", "mashumaro >= 3.0"]
 requires-python = ">= 3.12"
 
 [project.urls]

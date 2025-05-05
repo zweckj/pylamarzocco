@@ -1,352 +1,169 @@
-"""Test the LaMarzoccoMachine class."""
+"""Test the machine module."""
 
-# pylint: disable=W0212
-from dataclasses import asdict
-from http import HTTPMethod
-from unittest.mock import AsyncMock, patch
-from aiohttp import ClientTimeout
+from unittest.mock import MagicMock
+
 import pytest
 
-from aioresponses import aioresponses
-from bleak import BleakError
-from syrupy import SnapshotAssertion
-
-from pylamarzocco.clients.bluetooth import LaMarzoccoBluetoothClient
-from pylamarzocco.clients.cloud import LaMarzoccoCloudClient
-from pylamarzocco.clients.local import LaMarzoccoLocalClient
-from pylamarzocco.const import (
-    BoilerType,
-    PhysicalKey,
-    MachineModel,
-    GW_MACHINE_BASE_URL,
+from pylamarzocco import (
+    LaMarzoccoBluetoothClient,
+    LaMarzoccoCloudClient,
+    LaMarzoccoMachine,
 )
-from pylamarzocco.devices.machine import LaMarzoccoMachine
-from pylamarzocco.models import LaMarzoccoBrewByWeightSettings
-
-from . import init_machine
-from .conftest import load_fixture
-
-CLIENT_TIMEOUT = ClientTimeout(
-    total=5, connect=None, sock_read=None, sock_connect=None, ceil_threshold=5
-)
+from pylamarzocco.const import BoilerType, SteamTargetLevel, SmartStandByType
+from pylamarzocco.exceptions import BluetoothConnectionFailed
 
 
-async def test_create(
-    cloud_client: LaMarzoccoCloudClient,
-    snapshot: SnapshotAssertion,
-) -> None:
-    """Test creation of a cloud client."""
-
-    machine = await init_machine(cloud_client)
-    assert asdict(machine.config) == snapshot(name="config")
-    assert machine.firmware == snapshot(name="firmware")
-    assert machine.statistics == snapshot(name="statistics")
+@pytest.fixture(name="mock_bluetooth_client")
+def mock_lm_bluetooth_client() -> MagicMock:
+    """Mock the LaMarzoccoBluetoothClient."""
+    client = MagicMock(spec=LaMarzoccoBluetoothClient)
+    return client
 
 
-async def test_mini(
-    cloud_client: LaMarzoccoCloudClient,
-    mock_aioresponse: aioresponses,
-    snapshot: SnapshotAssertion,
-) -> None:
-    """Test creation of a cloud client."""
-    serial = "LM01234"
-    mock_aioresponse.get(
-        url=f"{GW_MACHINE_BASE_URL}/{serial}/configuration",
-        status=200,
-        payload=load_fixture("machine", "config-mini.json"),
+@pytest.fixture(name="mock_cloud_client")
+def mock_lm_cloud_client() -> MagicMock:
+    """Mock the LaMarzoccoCloudClient."""
+    client = MagicMock(spec=LaMarzoccoCloudClient)
+    return client
+
+
+@pytest.fixture(name="mock_machine")
+def mock_lm_machine(
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+) -> LaMarzoccoMachine:
+    """Mock the LaMarzoccoMachine."""
+    machine = LaMarzoccoMachine(
+        serial_number="MR123456",
+        bluetooth_client=mock_bluetooth_client,
+        cloud_client=mock_cloud_client,
     )
-    mock_aioresponse.get(
-        url=f"{GW_MACHINE_BASE_URL}/{serial}/statistics/counters",
-        status=200,
-        payload=load_fixture("machine", "counters.json"),
-    )
-    mock_aioresponse.get(
-        url=f"{GW_MACHINE_BASE_URL}/{serial}/firmware/",
-        status=200,
-        payload=load_fixture("machine", "firmware.json"),
-    )
-    machine = await LaMarzoccoMachine.create(
-        model=MachineModel.LINEA_MINI,
-        serial_number=serial,
-        name="MyMachine",
-        cloud_client=cloud_client,
-    )
-
-    assert asdict(machine.config) == snapshot
-
-
-async def test_local_client(
-    machine: LaMarzoccoMachine,
-    local_machine_client: LaMarzoccoLocalClient,
-    mock_aioresponse: aioresponses,
-) -> None:
-    """Ensure that the local client delivers same result"""
-    # load config
-    mock_aioresponse.get(
-        url="http://192.168.1.42:8081/api/v1/config",
-        status=200,
-        payload=load_fixture("machine", "config.json")["data"],
-    )
-
-    machine_local = await init_machine(local_client=local_machine_client)
-
-    assert machine_local
-    assert str(machine.config) == str(machine_local.config)
-
-
-async def test_set_temp(machine: LaMarzoccoMachine) -> None:
-    """Test setting boiler temperature."""
-
-    result = await machine.set_temp(
-        BoilerType.STEAM,
-        120,
-    )
-    assert result is True
-    assert machine.config.boilers[BoilerType.STEAM].target_temperature == 120
-
-
-# async def test_set_schedule(
-#     cloud_client: LaMarzoccoCloudClient,
-# ) -> None:
-#     """Test setting prebrew infusion."""
-#     machine = await init_machine(cloud_client)
-
-#     with patch("asyncio.sleep", new_callable=AsyncMock):
-#         result = await machine.set_schedule_day(
-#             day=WeekDay.MONDAY,
-#             enabled=True,
-#             h_on=3,
-#             m_on=0,
-#             h_off=24,
-#             m_off=0,
-#         )
-#     assert result is True
+    return machine
 
 
 async def test_set_power(
-    cloud_client: LaMarzoccoCloudClient,
-    bluetooth_client: LaMarzoccoBluetoothClient,
-    mock_aioresponse: aioresponses,
-):
-    """Test setting the power."""
-    machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
-
-    with patch(
-        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_power",
-        new=AsyncMock(),
-    ) as mock_set_power:
-        mock_set_power.side_effect = BleakError("Failed to write")
-        assert await machine.set_power(True)
-
-        mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-            method=HTTPMethod.POST,
-            url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/status",
-            json={"status": "BrewingMode"},
-            headers={"Authorization": "Bearer 123"},
-            timeout=CLIENT_TIMEOUT,
-            allow_redirects=True,
-            data=None,
-        )
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test the set_power method."""
+    assert await mock_machine.set_power(True)
+    mock_bluetooth_client.set_power.assert_called_once_with(enabled=True)
 
 
-async def test_set_steam(
-    cloud_client: LaMarzoccoCloudClient,
-    bluetooth_client: LaMarzoccoBluetoothClient,
-    mock_aioresponse: aioresponses,
-):
-    """Test setting the steam."""
-    machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
-
-    with patch(
-        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_steam",
-        new=AsyncMock(),
-    ) as mock_set_steam:
-        mock_set_steam.side_effect = BleakError("Failed to write")
-
-        assert await machine.set_steam(True)
-
-        mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-            method=HTTPMethod.POST,
-            url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/enable-boiler",
-            json={"identifier": "SteamBoiler", "state": True},
-            headers={"Authorization": "Bearer 123"},
-            timeout=CLIENT_TIMEOUT,
-            allow_redirects=True,
-            data=None,
-        )
-
-
-async def test_set_temperature(
-    cloud_client: LaMarzoccoCloudClient,
-    bluetooth_client: LaMarzoccoBluetoothClient,
-    mock_aioresponse: aioresponses,
-):
-    """Test setting temperature."""
-    machine = await init_machine(cloud_client, bluetooth_client=bluetooth_client)
-
-    with patch(
-        "pylamarzocco.clients.bluetooth.LaMarzoccoBluetoothClient.set_temp",
-        new=AsyncMock(),
-    ) as mock_set_temp:
-        mock_set_temp.side_effect = BleakError("Failed to write")
-
-        assert await machine.set_temp(BoilerType.STEAM, 131)
-
-        mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-            method=HTTPMethod.POST,
-            url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/target-boiler",
-            json={"identifier": "SteamBoiler", "value": 131},
-            headers={"Authorization": "Bearer 123"},
-            timeout=CLIENT_TIMEOUT,
-            allow_redirects=True,
-            data=None,
-        )
-
-
-async def test_set_prebrew_time(
-    machine: LaMarzoccoMachine,
-    mock_aioresponse: aioresponses,
-):
-    """Test setting prebrew time."""
-
-    assert await machine.set_prebrew_time(1.0, 3.5)
-
-    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-        method=HTTPMethod.POST,
-        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
-        json={
-            "button": "DoseA",
-            "group": "Group1",
-            "holdTimeMs": 3500,
-            "wetTimeMs": 1000,
-        },
-        headers={"Authorization": "Bearer 123"},
-        timeout=CLIENT_TIMEOUT,
-        allow_redirects=True,
-        data=None,
+async def test_set_power_cloud_fallback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_power method without Bluetooth."""
+    mock_bluetooth_client.set_power.side_effect = BluetoothConnectionFailed(
+        "Bluetooth error"
+    )
+    assert await mock_machine.set_power(True)
+    mock_bluetooth_client.set_power.assert_called_once_with(enabled=True)
+    mock_cloud_client.set_power.assert_called_once_with(
+        serial_number="MR123456", enabled=True
     )
 
-    assert machine.config.prebrew_configuration[PhysicalKey.A][0].on_time == 1.0
-    assert machine.config.prebrew_configuration[PhysicalKey.A][0].off_time == 3.5
 
-
-async def test_set_preinfusion_time(
-    machine: LaMarzoccoMachine,
-    mock_aioresponse: aioresponses,
-):
-    """Test setting prebrew time."""
-    assert await machine.set_preinfusion_time(4.5)
-    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-        method=HTTPMethod.POST,
-        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/setting-preinfusion",
-        json={"button": "DoseA", "group": "Group1", "holdTimeMs": 4500, "wetTimeMs": 0},
-        headers={"Authorization": "Bearer 123"},
-        timeout=CLIENT_TIMEOUT,
-        allow_redirects=True,
-        data=None,
+async def test_set_steam_level(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test the set_steam_level method."""
+    assert await mock_machine.set_steam_level(SteamTargetLevel.LEVEL_2)
+    mock_bluetooth_client.set_temp.assert_called_once_with(
+        boiler=BoilerType.STEAM, temperature=128
     )
 
-    assert machine.config.prebrew_configuration[PhysicalKey.A][1].off_time == 4.5
 
-
-async def test_set_scale_target(
-    machine: LaMarzoccoMachine,
-    mock_aioresponse: aioresponses,
-):
-    """Test setting scale target."""
-    # fails with not Linea Mini
-    with pytest.raises(ValueError):
-        await machine.set_scale_target(PhysicalKey.B, 42)
-
-    # set to Linea Mini
-    machine.model = MachineModel.LINEA_MINI
-    machine.config.bbw_settings = LaMarzoccoBrewByWeightSettings(
-        doses={}, active_dose=PhysicalKey.A
+async def test_set_steam_level_cloud_fallback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_steam_level method without Bluetooth."""
+    mock_bluetooth_client.set_temp.side_effect = BluetoothConnectionFailed(
+        "Bluetooth error"
+    )
+    assert await mock_machine.set_steam_level(SteamTargetLevel.LEVEL_2)
+    mock_bluetooth_client.set_temp.assert_called_once_with(
+        boiler=BoilerType.STEAM, temperature=128
+    )
+    mock_cloud_client.set_steam_target_level.assert_called_once_with(
+        serial_number="MR123456", target_level=SteamTargetLevel.LEVEL_2
     )
 
-    assert await machine.set_scale_target(PhysicalKey.B, 42)
-    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-        method=HTTPMethod.POST,
-        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/scale/target-dose",
-        json={
-            "group": "Group1",
-            "dose_index": "DoseB",
-            "dose_type": "MassType",
-            "value": 42,
-        },
-        headers={"Authorization": "Bearer 123"},
-        timeout=CLIENT_TIMEOUT,
-        allow_redirects=True,
-        data=None,
+
+async def test_set_coffee_temp(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test the set_coffee_temp method."""
+    assert await mock_machine.set_coffee_target_temperature(93)
+    mock_bluetooth_client.set_temp.assert_called_once_with(
+        boiler=BoilerType.COFFEE, temperature=93
     )
 
-    assert machine.config.bbw_settings.doses[PhysicalKey.B] == 42
 
-
-async def test_set_bbw_recipe(
-    machine: LaMarzoccoMachine,
-    mock_aioresponse: aioresponses,
-):
-    """Test setting scale target."""
-    # fails with not Linea Mini
-    with pytest.raises(ValueError):
-        await machine.set_bbw_recipe_target(PhysicalKey.B, 42)
-
-    # set to Linea Mini
-    machine.model = MachineModel.LINEA_MINI
-    machine.config.bbw_settings = LaMarzoccoBrewByWeightSettings(
-        doses={PhysicalKey.A: 12, PhysicalKey.B: 34}, active_dose=PhysicalKey.A
+async def test_set_coffee_temp_cloud_fallback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_coffee_temp method without Bluetooth."""
+    mock_bluetooth_client.set_temp.side_effect = BluetoothConnectionFailed(
+        "Bluetooth error"
+    )
+    assert await mock_machine.set_coffee_target_temperature(93)
+    mock_bluetooth_client.set_temp.assert_called_once_with(
+        boiler=BoilerType.COFFEE, temperature=93
+    )
+    mock_cloud_client.set_coffee_target_temperature.assert_called_once_with(
+        serial_number="MR123456", target_temperature=93
     )
 
-    assert await machine.set_bbw_recipe_target(PhysicalKey.B, 42)
-    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-        method=HTTPMethod.PUT,
-        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/recipes/",
-        json={
-            "recipeId": "Recipe1",
-            "doseMode": "Mass",
-            "recipeDoses": [
-                {"id": "A", "target": 12},
-                {"id": "B", "target": 42},
-            ],
-        },
-        headers={"Authorization": "Bearer 123"},
-        timeout=CLIENT_TIMEOUT,
-        allow_redirects=True,
+
+async def test_set_smart_standby(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test the set_smart_standby method."""
+    assert await mock_machine.set_smart_standby(True, 30, SmartStandByType.POWER_ON)
+    mock_bluetooth_client.set_smart_standby.assert_called_once_with(
+        enabled=True, minutes=30, mode=SmartStandByType.POWER_ON
     )
 
-    assert machine.config.bbw_settings.doses[PhysicalKey.B] == 42
 
-
-async def test_set_active_bbw_recipe(
-    machine: LaMarzoccoMachine,
-    mock_aioresponse: aioresponses,
-):
-    """Test active bbw recipe."""
-    # fails with not Linea Mini
-    with pytest.raises(ValueError):
-        await machine.set_active_bbw_recipe(PhysicalKey.B)
-
-    # set to Linea Mini
-    machine.model = MachineModel.LINEA_MINI
-    machine.config.bbw_settings = LaMarzoccoBrewByWeightSettings(
-        doses={PhysicalKey.A: 12, PhysicalKey.B: 34}, active_dose=PhysicalKey.A
+async def test_set_smart_standby_cloud_fallback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_smart_standby method without Bluetooth."""
+    mock_bluetooth_client.set_smart_standby.side_effect = BluetoothConnectionFailed(
+        "Bluetooth error"
+    )
+    assert await mock_machine.set_smart_standby(True, 30, SmartStandByType.POWER_ON)
+    mock_bluetooth_client.set_smart_standby.assert_called_once_with(
+        enabled=True, minutes=30, mode=SmartStandByType.POWER_ON
+    )
+    mock_cloud_client.set_smart_standby.assert_called_once_with(
+        serial_number="MR123456",
+        enabled=True,
+        minutes=30,
+        after=SmartStandByType.POWER_ON,
     )
 
-    assert await machine.set_active_bbw_recipe(PhysicalKey.B)
-    mock_aioresponse.assert_called_with(  # type: ignore[attr-defined]
-        method=HTTPMethod.POST,
-        url="https://gw-lmz.lamarzocco.io/v1/home/machines/GS01234/recipes/active-recipe",
-        json={
-            "group": "Group1",
-            "doseIndex": "DoseA",
-            "recipeId": "Recipe1",
-            "recipeDose": "B",
-        },
-        headers={"Authorization": "Bearer 123"},
-        timeout=CLIENT_TIMEOUT,
-        allow_redirects=True,
-        data=None,
-    )
 
-    assert machine.config.bbw_settings.active_dose == PhysicalKey.B
+async def test_failing_command(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Check we return false if both clients fail."""
+    mock_bluetooth_client.set_power.side_effect = BluetoothConnectionFailed(
+        "Bluetooth error"
+    )
+    mock_cloud_client.set_power.return_value = False
+    assert not await mock_machine.set_power(True)

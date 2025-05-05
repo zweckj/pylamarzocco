@@ -1,0 +1,11 @@
+[run]
+omit =
+    tests/legacy/*
+    tests/legacy/**/*
+branch = True
+
+[report]
+omit =
+    tests/legacy/*
+    tests/legacy/**/*
+ignore_errors = False
