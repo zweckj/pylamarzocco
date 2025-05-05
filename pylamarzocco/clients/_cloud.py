@@ -81,6 +81,7 @@ class LaMarzoccoCloudClient:
         self._username = username
         self._password = password
         self._access_token: AccessToken | None = None
+        self._access_token_lock = asyncio.Lock()
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
 
@@ -119,24 +120,25 @@ class LaMarzoccoCloudClient:
 
     async def __async_get_token(self, url: str, data: dict[str, Any]) -> AccessToken:
         """Wrapper for a token request."""
-        try:
-            response = await self._client.post(url=url, json=data)
-        except ClientError as ex:
+        async with self._access_token_lock:
+            try:
+                response = await self._client.post(url=url, json=data)
+            except ClientError as ex:
+                raise RequestNotSuccessful(
+                    "Error during HTTP request."
+                    + f"Request auth to endpoint failed with error: {ex}"
+                ) from ex
+            if is_success(response):
+                json_response = await response.json()
+                return AccessToken.from_dict(json_response)
+
+            if response.status == 401:
+                raise AuthFail("Invalid username or password")
+
             raise RequestNotSuccessful(
-                "Error during HTTP request."
-                + f"Request auth to endpoint failed with error: {ex}"
-            ) from ex
-        if is_success(response):
-            json_response = await response.json()
-            return AccessToken.from_dict(json_response)
-
-        if response.status == 401:
-            raise AuthFail("Invalid username or password")
-
-        raise RequestNotSuccessful(
-            f"Request t auth endpoint failed with status code {response.status}"
-            + f"response: {await response.text()}"
-        )
+                f"Request t auth endpoint failed with status code {response.status}"
+                + f"response: {await response.text()}"
+            )
 
     # endregion
 
