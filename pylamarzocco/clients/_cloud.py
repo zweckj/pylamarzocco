@@ -88,13 +88,14 @@ class LaMarzoccoCloudClient:
     # region Authentication
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
-        if self._access_token is None or self._access_token.expires_at < time.time():
-            self._access_token = await self._async_sign_in()
+        async with self._access_token_lock:
+            if self._access_token is None or self._access_token.expires_at < time.time():
+                self._access_token = await self._async_sign_in()
 
-        elif self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH:
-            self._access_token = await self._async_refresh_token()
+            elif self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH:
+                self._access_token = await self._async_refresh_token()
 
-        return self._access_token.access_token
+            return self._access_token.access_token
 
     async def _async_sign_in(self) -> AccessToken:
         """Get a new access token."""
@@ -120,25 +121,24 @@ class LaMarzoccoCloudClient:
 
     async def __async_get_token(self, url: str, data: dict[str, Any]) -> AccessToken:
         """Wrapper for a token request."""
-        async with self._access_token_lock:
-            try:
-                response = await self._client.post(url=url, json=data)
-            except ClientError as ex:
-                raise RequestNotSuccessful(
-                    "Error during HTTP request."
-                    + f"Request auth to endpoint failed with error: {ex}"
-                ) from ex
-            if is_success(response):
-                json_response = await response.json()
-                return AccessToken.from_dict(json_response)
-
-            if response.status == 401:
-                raise AuthFail("Invalid username or password")
-
+        try:
+            response = await self._client.post(url=url, json=data)
+        except ClientError as ex:
             raise RequestNotSuccessful(
-                f"Request t auth endpoint failed with status code {response.status}"
-                + f"response: {await response.text()}"
-            )
+                "Error during HTTP request."
+                + f"Request auth to endpoint failed with error: {ex}"
+            ) from ex
+        if is_success(response):
+            json_response = await response.json()
+            return AccessToken.from_dict(json_response)
+
+        if response.status == 401:
+            raise AuthFail("Invalid username or password")
+
+        raise RequestNotSuccessful(
+            f"Request t auth endpoint failed with status code {response.status}"
+            + f"response: {await response.text()}"
+        )
 
     # endregion
 
