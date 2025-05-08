@@ -22,6 +22,7 @@ class MachineState(StrEnum):
     STANDBY = "StandBy"
     POWERED_ON = "PoweredOn"
     BREWING = "Brewing"
+    OFF = "Off"
 
 
 class PreExtractionMode(StrEnum):
@@ -134,7 +135,7 @@ class ModelName(StrEnum):
         mapping = {
             "GS3MP": "GS3 MP",
             "GS3AV": "GS3 AV",
-            "LINEAMINIR": "Linea Mini R",
+            "LINEAMINI2023": "Linea Mini R",
             "LINEAMICRA": "Linea Micra",
             "LINEAMINI": "Linea Mini",
             "MICRA": "Linea Micra",
