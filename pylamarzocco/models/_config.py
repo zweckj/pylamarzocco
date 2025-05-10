@@ -281,6 +281,19 @@ class BackFlush(BaseWidgetOutput):
 
 
 @dataclass(kw_only=True)
+class RinseFlush(BaseWidgetOutput):
+    """Rinse flush configuration."""
+
+    widget_type = WidgetType.CM_RINSE_FLUSH
+    enabled: bool
+    enabled_supported: bool = field(metadata=field_options(alias="enabledSupported"))
+    time_seconds: float = field(metadata=field_options(alias="timeSeconds"))
+    time_seconds_min: int = field(metadata=field_options(alias="timeSecondsMin"))
+    time_seconds_max: int = field(metadata=field_options(alias="timeSecondsMax"))
+    time_seconds_step: int = field(metadata=field_options(alias="timeSecondsStep"))
+
+
+@dataclass(kw_only=True)
 class ThingSettings(Thing):
     """Device settings configuration."""
 

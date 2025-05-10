@@ -1,0 +1,173 @@
+{
+    "serialNumber": "MI123456",
+    "type": "CoffeeMachine",
+    "name": "MI123456",
+    "location": "HOME_OR_DWELLING_SPACE",
+    "modelCode": "LINEAMINIR",
+    "modelName": "LINEA MINI 2023",
+    "connected": true,
+    "connectionDate": 1742526019892,
+    "offlineMode": false,
+    "requireFirmwareUpdate": false,
+    "availableFirmwareUpdate": false,
+    "coffeeStation": null,
+    "imageUrl": "https://lion.lamarzocco.io/img/thing-model/list/lineaminir/lineaminir-1-c-bianco.png",
+    "bleAuthToken": null,
+    "widgets": [
+        {
+            "code": "CMMachineStatus",
+            "index": 1,
+            "output": {
+                "status": "StandBy",
+                "availableModes": [
+                    "BrewingMode",
+                    "StandBy"
+                ],
+                "mode": "StandBy",
+                "nextStatus": null,
+                "brewingStartTime": null,
+                "lastCoffee": null,
+                "lastFlush": null,
+                "widget_type": "CMMachineStatus"
+            },
+            "tutorialUrl": null
+        },
+        {
+            "code": "CMCoffeeBoiler",
+            "index": 1,
+            "output": {
+                "status": "StandBy",
+                "enabled": true,
+                "enabledSupported": false,
+                "targetTemperature": 94.0,
+                "targetTemperatureMin": 80,
+                "targetTemperatureMax": 100,
+                "targetTemperatureStep": 0.1,
+                "readyStartTime": null,
+                "widget_type": "CMCoffeeBoiler"
+            },
+            "tutorialUrl": null
+        },
+        {
+            "code": "CMSteamBoilerLevel",
+            "index": 1,
+            "output": {
+                "status": "StandBy",
+                "enabled": true,
+                "enabledSupported": true,
+                "targetLevel": "Level1",
+                "targetLevelSupported": true,
+                "readyStartTime": null,
+                "widget_type": "CMSteamBoilerLevel"
+            },
+            "tutorialUrl": null
+        },
+        {
+            "code": "CMPreExtraction",
+            "index": 1,
+            "output": {
+                "availableModes": [
+                    "PreBrewing",
+                    "Disabled"
+                ],
+                "mode": "PreBrewing",
+                "times": {
+                    "Out": {
+                        "seconds": 2.0,
+                        "secondsMin": {
+                            "PreBrewing": 1,
+                            "PreInfusion": 1
+                        },
+                        "secondsMax": {
+                            "PreBrewing": 9,
+                            "PreInfusion": 25
+                        },
+                        "secondsStep": {
+                            "PreBrewing": 0.1,
+                            "PreInfusion": 0.1
+                        }
+                    },
+                    "In": {
+                        "seconds": 2.0,
+                        "secondsMin": {
+                            "PreBrewing": 2,
+                            "PreInfusion": 2
+                        },
+                        "secondsMax": {
+                            "PreBrewing": 9,
+                            "PreInfusion": 9
+                        },
+                        "secondsStep": {
+                            "PreBrewing": 0.1,
+                            "PreInfusion": 0.1
+                        }
+                    }
+                },
+                "widget_type": "CMPreExtraction"
+            },
+            "tutorialUrl": null
+        },
+        {
+            "code": "CMPreBrewing",
+            "index": 1,
+            "output": {
+                "availableModes": [
+                    "PreBrewing",
+                    "Disabled"
+                ],
+                "mode": "PreBrewing",
+                "times": {
+                    "PreBrewing": [
+                        {
+                            "doseIndex": "ByGroup",
+                            "seconds": {
+                                "In": 2.0,
+                                "Out": 2.0
+                            },
+                            "secondsMin": {
+                                "In": 1,
+                                "Out": 1
+                            },
+                            "secondsMax": {
+                                "In": 9,
+                                "Out": 9
+                            },
+                            "secondsStep": {
+                                "In": 0.1,
+                                "Out": 0.1
+                            }
+                        }
+                    ]
+                },
+                "doseIndexSupported": false,
+                "widget_type": "CMPreBrewing"
+            },
+            "tutorialUrl": "https://www.lamarzocco.com/it/en/app/support/brewing-features/#gs3-av-linea-micra-linea-mini-home"
+        },
+        {
+            "code": "CMRinseFlush",
+            "index": 1,
+            "output": {
+                "enabled": true,
+                "enabledSupported": true,
+                "timeSeconds": 4.0,
+                "timeSecondsMin": 2,
+                "timeSecondsMax": 8,
+                "timeSecondsStep": 1,
+                "widget_type": "CMRinseFlush"
+            },
+            "tutorialUrl": null
+        },
+        {
+            "code": "CMBackFlush",
+            "index": 1,
+            "output": {
+                "lastCleaningStartTime": 1745593268850,
+                "status": "Off",
+                "widget_type": "CMBackFlush"
+            },
+            "tutorialUrl": "http://lamarzocco.com/it/en/app/support/cleaning-and-backflush/#linea-mini-2023"
+        }
+    ],
+    "runningCommands": []
+}
