@@ -89,7 +89,10 @@ class LaMarzoccoCloudClient:
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
         async with self._access_token_lock:
-            if self._access_token is None or self._access_token.expires_at < time.time():
+            if (
+                self._access_token is None
+                or self._access_token.expires_at < time.time()
+            ):
                 self._access_token = await self._async_sign_in()
 
             elif self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH:
@@ -147,7 +150,7 @@ class LaMarzoccoCloudClient:
         url: str,
         method: HTTPMethod,
         data: dict[str, Any] | None = None,
-        timeout: int = 5,
+        timeout: int = 10,
     ) -> dict:
         """Wrapper for the API call."""
 
