@@ -212,13 +212,9 @@ class UpdateStatus(StrEnum):
     """Update statuses."""
 
     TO_UPDATE = "ToUpdate"
-    UPDATED = "Updated"
-
-
-class UpdateCommandStatus(StrEnum):
-    """Update progress statuses."""
-
+    PENDING = "Pending"
     IN_PROGRESS = "InProgress"
+    UPDATED = "Updated"
 
 
 class UpdateProgressInfo(StrEnum):
