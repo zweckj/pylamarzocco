@@ -8,7 +8,6 @@ from mashumaro.mixins.json import DataClassJSONMixin
 from pylamarzocco.const import (
     UpdateProgressInfo,
     UpdateStatus,
-    UpdateCommandStatus,
     FirmwareType,
 )
 
@@ -18,7 +17,7 @@ class UpdateDetails(DataClassJSONMixin):
     """Update status."""
 
     status: UpdateStatus
-    command_status: UpdateCommandStatus | None = field(
+    command_status: UpdateStatus | None = field(
         metadata=field_options(alias="commandStatus"), default=None
     )
     progress_info: UpdateProgressInfo | None = field(
