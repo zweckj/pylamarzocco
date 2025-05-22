@@ -118,7 +118,7 @@ class ModelCode(StrEnum):
 
 
 class ModelName(StrEnum):
-    """Model codes."""
+    """Model names."""
 
     LINEA_MINI = "Linea Mini"
     LINEA_MICRA = "Linea Micra"
