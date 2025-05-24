@@ -316,6 +316,10 @@ class LaMarzoccoCloudClient:
             finally:
                 if disconnect_callback is not None:
                     disconnect_callback()
+                # reset the websocket connection
+                self.websocket = WebSocketDetails(
+                    disconnect_callback=disconnect_callback
+                )
 
     async def __setup_websocket_connection(
         self,
@@ -387,7 +391,9 @@ class LaMarzoccoCloudClient:
         _LOGGER.debug("Received websocket message: %s", msg)
         try:
             msg_type, _, data = decode_stomp_ws_message(str(msg.data))
-            if msg_type is not StompMessageType.MESSAGE:
+            if msg_type is StompMessageType.ERROR:
+                _LOGGER.warning("Websocket error message: %s", data)
+            elif msg_type is not StompMessageType.MESSAGE:
                 _LOGGER.warning("Non MESSAGE-type message: %s", msg.data)
             else:
                 self.__parse_websocket_message(data, notification_callback)
