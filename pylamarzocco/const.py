@@ -95,6 +95,7 @@ class StompMessageType(StrEnum):
     SUBSCRIBE = "SUBSCRIBE"
     UNSUBSCRIBE = "UNSUBSCRIBE"
     MESSAGE = "MESSAGE"
+    ERROR = "ERROR"
 
 
 class DeviceType(StrEnum):
