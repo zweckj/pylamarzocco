@@ -77,6 +77,7 @@ class CommandStatus(StrEnum):
     ERROR = "Error"
     TIMEOUT = "Timeout"
     PENDING = "Pending"
+    IN_PROGRESS = "InProgress"
 
 
 class SteamTargetLevel(StrEnum):
