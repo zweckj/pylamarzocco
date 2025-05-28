@@ -1251,24 +1251,26 @@
       }),
       'CMBrewByWeightDoses': dict({
         'available_modes': list([
+          'Dose1',
+          'Dose2',
           'Continuous',
         ]),
         'doses': dict({
           'dose_1': dict({
-            'dose': 34.5,
+            'dose': 32.0,
             'dose_max': 100.0,
             'dose_min': 5.0,
             'dose_step': 0,
           }),
           'dose_2': dict({
-            'dose': 17.5,
+            'dose': 34.0,
             'dose_max': 100.0,
             'dose_min': 5.0,
             'dose_step': 0,
           }),
         }),
-        'mode': 'Continuous',
-        'scale_connected': False,
+        'mode': 'Dose2',
+        'scale_connected': True,
       }),
       'CMCoffeeBoiler': dict({
         'enabled': True,
@@ -1374,10 +1376,10 @@
         'target_temperature_supported': False,
       }),
       'ThingScale': dict({
-        'battery_level': 0.0,
-        'calibration_required': False,
-        'connected': False,
-        'name': 'LMZ-123A12',
+        'battery_level': 81.0,
+        'calibration_required': True,
+        'connected': True,
+        'name': 'LMZ-XXXXXX',
       }),
     }),
     'connected': True,
@@ -1520,24 +1522,26 @@
         'index': 1,
         'output': dict({
           'available_modes': list([
+            'Dose1',
+            'Dose2',
             'Continuous',
           ]),
           'doses': dict({
             'dose_1': dict({
-              'dose': 34.5,
+              'dose': 32.0,
               'dose_max': 100.0,
               'dose_min': 5.0,
               'dose_step': 0,
             }),
             'dose_2': dict({
-              'dose': 17.5,
+              'dose': 34.0,
               'dose_max': 100.0,
               'dose_min': 5.0,
               'dose_step': 0,
             }),
           }),
-          'mode': 'Continuous',
-          'scale_connected': False,
+          'mode': 'Dose2',
+          'scale_connected': True,
         }),
       }),
       dict({
@@ -1550,12 +1554,12 @@
       }),
       dict({
         'code': 'ThingScale',
-        'index': 2,
+        'index': 1,
         'output': dict({
-          'battery_level': 0.0,
-          'calibration_required': False,
-          'connected': False,
-          'name': 'LMZ-123A12',
+          'battery_level': 81.0,
+          'calibration_required': True,
+          'connected': True,
+          'name': 'LMZ-XXXXXX',
         }),
       }),
     ]),

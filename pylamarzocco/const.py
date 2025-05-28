@@ -168,6 +168,8 @@ class DoseMode(StrEnum):
 
     CONTINUOUS = "Continuous"
     PULSES_TYPE = "PulsesType"
+    DOSE_1 = "Dose1"
+    DOSE_2 = "Dose2"
 
 
 class DoseIndex(StrEnum):

@@ -163,25 +163,24 @@
       "code": "CMBrewByWeightDoses",
       "index": 1,
       "output": {
-        "scaleConnected": false,
-        "availableModes": ["Continuous"],
-        "mode": "Continuous",
+        "scaleConnected": true,
+        "availableModes": ["Dose1", "Dose2", "Continuous"],
+        "mode": "Dose2",
         "doses": {
           "Dose1": {
-            "dose": 34.5,
+            "dose": 32.0,
             "doseMin": 5,
             "doseMax": 100,
             "doseStep": 0.1
           },
           "Dose2": {
-            "dose": 17.5,
+            "dose": 34.0,
             "doseMin": 5,
             "doseMax": 100,
             "doseStep": 0.1
           }
         }
-      },
-      "tutorialUrl": "http://lamarzocco.com/it/en/app/support/brew-by-weight"
+      }
     },
     {
       "code": "CMBackFlush",
@@ -194,14 +193,14 @@
     },
     {
       "code": "ThingScale",
-      "index": 2,
+      "index": 1,
       "output": {
-        "name": "LMZ-123A12",
-        "connected": false,
-        "batteryLevel": 0.0,
-        "calibrationRequired": false
-      },
-      "tutorialUrl": "http://lamarzocco.com/it/en/app/support/training-scale-location/#linea-mini"
+        "name": "LMZ-XXXXXX",
+        "connected": true,
+        "batteryLevel": 81.0,
+        "calibrationRequired": true,
+        "forceConnectSupported": false
+      }
     }
   ],
   "invalidWidgets": [
@@ -272,12 +271,6 @@
         "allarm": false
       },
       "tutorialUrl": null
-    },
-    {
-      "code": "ThingScale",
-      "index": 1,
-      "output": null,
-      "tutorialUrl": "http://lamarzocco.com/it/en/app/support/training-scale-location/#linea-mini"
     }
   ],
   "runningCommands": []
