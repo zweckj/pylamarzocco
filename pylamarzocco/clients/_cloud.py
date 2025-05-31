@@ -302,24 +302,23 @@ class LaMarzoccoCloudClient:
                         _LOGGER.debug("WebSocket cancellation requested")
                         await self.websocket.disconnect()
                         raise
-            except TimeoutError:
-                _LOGGER.warning("Websocket disconnected: Connection timed out")
-            except ClientConnectionError as err:
-                _LOGGER.error("Websocket disconnected: Could not connect: %s", err)
-                auto_reconnect = False
             except InvalidURL:
                 _LOGGER.error("Invalid URL for websocket.")
+                auto_reconnect = False
+            except TimeoutError:
+                _LOGGER.debug("Websocket disconnected: Connection timed out")
+            except ClientError as err:
+                _LOGGER.debug("Websocket disconnected: Could not connect: %s", err)
                 auto_reconnect = False
             except asyncio.CancelledError:
                 _LOGGER.debug("WebSocket cancellation successful")
                 auto_reconnect = False
+            except Exception: # pylint: disable=broad-except
+                _LOGGER.exception("Websocket disconnected with error")
+                auto_reconnect = False
             finally:
                 if disconnect_callback is not None:
                     disconnect_callback()
-                # reset the websocket connection
-                self.websocket = WebSocketDetails(
-                    disconnect_callback=disconnect_callback
-                )
 
     async def __setup_websocket_connection(
         self,
