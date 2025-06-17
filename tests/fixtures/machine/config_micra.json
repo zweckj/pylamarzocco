@@ -6,6 +6,10 @@
       "index": 1
     },
     {
+      "code": "CMMachineModuleStatus",
+      "index": 1
+    },
+    {
       "code": "CMSteamBoilerTemperature",
       "index": 1
     },
@@ -80,6 +84,10 @@
     {
       "code": "GGrindWith",
       "index": 1
+    },
+    {
+      "code": "CMModuleAndTapsTemperature",
+      "index": 1
     }
   ],
   "connectionDate": 1742439620235,
@@ -89,9 +97,15 @@
       "index": 1,
       "output": {
         "status": "StandBy",
-        "availableModes": ["BrewingMode", "StandBy"],
+        "availableModes": [
+          "BrewingMode",
+          "StandBy"
+        ],
         "mode": "StandBy",
-        "nextStatus": { "status": "StandBy", "startTime": 1742490427722 },
+        "nextStatus": {
+          "status": "StandBy",
+          "startTime": 1742490427722
+        },
         "brewingStartTime": null
       }
     },
@@ -125,7 +139,11 @@
       "code": "CMPreExtraction",
       "index": 1,
       "output": {
-        "availableModes": ["PreBrewing", "PreInfusion", "Disabled"],
+        "availableModes": [
+          "PreBrewing",
+          "PreInfusion",
+          "Disabled"
+        ],
         "mode": "PreInfusion",
         "times": {
           "In": {
@@ -165,7 +183,11 @@
       "code": "CMPreBrewing",
       "index": 1,
       "output": {
-        "availableModes": ["PreBrewing", "PreInfusion", "Disabled"],
+        "availableModes": [
+          "PreBrewing",
+          "PreInfusion",
+          "Disabled"
+        ],
         "mode": "PreInfusion",
         "times": {
           "PreBrewing": [

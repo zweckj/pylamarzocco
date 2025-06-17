@@ -396,6 +396,8 @@ class LaMarzoccoCloudClient:
                 _LOGGER.warning("Non MESSAGE-type message: %s", msg.data)
             else:
                 self.__parse_websocket_message(data, notification_callback)
+        except ValueError as ex:
+            _LOGGER.warning("Error parsing websocket message: %s. Message was: %s", ex, msg.data)
         except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.exception("Error during callback: %s", ex)
         return False
