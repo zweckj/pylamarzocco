@@ -146,6 +146,10 @@
         'index': 1,
       }),
       dict({
+        'code': 'CMMachineModuleStatus',
+        'index': 1,
+      }),
+      dict({
         'code': 'CMSteamBoilerTemperature',
         'index': 1,
       }),
@@ -219,6 +223,10 @@
       }),
       dict({
         'code': 'GGrindWith',
+        'index': 1,
+      }),
+      dict({
+        'code': 'CMModuleAndTapsTemperature',
         'index': 1,
       }),
     ]),
