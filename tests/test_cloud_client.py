@@ -459,7 +459,7 @@ async def test_change_pre_extraction_times(
     """Test changing the pre-extraction times for a thing."""
 
     url = (
-        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingChangeTimes"
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingSettingTimes"
     )
     mock_aioresponse.post(
         url=url,
