@@ -552,7 +552,7 @@ class LaMarzoccoCloudClient:
         """Change pre-extraction times"""
 
         return await self.__execute_command(
-            serial_number, "CoffeeMachinePreBrewingChangeTimes", times.to_dict()
+            serial_number, "CoffeeMachinePreBrewingSettingTimes", times.to_dict()
         )
 
     async def set_smart_standby(
