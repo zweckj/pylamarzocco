@@ -242,6 +242,7 @@ class BackFlushStatus(StrEnum):
     """Back flush statuses."""
 
     REQUESTED = "Requested"
+    CLEANING = "Cleaning"
     OFF = "Off"
 
 
