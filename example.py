@@ -1,20 +1,47 @@
 """Demonstrate the usage of the library."""
 
 import asyncio
+import uuid
+from pathlib import Path
+
 from aiohttp import ClientSession
 
 from pylamarzocco import LaMarzoccoCloudClient, LaMarzoccoMachine
 from pylamarzocco.models import ThingDashboardWebsocketConfig
-
+from pylamarzocco.util import SecretData, generate_secret_data
 
 SERIAL = ""
 USERNAME = ""
 PASSWORD = ""
 
+
 async def main():
     """Async main."""
+    # Generate or load key material
+    registration_required = False
+    key_file = Path("secret_data.json")
+    if not key_file.exists():
+        print("Generating new key material...")
+        secret_data = generate_secret_data(str(uuid.uuid4()).lower())
+        print("Generated key material:")
+        with open(key_file, "w", encoding="utf-8") as f:
+            f.write(secret_data.to_json())
+        registration_required = True
+    else:
+        print("Loading existing key material...")
+        with open(key_file, "r", encoding="utf-8") as f:
+            secret_data = SecretData.from_json(f.read())
+
     async with ClientSession() as session:
-        client = LaMarzoccoCloudClient(username=USERNAME, password=PASSWORD, client=session)
+        client = LaMarzoccoCloudClient(
+            username=USERNAME,
+            password=PASSWORD,
+            secret_data=secret_data,
+            client=session,
+        )
+        if registration_required:
+            print("Registering device...")
+            await client.async_register_client()
         machine = LaMarzoccoMachine(SERIAL, client)
 
         await machine.get_dashboard()
@@ -25,7 +52,9 @@ async def main():
         print(machine.to_dict())
 
         def my_callback(config: ThingDashboardWebsocketConfig):
-            print("----------------------------- NEW MESSAGE ----------------------------")
+            print(
+                "----------------------------- NEW MESSAGE ----------------------------"
+            )
             print(f"Received: {config.to_dict()}")
 
         asyncio.create_task(machine.connect_dashboard_websocket(my_callback))
@@ -37,7 +66,6 @@ async def main():
         print("----------------------------- WAITING ----------------------------")
         await asyncio.sleep(10)
         await machine.websocket.disconnect()
-
 
 
 asyncio.run(main())
