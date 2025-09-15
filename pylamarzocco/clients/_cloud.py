@@ -116,7 +116,7 @@ class LaMarzoccoCloudClient:
             ) from ex
 
         if is_success(response):
-            print("Registration successful.")
+            _LOGGER.info("Registration successful.")
             return
 
         if response.status == 401:
