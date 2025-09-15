@@ -143,5 +143,5 @@ flows/*
 ble_details.md
 run_ble.py
 example.py
-secret_data.json
+installation_key.json
 test.py
