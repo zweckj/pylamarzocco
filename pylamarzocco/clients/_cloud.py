@@ -165,9 +165,12 @@ class LaMarzoccoCloudClient:
 
     async def __async_get_token(self, url: str, data: dict[str, Any]) -> AccessToken:
         """Wrapper for a token request."""
-        headers = generate_extra_request_headers(self._secret_data)
         try:
-            response = await self._client.post(url=url, headers=headers, json=data)
+            response = await self._client.post(
+                url=url,
+                headers=generate_extra_request_headers(self._secret_data),
+                json=data,
+            )
         except ClientError as ex:
             raise RequestNotSuccessful(
                 "Error during HTTP request."
