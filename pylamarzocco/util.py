@@ -85,7 +85,7 @@ def generate_request_proof(base_string: str, secret32: bytes) -> str:
 
 
 @dataclass
-class SecretData(DataClassJSONMixin):
+class InstallationKey(DataClassJSONMixin):
     """Holds key material derived from installation ID."""
 
     secret: bytes = field(
@@ -127,7 +127,7 @@ class SecretData(DataClassJSONMixin):
         return f"{self.installation_id}.{pub_hash_b64}"
 
 
-def generate_extra_request_headers(secret_data: SecretData) -> dict[str, str]:
+def generate_extra_request_headers(installation_key: InstallationKey) -> dict[str, str]:
     """Generate extra headers for normal API calls after authentication"""
 
     # Generate nonce and timestamp
@@ -135,28 +135,28 @@ def generate_extra_request_headers(secret_data: SecretData) -> dict[str, str]:
     timestamp = str(int(time.time() * 1000))  # milliseconds
 
     # Create proof using Y5.e algorithm: installation_id.nonce.timestamp
-    proof_input = f"{secret_data.installation_id}.{nonce}.{timestamp}"
-    proof = generate_request_proof(proof_input, secret_data.secret)
+    proof_input = f"{installation_key.installation_id}.{nonce}.{timestamp}"
+    proof = generate_request_proof(proof_input, installation_key.secret)
 
     # Create signature data: installation_id.nonce.timestamp.proof
     signature_data = f"{proof_input}.{proof}"
 
     # Sign with ECDSA
-    signature = secret_data.private_key.sign(
+    signature = installation_key.private_key.sign(
         signature_data.encode("utf-8"), ECDSA(hashes.SHA256())
     )
     signature_b64 = b64(signature)
 
     # Return headers
     return {
-        "X-App-Installation-Id": secret_data.installation_id,
+        "X-App-Installation-Id": installation_key.installation_id,
         "X-Timestamp": timestamp,
         "X-Nonce": nonce,
         "X-Request-Signature": signature_b64,
     }
 
 
-def generate_secret_data(installation_id: str) -> SecretData:
+def generate_installation_key(installation_id: str) -> InstallationKey:
     """Generate the key material from installation ID."""
 
     def derive_secret_bytes(installation_id: str, pub_der_bytes: bytes) -> bytes:
@@ -173,6 +173,6 @@ def generate_secret_data(installation_id: str) -> SecretData:
     )
 
     secret_bytes = derive_secret_bytes(installation_id, pub_bytes)
-    return SecretData(
+    return InstallationKey(
         installation_id=installation_id, secret=secret_bytes, private_key=private_key
     )

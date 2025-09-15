@@ -53,7 +53,7 @@ from pylamarzocco.models import (
     WebSocketDetails,
 )
 from pylamarzocco.util import (
-    SecretData,
+    InstallationKey,
     decode_stomp_ws_message,
     encode_stomp_ws_message,
     generate_extra_request_headers,
@@ -77,14 +77,14 @@ class LaMarzoccoCloudClient:
         self,
         username: str,
         password: str,
-        secret_data: SecretData,
+        installation_key: InstallationKey,
         client: ClientSession | None = None,
     ) -> None:
         """Set the cloud client up."""
         self._client = ClientSession() if client is None else client
         self._username = username
         self._password = password
-        self._secret_data = secret_data
+        self._installation_key = installation_key
         self._access_token: AccessToken | None = None
         self._access_token_lock = asyncio.Lock()
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
@@ -95,13 +95,13 @@ class LaMarzoccoCloudClient:
         """Register a new client."""
 
         headers = {
-            "X-App-Installation-Id": self._secret_data.installation_id,
+            "X-App-Installation-Id": self._installation_key.installation_id,
             "X-Request-Proof": generate_request_proof(
-                self._secret_data.base_string, self._secret_data.secret
+                self._installation_key.base_string, self._installation_key.secret
             ),
         }
         body = {
-            "pk": self._secret_data.public_key_b64,
+            "pk": self._installation_key.public_key_b64,
         }
         try:
             response = await self._client.post(
@@ -168,7 +168,7 @@ class LaMarzoccoCloudClient:
         try:
             response = await self._client.post(
                 url=url,
-                headers=generate_extra_request_headers(self._secret_data),
+                headers=generate_extra_request_headers(self._installation_key),
                 json=data,
             )
         except ClientError as ex:
@@ -201,7 +201,7 @@ class LaMarzoccoCloudClient:
 
         access_token = await self.async_get_access_token()
         headers = {
-            **generate_extra_request_headers(self._secret_data),
+            **generate_extra_request_headers(self._installation_key),
             "Authorization": f"Bearer {access_token}",
         }
 
@@ -336,7 +336,7 @@ class LaMarzoccoCloudClient:
                     f"wss://{BASE_URL}/ws/connect",
                     timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
                     heartbeat=15,
-                    headers=generate_extra_request_headers(self._secret_data),
+                    headers=generate_extra_request_headers(self._installation_key),
                 ) as ws:
                     try:
                         await self.__setup_websocket_connection(ws, serial_number)

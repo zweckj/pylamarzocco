@@ -27,7 +27,7 @@ from pylamarzocco.models import (
     SecondsInOut,
     WakeUpScheduleSettings,
 )
-from pylamarzocco.util import SecretData
+from pylamarzocco.util import InstallationKey
 
 from .conftest import load_fixture
 
@@ -39,7 +39,7 @@ MOCK_COMMAND_RESPONSE = [
     }
 ]
 
-MOCK_SECRET_DATA = SecretData(
+MOCK_SECRET_DATA = InstallationKey(
     secret=bytes(32),
     private_key=generate_private_key(SECP256R1()),
     installation_id="mock-installation-id",

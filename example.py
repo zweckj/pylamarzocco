@@ -8,7 +8,7 @@ from aiohttp import ClientSession
 
 from pylamarzocco import LaMarzoccoCloudClient, LaMarzoccoMachine
 from pylamarzocco.models import ThingDashboardWebsocketConfig
-from pylamarzocco.util import SecretData, generate_secret_data
+from pylamarzocco.util import InstallationKey, generate_installation_key
 
 SERIAL = ""
 USERNAME = ""
@@ -19,24 +19,24 @@ async def main():
     """Async main."""
     # Generate or load key material
     registration_required = False
-    key_file = Path("secret_data.json")
+    key_file = Path("installation_key.json")
     if not key_file.exists():
         print("Generating new key material...")
-        secret_data = generate_secret_data(str(uuid.uuid4()).lower())
+        installation_key = generate_installation_key(str(uuid.uuid4()).lower())
         print("Generated key material:")
         with open(key_file, "w", encoding="utf-8") as f:
-            f.write(secret_data.to_json())
+            f.write(installation_key.to_json())
         registration_required = True
     else:
         print("Loading existing key material...")
         with open(key_file, "r", encoding="utf-8") as f:
-            secret_data = SecretData.from_json(f.read())
+            installation_key = InstallationKey.from_json(f.read())
 
     async with ClientSession() as session:
         client = LaMarzoccoCloudClient(
             username=USERNAME,
             password=PASSWORD,
-            secret_data=secret_data,
+            installation_key=installation_key,
             client=session,
         )
         if registration_required:
