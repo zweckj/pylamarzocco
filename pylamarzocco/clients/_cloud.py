@@ -53,8 +53,11 @@ from pylamarzocco.models import (
     WebSocketDetails,
 )
 from pylamarzocco.util import (
+    InstallationKey,
     decode_stomp_ws_message,
     encode_stomp_ws_message,
+    generate_extra_request_headers,
+    generate_request_proof,
     is_success,
 )
 
@@ -74,18 +77,56 @@ class LaMarzoccoCloudClient:
         self,
         username: str,
         password: str,
+        installation_key: InstallationKey,
         client: ClientSession | None = None,
     ) -> None:
         """Set the cloud client up."""
         self._client = ClientSession() if client is None else client
         self._username = username
         self._password = password
+        self._installation_key = installation_key
         self._access_token: AccessToken | None = None
         self._access_token_lock = asyncio.Lock()
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
 
     # region Authentication
+    async def async_register_client(self) -> None:
+        """Register a new client."""
+
+        headers = {
+            "X-App-Installation-Id": self._installation_key.installation_id,
+            "X-Request-Proof": generate_request_proof(
+                self._installation_key.base_string, self._installation_key.secret
+            ),
+        }
+        body = {
+            "pk": self._installation_key.public_key_b64,
+        }
+        try:
+            response = await self._client.post(
+                url=f"{CUSTOMER_APP_URL}/auth/init",
+                headers=headers,
+                json=body,
+            )
+        except ClientError as ex:
+            raise RequestNotSuccessful(
+                "Error during HTTP request."
+                + f"Request auth to endpoint failed with error: {ex}"
+            ) from ex
+
+        if is_success(response):
+            _LOGGER.info("Registration successful.")
+            return
+
+        if response.status == 401:
+            raise AuthFail("Invalid username or password")
+
+        raise RequestNotSuccessful(
+            f"Request to auth endpoint failed with status code {response.status}"
+            + f"response: {await response.text()}"
+        )
+
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
         async with self._access_token_lock:
@@ -125,7 +166,11 @@ class LaMarzoccoCloudClient:
     async def __async_get_token(self, url: str, data: dict[str, Any]) -> AccessToken:
         """Wrapper for a token request."""
         try:
-            response = await self._client.post(url=url, json=data)
+            response = await self._client.post(
+                url=url,
+                headers=generate_extra_request_headers(self._installation_key),
+                json=data,
+            )
         except ClientError as ex:
             raise RequestNotSuccessful(
                 "Error during HTTP request."
@@ -155,7 +200,10 @@ class LaMarzoccoCloudClient:
         """Wrapper for the API call."""
 
         access_token = await self.async_get_access_token()
-        headers = {"Authorization": f"Bearer {access_token}"}
+        headers = {
+            **generate_extra_request_headers(self._installation_key),
+            "Authorization": f"Bearer {access_token}",
+        }
 
         try:
             response = await self._client.request(
@@ -288,6 +336,7 @@ class LaMarzoccoCloudClient:
                     f"wss://{BASE_URL}/ws/connect",
                     timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
                     heartbeat=15,
+                    headers=generate_extra_request_headers(self._installation_key),
                 ) as ws:
                     try:
                         await self.__setup_websocket_connection(ws, serial_number)
@@ -313,7 +362,7 @@ class LaMarzoccoCloudClient:
             except asyncio.CancelledError:
                 _LOGGER.debug("WebSocket cancellation successful")
                 auto_reconnect = False
-            except Exception: # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Websocket disconnected with error")
                 auto_reconnect = False
             finally:
@@ -397,7 +446,9 @@ class LaMarzoccoCloudClient:
             else:
                 self.__parse_websocket_message(data, notification_callback)
         except ValueError as ex:
-            _LOGGER.warning("Error parsing websocket message: %s. Message was: %s", ex, msg.data)
+            _LOGGER.warning(
+                "Error parsing websocket message: %s. Message was: %s", ex, msg.data
+            )
         except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.exception("Error during callback: %s", ex)
         return False

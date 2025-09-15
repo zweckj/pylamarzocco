@@ -1,13 +1,6 @@
-"""Helpers for the pylamarzocco package."""
+"""WebSocket utility functions."""
 
-from aiohttp import ClientResponse
-from .const import StompMessageType
-
-
-def is_success(response: ClientResponse) -> bool:
-    """Check if response is successful."""
-    return 200 <= response.status < 300
-
+from pylamarzocco.const import StompMessageType
 
 def encode_stomp_ws_message(
     msg_type: StompMessageType, headers: dict[str, str], body: str | None = None
@@ -39,3 +32,5 @@ def decode_stomp_ws_message(
     if data.endswith("\x00"):
         data = data[:-1]
     return msg_type, headers, data
+
+

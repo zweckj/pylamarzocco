@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aioresponses import aioresponses
+from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1, generate_private_key
 from syrupy import SnapshotAssertion
 from yarl import URL
 
@@ -26,6 +27,7 @@ from pylamarzocco.models import (
     SecondsInOut,
     WakeUpScheduleSettings,
 )
+from pylamarzocco.util import InstallationKey
 
 from .conftest import load_fixture
 
@@ -36,6 +38,12 @@ MOCK_COMMAND_RESPONSE = [
         "error_code": None,
     }
 ]
+
+MOCK_SECRET_DATA = InstallationKey(
+    secret=bytes(32),
+    private_key=generate_private_key(SECP256R1()),
+    installation_id="mock-installation-id",
+)
 
 
 @pytest.fixture(name="mock_ws_command_response")
@@ -89,7 +97,7 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
         },
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.async_get_access_token()
     assert result == "mock-access"
 
@@ -140,7 +148,7 @@ async def test_get_thing_dashboard(
         payload=load_fixture("machine", f"dashboard_{model}.json"),
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.get_thing_dashboard(serial)
     assert result.to_dict() == snapshot
 
@@ -156,7 +164,7 @@ async def test_get_thing_settings(
         payload=load_fixture("machine", "settings_micra.json"),
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.get_thing_settings(serial)
     assert result.to_dict() == snapshot
 
@@ -172,7 +180,7 @@ async def test_get_thing_schedule(
         payload=load_fixture("machine", "schedule.json"),
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.get_thing_schedule(serial)
     assert result.to_dict() == snapshot
 
@@ -188,7 +196,7 @@ async def test_list_things(
         payload=[load_fixture("machine", "settings_micra.json")],
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.list_things()
     assert result[0].to_dict() == snapshot
 
@@ -204,7 +212,7 @@ async def test_get_statistics(
         payload=load_fixture("machine", "statistics.json"),
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.get_thing_statistics(serial)
     assert result.to_dict() == snapshot
 
@@ -223,7 +231,7 @@ async def test_set_power(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_power(serial, False)
 
@@ -247,7 +255,7 @@ async def test_set_power_with_ws_validation(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_power(serial, False)
 
@@ -274,7 +282,7 @@ async def test_failing_response_ws_validation(
 
     mock_ws_command_response.status = CommandStatus.ERROR
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_power(serial, False)
     assert result is False
@@ -298,7 +306,7 @@ async def test_pending_command_ws_validation_timeout(
 
     mock_wait_for_ws_command_response.side_effect = TimeoutError
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_power(serial, False)
     assert result is False
@@ -319,7 +327,7 @@ async def test_disconnected_ws_returns_true(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     mock_websocket.connected = False
 
@@ -344,7 +352,7 @@ async def test_set_steam(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_steam(serial, True)
 
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
@@ -369,7 +377,7 @@ async def test_set_coffee_temperature(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_coffee_target_temperature(serial, 94.584)
 
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
@@ -394,7 +402,7 @@ async def test_set_steam_target_level(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_steam_target_level(serial, SteamTargetLevel.LEVEL_1)
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {
@@ -417,7 +425,7 @@ async def test_start_backflush_cleaning(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.start_backflush_cleaning(serial)
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {
@@ -441,7 +449,7 @@ async def test_change_pre_extraction_mode(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.change_pre_extraction_mode(
         serial, PreExtractionMode.PREBREWING
     )
@@ -458,16 +466,14 @@ async def test_change_pre_extraction_times(
 ) -> None:
     """Test changing the pre-extraction times for a thing."""
 
-    url = (
-        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingSettingTimes"
-    )
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingSettingTimes"
     mock_aioresponse.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.change_pre_extraction_times(
         serial,
         PrebrewSettingTimes(times=SecondsInOut(seconds_in=5.12, seconds_out=5.03)),
@@ -494,7 +500,7 @@ async def test_setting_smart_standby(
         payload=MOCK_COMMAND_RESPONSE,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_smart_standby(
         serial, False, 20, SmartStandByType.LAST_BREW
     )
@@ -521,7 +527,7 @@ async def test_set_wake_up_schedule(
         repeat=2,
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     # new schedule
     result = await client.set_wakeup_schedule(
@@ -585,7 +591,7 @@ async def test_get_update_details(
         },
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.get_thing_firmware(serial)
     assert result.to_dict() == snapshot
 
@@ -607,6 +613,6 @@ async def test_start_update(
         },
     )
 
-    client = LaMarzoccoCloudClient("test", "test")
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.update_firmware(serial)
     assert result.to_dict() == snapshot
