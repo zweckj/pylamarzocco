@@ -333,6 +333,7 @@ class LaMarzoccoCloudClient:
                     f"wss://{BASE_URL}/ws/connect",
                     timeout=ClientWSTimeout(ws_receive=None, ws_close=10.0),
                     heartbeat=15,
+                    headers=generate_extra_request_headers(self._secret_data),
                 ) as ws:
                     try:
                         await self.__setup_websocket_connection(ws, serial_number)
