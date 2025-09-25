@@ -81,6 +81,7 @@ class LaMarzoccoCloudClient:
         password: str,
         installation_key: InstallationKey,
         client: ClientSession | None = None,
+        auto_start_background_refresh: bool = True,
     ) -> None:
         """Set the cloud client up."""
         self._client = ClientSession() if client is None else client
@@ -93,6 +94,7 @@ class LaMarzoccoCloudClient:
         self.websocket = WebSocketDetails()
         self._token_refresh_task: Task[None] | None = None
         self._shutdown_event = asyncio.Event()
+        self._auto_start_background_refresh = auto_start_background_refresh
 
     # region Authentication
     async def async_register_client(self) -> None:
@@ -142,6 +144,13 @@ class LaMarzoccoCloudClient:
 
             elif self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH:
                 self._access_token = await self._async_refresh_token()
+
+            # Start background refresh if enabled and not already running
+            if (
+                self._auto_start_background_refresh
+                and (self._token_refresh_task is None or self._token_refresh_task.done())
+            ):
+                self.start_background_token_refresh()
 
             return self._access_token.access_token
 

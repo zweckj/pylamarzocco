@@ -199,6 +199,71 @@ async def test_background_token_refresh_context_manager() -> None:
     assert client._token_refresh_task is None or client._token_refresh_task.done()
 
 
+async def test_auto_start_background_refresh() -> None:
+    """Test that background refresh starts automatically when getting first token."""
+    from unittest.mock import AsyncMock, patch
+
+    mock_client = AsyncMock()
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, client=mock_client)
+    
+    # Initially, background task should not be running
+    assert client._token_refresh_task is None
+    
+    # Mock the sign in method to return a token
+    from pylamarzocco.models import AccessToken
+    import time
+    
+    async def mock_sign_in():
+        return AccessToken(
+            access_token="test-token",
+            refresh_token="test-refresh",
+            expires_at=time.time() + 3600
+        )
+    
+    with patch.object(client, '_async_sign_in', side_effect=mock_sign_in):
+        # Get access token should auto-start background refresh
+        token = await client.async_get_access_token()
+        assert token == "test-token"
+        
+        # Background task should now be running
+        assert client._token_refresh_task is not None
+        assert not client._token_refresh_task.done()
+    
+    # Clean up
+    await client.stop_background_token_refresh()
+
+
+async def test_disable_auto_start_background_refresh() -> None:
+    """Test that background refresh can be disabled from auto-starting."""
+    from unittest.mock import AsyncMock, patch
+
+    mock_client = AsyncMock()
+    client = LaMarzoccoCloudClient(
+        "test", "test", MOCK_SECRET_DATA, 
+        client=mock_client, 
+        auto_start_background_refresh=False
+    )
+    
+    # Mock the sign in method to return a token
+    from pylamarzocco.models import AccessToken
+    import time
+    
+    async def mock_sign_in():
+        return AccessToken(
+            access_token="test-token",
+            refresh_token="test-refresh",
+            expires_at=time.time() + 3600
+        )
+    
+    with patch.object(client, '_async_sign_in', side_effect=mock_sign_in):
+        # Get access token should NOT auto-start background refresh
+        token = await client.async_get_access_token()
+        assert token == "test-token"
+        
+        # Background task should still be None
+        assert client._token_refresh_task is None
+
+
 async def test_close_method_cleanup() -> None:
     """Test that close method properly cleans up resources."""
     from unittest.mock import AsyncMock
@@ -216,6 +281,77 @@ async def test_close_method_cleanup() -> None:
     
     # Verify task is stopped
     assert client._token_refresh_task is None or client._token_refresh_task.done()
+
+
+async def test_cleanup_on_destruction() -> None:
+    """Test cleanup when client is destroyed."""
+    from unittest.mock import AsyncMock, patch
+    from pylamarzocco.models import AccessToken
+    import time
+    
+    mock_client = AsyncMock()
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, client=mock_client)
+    
+    # Mock sign-in to trigger auto-start
+    async def mock_sign_in():
+        return AccessToken(
+            access_token="test-token",
+            refresh_token="test-refresh",
+            expires_at=time.time() + 3600
+        )
+    
+    with patch.object(client, '_async_sign_in', side_effect=mock_sign_in):
+        # Get token to trigger auto-start
+        await client.async_get_access_token()
+        
+        # Task should be running
+        assert client._token_refresh_task is not None
+        assert not client._token_refresh_task.done()
+        
+        # Cleanup should be called to prevent dangling tasks
+        await client.close()
+
+
+async def test_background_refresh_handles_errors() -> None:
+    """Test that background refresh handles errors gracefully."""
+    import asyncio
+    import time
+    from unittest.mock import patch, AsyncMock
+    from pylamarzocco.models import AccessToken
+    
+    current_time = time.time()
+    mock_client = AsyncMock()
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, client=mock_client)
+    
+    # Set up initial access token that will expire soon
+    client._access_token = AccessToken(
+        access_token="initial-token",
+        refresh_token="initial-refresh", 
+        expires_at=current_time + 300  # Expires in 5 minutes
+    )
+    
+    # Mock the refresh token method to raise an exception
+    async def mock_refresh_failure():
+        raise Exception("Network error")
+    
+    with patch.object(client, '_async_refresh_token', side_effect=mock_refresh_failure):
+        # Start background refresh with faster check interval and reduced refresh threshold
+        with patch("pylamarzocco.clients._cloud.TOKEN_REFRESH_CHECK_INTERVAL", new=0.1):
+            with patch("pylamarzocco.clients._cloud.TOKEN_TIME_TO_REFRESH", new=600):  # 10 minutes - should trigger refresh
+                client.start_background_token_refresh()
+                
+                # Wait for background refresh to attempt and fail
+                await asyncio.sleep(0.3)
+                
+                # Token should still be the original one (refresh failed but didn't crash)
+                assert client._access_token.access_token == "initial-token"
+                
+                # Background task should still be running (didn't crash from the error)
+                assert client._token_refresh_task is not None
+                assert not client._token_refresh_task.done()
+        
+        # Stop background refresh
+        await client.stop_background_token_refresh()
 
 
 @pytest.mark.parametrize("model", ["micra", "gs3av", "mini", "minir"])
