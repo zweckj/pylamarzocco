@@ -133,6 +133,91 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
     assert result == "new-token"
 
 
+@pytest.mark.skip_autouse_fixture
+async def test_background_token_refresh() -> None:
+    """Test background token refresh functionality."""
+    import asyncio
+    import time
+    from unittest.mock import patch, AsyncMock, MagicMock
+    from pylamarzocco.models import AccessToken
+    
+    current_time = time.time()
+    
+    # Create a mock client
+    mock_client = AsyncMock()
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, client=mock_client)
+    
+    # Set up initial access token that will expire soon
+    client._access_token = AccessToken(
+        access_token="initial-token",
+        refresh_token="initial-refresh", 
+        expires_at=current_time + 300  # Expires in 5 minutes
+    )
+    
+    # Mock the refresh token method to return a new token
+    refreshed_token = AccessToken(
+        access_token="refreshed-token",
+        refresh_token="new-refresh",
+        expires_at=current_time + 3600  # New token expires in 1 hour
+    )
+    
+    async def mock_refresh():
+        client._access_token = refreshed_token
+        return refreshed_token
+    
+    with patch.object(client, '_async_refresh_token', side_effect=mock_refresh):
+        # Start background refresh with faster check interval and reduced refresh threshold
+        with patch("pylamarzocco.clients._cloud.TOKEN_REFRESH_CHECK_INTERVAL", new=0.1):
+            with patch("pylamarzocco.clients._cloud.TOKEN_TIME_TO_REFRESH", new=600):  # 10 minutes - should trigger refresh
+                client.start_background_token_refresh()
+                
+                # Wait for background refresh to occur
+                await asyncio.sleep(0.3)
+                
+                # Check that token was refreshed
+                assert client._access_token.access_token == "refreshed-token"
+        
+        # Stop background refresh
+        await client.stop_background_token_refresh()
+
+
+async def test_background_token_refresh_context_manager() -> None:
+    """Test background token refresh with context manager."""
+    import asyncio
+    from unittest.mock import patch, AsyncMock
+    
+    # Create a mock client to avoid autouse fixture conflicts
+    mock_client = AsyncMock()
+    
+    # Use context manager which should auto-start/stop background refresh
+    async with LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, client=mock_client) as client:
+        # Background task should be running
+        assert client._token_refresh_task is not None
+        assert not client._token_refresh_task.done()
+    
+    # After context exit, background task should be stopped
+    assert client._token_refresh_task is None or client._token_refresh_task.done()
+
+
+async def test_close_method_cleanup() -> None:
+    """Test that close method properly cleans up resources."""
+    from unittest.mock import AsyncMock
+    
+    mock_client = AsyncMock()
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, client=mock_client)
+    client.start_background_token_refresh()
+    
+    # Verify task is running
+    assert client._token_refresh_task is not None
+    assert not client._token_refresh_task.done()
+    
+    # Close should stop the background task
+    await client.close()
+    
+    # Verify task is stopped
+    assert client._token_refresh_task is None or client._token_refresh_task.done()
+
+
 @pytest.mark.parametrize("model", ["micra", "gs3av", "mini", "minir"])
 async def test_get_thing_dashboard(
     mock_aioresponse: aioresponses,

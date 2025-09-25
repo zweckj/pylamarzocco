@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 import uuid
-from asyncio import Future, wait_for
+from asyncio import Future, wait_for, Task
 from collections.abc import Callable
 from http import HTTPMethod
 from typing import Any
@@ -66,6 +66,8 @@ _LOGGER = logging.getLogger(__name__)
 
 TOKEN_TIME_TO_REFRESH = 10 * 60  # 10 minutes before expiration
 PENDING_COMMAND_TIMEOUT = 10
+# Check for token refresh every 5 minutes
+TOKEN_REFRESH_CHECK_INTERVAL = 5 * 60
 
 
 class LaMarzoccoCloudClient:
@@ -89,6 +91,8 @@ class LaMarzoccoCloudClient:
         self._access_token_lock = asyncio.Lock()
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
+        self._token_refresh_task: Task[None] | None = None
+        self._shutdown_event = asyncio.Event()
 
     # region Authentication
     async def async_register_client(self) -> None:
@@ -189,6 +193,79 @@ class LaMarzoccoCloudClient:
         )
 
     # endregion
+
+    def start_background_token_refresh(self) -> None:
+        """Start the background token refresh task."""
+        if self._token_refresh_task is None or self._token_refresh_task.done():
+            self._shutdown_event.clear()
+            self._token_refresh_task = asyncio.create_task(self._background_token_refresh())
+            _LOGGER.debug("Started background token refresh task")
+
+    async def stop_background_token_refresh(self) -> None:
+        """Stop the background token refresh task."""
+        if self._token_refresh_task and not self._token_refresh_task.done():
+            self._shutdown_event.set()
+            try:
+                await asyncio.wait_for(self._token_refresh_task, timeout=5.0)
+            except asyncio.TimeoutError:
+                self._token_refresh_task.cancel()
+                try:
+                    await self._token_refresh_task
+                except asyncio.CancelledError:
+                    pass
+            _LOGGER.debug("Stopped background token refresh task")
+
+    async def _background_token_refresh(self) -> None:
+        """Background task to periodically refresh tokens."""
+        _LOGGER.debug("Background token refresh task started")
+        try:
+            while not self._shutdown_event.is_set():
+                try:
+                    # Wait for the check interval or until shutdown
+                    await asyncio.wait_for(
+                        self._shutdown_event.wait(), timeout=TOKEN_REFRESH_CHECK_INTERVAL
+                    )
+                    # If we reach here, shutdown was signaled
+                    break
+                except asyncio.TimeoutError:
+                    # Timeout is expected - time to check for token refresh
+                    pass
+
+                # Check if token needs refresh
+                async with self._access_token_lock:
+                    if (
+                        self._access_token is not None
+                        and self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH
+                        and self._access_token.expires_at > time.time()  # Still valid
+                    ):
+                        try:
+                            _LOGGER.debug("Background refreshing access token")
+                            self._access_token = await self._async_refresh_token()
+                        except Exception as ex:  # pylint: disable=broad-except
+                            _LOGGER.warning("Failed to refresh token in background: %s", ex)
+                            
+        except asyncio.CancelledError:
+            _LOGGER.debug("Background token refresh task cancelled")
+            raise
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.exception("Background token refresh task failed: %s", ex)
+        finally:
+            _LOGGER.debug("Background token refresh task finished")
+
+    async def __aenter__(self) -> "LaMarzoccoCloudClient":
+        """Async context manager entry."""
+        self.start_background_token_refresh()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit."""
+        await self.stop_background_token_refresh()
+
+    async def close(self) -> None:
+        """Close the client and cleanup resources."""
+        await self.stop_background_token_refresh()
+        if hasattr(self, '_client') and not self._client.closed:
+            await self._client.close()
 
     async def _rest_api_call(
         self,
