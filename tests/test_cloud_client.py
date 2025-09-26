@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Generator
 from http import HTTPMethod
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -131,6 +132,88 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
         result = await client.async_get_access_token()
 
     assert result == "new-token"
+
+
+@pytest.mark.asyncio
+async def test_background_token_validation_starts_on_first_token() -> None:
+    """Test that background token validation task starts when getting first token."""
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    
+    # Initially no task should be running
+    assert client._token_validation_task is None
+    
+    # Get access token should start the background task (uses autouse fixture)
+    await client.async_get_access_token()
+    
+    # Task should now be created and running
+    assert client._token_validation_task is not None
+    assert not client._token_validation_task.done()
+    assert client._token_validation_enabled
+    
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_background_token_validation_periodic_refresh() -> None:
+    """Test that background token validation periodically calls refresh."""
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    
+    with patch("pylamarzocco.clients._cloud.TOKEN_VALIDATION_INTERVAL", new=0.1):
+        # Get initial token to start background task
+        token = await client.async_get_access_token()
+        assert token == "mock-access"  # This comes from the autouse fixture
+        
+        initial_task = client._token_validation_task
+        assert initial_task is not None
+        assert not initial_task.done()
+        
+        # Wait for at least one background validation cycle
+        await asyncio.sleep(0.2)
+        
+        # Background task should still be running
+        assert client._token_validation_task is not None
+        assert not client._token_validation_task.done()
+        assert client._token_validation_task is initial_task  # Same task still running
+    
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_background_task_cleanup_on_close() -> None:
+    """Test that background token validation task is properly cleaned up."""
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    
+    # Manually start the task to test cleanup
+    client._start_token_validation_task()
+    task = client._token_validation_task
+    
+    assert task is not None
+    assert not task.done()
+    
+    # Close should stop the task
+    await client.close()
+    
+    # Task should be cancelled
+    assert client._token_validation_enabled is False
+    
+    # Give a moment for cancellation to complete
+    await asyncio.sleep(0.1)
+    assert task.cancelled() or task.done()
+
+
+@pytest.mark.asyncio
+async def test_async_context_manager_cleanup() -> None:
+    """Test that async context manager properly cleans up background task."""
+    async with LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA) as client:
+        await client.async_get_access_token()  # Uses autouse fixture
+        task = client._token_validation_task
+        assert task is not None
+        assert not task.done()
+    
+    # After context manager exit, task should be cleaned up
+    assert client._token_validation_enabled is False
+    await asyncio.sleep(0.1)
+    assert task.cancelled() or task.done()
 
 
 @pytest.mark.parametrize("model", ["micra", "gs3av", "mini", "minir"])

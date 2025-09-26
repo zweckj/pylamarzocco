@@ -66,6 +66,7 @@ _LOGGER = logging.getLogger(__name__)
 
 TOKEN_TIME_TO_REFRESH = 10 * 60  # 10 minutes before expiration
 PENDING_COMMAND_TIMEOUT = 10
+TOKEN_VALIDATION_INTERVAL = 60  # Check token validity every minute
 
 
 class LaMarzoccoCloudClient:
@@ -89,6 +90,30 @@ class LaMarzoccoCloudClient:
         self._access_token_lock = asyncio.Lock()
         self._pending_commands: dict[str, Future[CommandResponse]] = {}
         self.websocket = WebSocketDetails()
+        self._token_validation_task: asyncio.Task[None] | None = None
+        self._token_validation_enabled = True
+
+    async def __aenter__(self) -> LaMarzoccoCloudClient:
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: any,
+    ) -> None:
+        """Async context manager exit."""
+        await self.close()
+
+    async def close(self) -> None:
+        """Close the client and cleanup resources."""
+        self._stop_token_validation_task()
+        if self._token_validation_task:
+            try:
+                await self._token_validation_task
+            except asyncio.CancelledError:
+                pass
 
     # region Authentication
     async def async_register_client(self) -> None:
@@ -139,6 +164,10 @@ class LaMarzoccoCloudClient:
             elif self._access_token.expires_at < time.time() + TOKEN_TIME_TO_REFRESH:
                 self._access_token = await self._async_refresh_token()
 
+            # Start background token validation task on first token acquisition
+            if self._access_token is not None:
+                self._start_token_validation_task()
+
             return self._access_token.access_token
 
     async def _async_sign_in(self) -> AccessToken:
@@ -188,6 +217,41 @@ class LaMarzoccoCloudClient:
             + f"response: {await response.text()}"
         )
 
+    # endregion
+
+    # region Background Token Validation
+    def _start_token_validation_task(self) -> None:
+        """Start the background token validation task."""
+        if self._token_validation_task is None or self._token_validation_task.done():
+            self._token_validation_enabled = True
+            self._token_validation_task = asyncio.create_task(
+                self._token_validation_loop()
+            )
+            _LOGGER.debug("Started background token validation task")
+
+    async def _token_validation_loop(self) -> None:
+        """Background task loop to periodically validate access token."""
+        while self._token_validation_enabled:
+            try:
+                await asyncio.sleep(TOKEN_VALIDATION_INTERVAL)
+                if self._token_validation_enabled:
+                    # Call async_get_access_token to ensure token is valid
+                    # This will refresh the token if it's close to expiry
+                    await self.async_get_access_token()
+                    _LOGGER.debug("Background token validation completed")
+            except asyncio.CancelledError:
+                _LOGGER.debug("Token validation task cancelled")
+                break
+            except Exception as ex:
+                _LOGGER.warning("Error during background token validation: %s", ex)
+                # Continue the loop even if there's an error
+
+    def _stop_token_validation_task(self) -> None:
+        """Stop the background token validation task."""
+        self._token_validation_enabled = False
+        if self._token_validation_task and not self._token_validation_task.done():
+            self._token_validation_task.cancel()
+            _LOGGER.debug("Stopped background token validation task")
     # endregion
 
     async def _rest_api_call(
