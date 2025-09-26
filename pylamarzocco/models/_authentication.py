@@ -15,7 +15,7 @@ class AccessToken(DataClassJSONMixin):
 
     access_token: str = field(metadata=field_options(alias="accessToken"))
     refresh_token: str = field(metadata=field_options(alias="refreshToken"))
-    expires_at: float = field(default=time() + TOKEN_EXPIRATION)
+    expires_at: float = field(default_factory=lambda: time() + TOKEN_EXPIRATION)
 
 @dataclass(kw_only=True, frozen=True)
 class SigninTokenRequest(DataClassJSONMixin):
