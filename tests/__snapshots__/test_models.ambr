@@ -214,6 +214,10 @@
         'index': 1,
       }),
       dict({
+        'code': 'GSpeed',
+        'index': 1,
+      }),
+      dict({
         'code': 'GMirrorDoses',
         'index': 1,
       }),
