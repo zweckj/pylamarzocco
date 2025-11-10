@@ -1,11 +1,14 @@
 """Test the bluetooth client."""
 
 from collections.abc import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from bleak.backends.device import BLEDevice
+
 from pylamarzocco import LaMarzoccoBluetoothClient
+from pylamarzocco.clients._bluetooth import BleakClientWithServiceCache
 from pylamarzocco.const import BoilerType, MachineMode, ModelName, SmartStandByType
 from pylamarzocco.models import (
     BluetoothBoilerDetails,
@@ -14,15 +17,32 @@ from pylamarzocco.models import (
 )
 
 
+@pytest.fixture(name="ble_device")
+def ble_device_fixture() -> BLEDevice:
+    """Fixture providing a fake BLE device instance."""
+    return BLEDevice(
+        address="test-address",
+        name="Test Device",
+        details=None,
+    )
+
+
 @pytest.fixture(name="mock_bleak_client", autouse=True)
-def bleak_client() -> Generator[MagicMock]:
+def bleak_client() -> Generator[MagicMock, None, None]:
     """Fixture to create a mock BleakClient."""
     with patch(
-        "pylamarzocco.clients._bluetooth.BleakClient", autospec=True
-    ) as mock_bleak:
-        mock_client = mock_bleak.return_value
+        "pylamarzocco.clients._bluetooth.establish_connection",
+        new_callable=AsyncMock,
+    ) as mock_establish_connection:
+        mock_client = MagicMock()
+        mock_client.write_gatt_char = AsyncMock()
+        mock_client.read_gatt_char = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client.services = MagicMock()
+        mock_establish_connection.return_value = mock_client
         mock_client.is_connected = True
         mock_client.services.get_characteristic.return_value = "mock_characteristic"
+        mock_client.establish_mock = mock_establish_connection
         yield mock_client
 
 
@@ -31,11 +51,18 @@ AUTH_CHAR = "0d0b7847-e12b-09a8-b04b-8e0922a9abab"
 READ_CHAR = "0a0b7847-e12b-09a8-b04b-8e0922a9abab"
 
 
-async def test_context_manager(mock_bleak_client: MagicMock) -> None:
+async def test_context_manager(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test context manager for LaMarzoccoBluetoothClient."""
-    async with LaMarzoccoBluetoothClient("test", "token"):
+    async with LaMarzoccoBluetoothClient(ble_device, "token"):
         pass
-    mock_bleak_client.connect.assert_called_once()
+    mock_bleak_client.establish_mock.assert_awaited_once_with(
+        BleakClientWithServiceCache,
+        ble_device,
+        ble_device.name,
+        max_attempts=3,
+    )
     mock_bleak_client.services.get_characteristic.assert_called_with(AUTH_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_once_with(
         char_specifier="mock_characteristic", data=b"token", response=True
@@ -43,9 +70,11 @@ async def test_context_manager(mock_bleak_client: MagicMock) -> None:
     mock_bleak_client.disconnect.assert_called_once()
 
 
-async def test_ble_set_power(mock_bleak_client: MagicMock) -> None:
+async def test_ble_set_power(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test setting power on the machine."""
-    async with LaMarzoccoBluetoothClient("test", "token") as client:
+    async with LaMarzoccoBluetoothClient(ble_device, "token") as client:
         await client.set_power(True)
 
     mock_bleak_client.services.get_characteristic.assert_called_with(SETTINGS_CHAR)
@@ -56,9 +85,11 @@ async def test_ble_set_power(mock_bleak_client: MagicMock) -> None:
     )
 
 
-async def test_ble_set_temperature(mock_bleak_client: MagicMock) -> None:
+async def test_ble_set_temperature(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test setting temperature on the machine."""
-    async with LaMarzoccoBluetoothClient("test", "token") as client:
+    async with LaMarzoccoBluetoothClient(ble_device, "token") as client:
         await client.set_temp(BoilerType.STEAM, 90)
     mock_bleak_client.services.get_characteristic.assert_called_with(SETTINGS_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
@@ -68,9 +99,11 @@ async def test_ble_set_temperature(mock_bleak_client: MagicMock) -> None:
     )
 
 
-async def test_ble_set_smart_standby(mock_bleak_client: MagicMock) -> None:
+async def test_ble_set_smart_standby(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test setting smart standby on the machine."""
-    async with LaMarzoccoBluetoothClient("test", "token") as client:
+    async with LaMarzoccoBluetoothClient(ble_device, "token") as client:
         await client.set_smart_standby(True, SmartStandByType.POWER_ON, 42)
     mock_bleak_client.services.get_characteristic.assert_called_with(SETTINGS_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
@@ -80,10 +113,12 @@ async def test_ble_set_smart_standby(mock_bleak_client: MagicMock) -> None:
     )
 
 
-async def test_ble_get_machine_capability(mock_bleak_client: MagicMock) -> None:
+async def test_ble_get_machine_capability(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test getting machine capability."""
     mock_bleak_client.read_gatt_char.return_value = b'[{"family":"MICRA","groupsNumber":1,"coffeeBoilersNumber":1,"hasCupWarmer":false,"steamBoilersNumber":1,"teaDosesNumber":0,"machineModes":["BrewingMode","StandBy"],"schedulingType":"smartWakeUpSleep"}]'
-    async with LaMarzoccoBluetoothClient("test", "token") as client:
+    async with LaMarzoccoBluetoothClient(ble_device, "token") as client:
         response = await client.get_machine_capabilities()
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
@@ -103,10 +138,12 @@ async def test_ble_get_machine_capability(mock_bleak_client: MagicMock) -> None:
     )
 
 
-async def test_ble_get_boiler_details(mock_bleak_client: MagicMock) -> None:
+async def test_ble_get_boiler_details(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test getting boiler details."""
     mock_bleak_client.read_gatt_char.return_value = b'[{"id":"SteamBoiler","isEnabled":true,"target":131,"current":45},{"id":"CoffeeBoiler1","isEnabled":true,"target":94,"current":65}]'
-    async with LaMarzoccoBluetoothClient("test", "token") as client:
+    async with LaMarzoccoBluetoothClient(ble_device, "token") as client:
         response = await client.get_boilers()
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
@@ -130,12 +167,14 @@ async def test_ble_get_boiler_details(mock_bleak_client: MagicMock) -> None:
     ]
 
 
-async def test_ble_get_smart_standby_details(mock_bleak_client: MagicMock) -> None:
+async def test_ble_get_smart_standby_details(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test getting smart standby details."""
     mock_bleak_client.read_gatt_char.return_value = (
         b'{"mode":"PowerOn","minutes":42,"enabled":"true"}'
     )
-    async with LaMarzoccoBluetoothClient("test", "token") as client:
+    async with LaMarzoccoBluetoothClient(ble_device, "token") as client:
         response = await client.get_smart_standby_settings()
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
@@ -148,10 +187,12 @@ async def test_ble_get_smart_standby_details(mock_bleak_client: MagicMock) -> No
     )
 
 
-async def test_ble_get_tank_status(mock_bleak_client: MagicMock) -> None:
+async def test_ble_get_tank_status(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test getting tank status."""
     mock_bleak_client.read_gatt_char.return_value = b'"true"'
-    async with LaMarzoccoBluetoothClient("test", "token") as client:
+    async with LaMarzoccoBluetoothClient(ble_device, "token") as client:
         response = await client.get_tank_status()
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
@@ -162,10 +203,12 @@ async def test_ble_get_tank_status(mock_bleak_client: MagicMock) -> None:
     assert response is True
 
 
-async def test_get_machine_mode(mock_bleak_client: MagicMock) -> None:
+async def test_get_machine_mode(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
     """Test getting machine mode."""
     mock_bleak_client.read_gatt_char.return_value = b'"BrewingMode"'
-    async with LaMarzoccoBluetoothClient("test", "token") as client:
+    async with LaMarzoccoBluetoothClient(ble_device, "token") as client:
         response = await client.get_machine_mode()
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(

@@ -8,6 +8,7 @@ from types import TracebackType
 from typing import Any, Type
 
 from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
+from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 
 from pylamarzocco.const import (
     BluetoothReadSetting,
@@ -39,22 +40,22 @@ class LaMarzoccoBluetoothClient:
 
     def __init__(
         self,
-        address_or_ble_device: BLEDevice | str,
+        ble_device: BLEDevice,
         ble_token: str,
     ) -> None:
         """Initializes a new bluetooth client instance."""
         self._ble_token = ble_token
-        self._address = (
-            address_or_ble_device.address
-            if isinstance(address_or_ble_device, BLEDevice)
-            else address_or_ble_device
-        )
-        self._address_or_ble_device = address_or_ble_device
+        self._address = ble_device.address
+        self._ble_device = ble_device
 
     async def __aenter__(self) -> LaMarzoccoBluetoothClient:
         """Connect to the machine."""
-        self._client = BleakClient(self._address_or_ble_device)
-        await self._client.connect()
+        self._client = await establish_connection(
+            BleakClientWithServiceCache,
+            self._ble_device,
+            self._ble_device.name or "Unknown",
+            max_attempts=3,
+        )
         await self._authenticate()
         return self
 
