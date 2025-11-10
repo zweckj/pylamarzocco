@@ -140,6 +140,17 @@ class LaMarzoccoBluetoothClient:
         }
         await self.__write_bluetooth_json_message(data)
 
+    async def set_steam(self, enabled: bool) -> None:
+        """Enable or disable the steam boiler."""
+        data = {
+            "name": "SettingBoilerEnable",
+            "parameter": {
+                "identifier": "SteamBoiler",
+                "state": enabled,
+            },
+        }
+        await self.__write_bluetooth_json_message(data)
+
     async def set_smart_standby(
         self, enabled: bool, mode: SmartStandByType, minutes: int
     ) -> None:

@@ -75,8 +75,10 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         Args:
             enabled (bool): True to turn on, False to turn off.
         """
-        assert self._cloud_client
-        return await self._cloud_client.set_steam(self.serial_number, enabled)
+        return await self.__bluetooth_command_with_cloud_fallback(
+            command="set_steam",
+            enabled=enabled,
+        )
 
     @models_supported((ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R))
     async def set_steam_level(self, level: SteamTargetLevel) -> bool:
