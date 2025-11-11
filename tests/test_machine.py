@@ -233,6 +233,7 @@ async def test_get_dashboard_from_bluetooth_no_client(
 async def test_get_dashboard_from_bluetooth_disabled_boilers(
     mock_machine: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
+    snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting dashboard from Bluetooth with disabled boilers."""
     # Mock the Bluetooth client methods with disabled boilers
@@ -255,25 +256,7 @@ async def test_get_dashboard_from_bluetooth_disabled_boilers(
 
     await mock_machine.get_dashboard_from_bluetooth()
 
-    # Verify the dashboard was updated (now includes NoWater widget)
-    assert len(mock_machine.dashboard.widgets) == 4
-
-    # Verify coffee boiler widget has STAND_BY status
-    coffee_boiler_widget = next(
-        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_COFFEE_BOILER
-    )
-    assert coffee_boiler_widget.output.status == BoilerStatus.STAND_BY
-    assert coffee_boiler_widget.output.enabled is False
-
-    # Verify steam boiler widget has STAND_BY status
-    steam_boiler_widget = next(
-        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_STEAM_BOILER_LEVEL
-    )
-    assert steam_boiler_widget.output.status == BoilerStatus.STAND_BY
-    assert steam_boiler_widget.output.enabled is False
-    
-    # Verify no water widget (tank_status=False means no water alarm)
-    no_water_widget = next(
-        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_NO_WATER
-    )
-    assert no_water_widget.output.allarm is True
+    # Verify the dashboard was updated with snapshot (excluding dynamic connection_date)
+    dashboard_dict = mock_machine.dashboard.to_dict()
+    dashboard_dict.pop("connection_date")
+    assert dashboard_dict == snapshot

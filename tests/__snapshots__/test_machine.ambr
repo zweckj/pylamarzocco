@@ -67,3 +67,71 @@
     ]),
   })
 # ---
+# name: test_get_dashboard_from_bluetooth_disabled_boilers
+  dict({
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'config': dict({
+    }),
+    'connected': False,
+    'image_url': '',
+    'location': None,
+    'model_code': 'LINEAMICRA',
+    'model_name': 'Linea Micra',
+    'name': '',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'MR123456',
+    'type': 'CoffeeMachine',
+    'widgets': list([
+      dict({
+        'code': 'CMMachineStatus',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'BrewingMode',
+            'StandBy',
+          ]),
+          'brewing_start_time': None,
+          'mode': 'StandBy',
+          'next_status': None,
+          'status': 'StandBy',
+        }),
+      }),
+      dict({
+        'code': 'CMCoffeeBoiler',
+        'index': 1,
+        'output': dict({
+          'enabled': False,
+          'enabled_supported': False,
+          'ready_start_time': None,
+          'status': 'StandBy',
+          'target_temperature': 94.0,
+          'target_temperature_max': 100,
+          'target_temperature_min': 80,
+          'target_temperature_step': 0.1,
+        }),
+      }),
+      dict({
+        'code': 'CMSteamBoilerLevel',
+        'index': 1,
+        'output': dict({
+          'enabled': False,
+          'enabled_supported': True,
+          'ready_start_time': None,
+          'status': 'StandBy',
+          'target_level': 'Level3',
+          'target_level_supported': True,
+        }),
+      }),
+      dict({
+        'code': 'CMNoWater',
+        'index': 1,
+        'output': dict({
+          'allarm': True,
+        }),
+      }),
+    ]),
+  })
+# ---
