@@ -9,8 +9,17 @@ from pylamarzocco import (
     LaMarzoccoCloudClient,
     LaMarzoccoMachine,
 )
-from pylamarzocco.const import BoilerType, SteamTargetLevel, SmartStandByType
+from pylamarzocco.const import (
+    BoilerStatus,
+    BoilerType,
+    MachineMode,
+    MachineState,
+    SteamTargetLevel,
+    SmartStandByType,
+    WidgetType,
+)
 from pylamarzocco.exceptions import BluetoothConnectionFailed
+from pylamarzocco.models import BluetoothBoilerDetails
 
 
 @pytest.fixture(name="mock_bluetooth_client")
@@ -167,3 +176,73 @@ async def test_failing_command(
     )
     mock_cloud_client.set_power.return_value = False
     assert not await mock_machine.set_power(True)
+
+
+async def test_get_dashboard_from_bluetooth(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test getting dashboard from Bluetooth."""
+    # Mock the Bluetooth client methods
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE,
+            is_enabled=True,
+            target=94,
+            current=93,
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM,
+            is_enabled=True,
+            target=131,
+            current=130,
+        ),
+    ]
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
+
+    await mock_machine.get_dashboard_from_bluetooth()
+
+    # Verify the Bluetooth client methods were called
+    mock_bluetooth_client.get_boilers.assert_called_once()
+    mock_bluetooth_client.get_machine_mode.assert_called_once()
+
+    # Verify the dashboard was updated
+    assert mock_machine.dashboard.serial_number == "MR123456"
+    assert len(mock_machine.dashboard.widgets) == 3
+
+    # Verify machine status widget
+    machine_status_widget = next(
+        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_MACHINE_STATUS
+    )
+    assert machine_status_widget.output.status == MachineState.POWERED_ON
+    assert machine_status_widget.output.mode == MachineMode.BREWING_MODE
+
+    # Verify coffee boiler widget
+    coffee_boiler_widget = next(
+        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_COFFEE_BOILER
+    )
+    assert coffee_boiler_widget.output.target_temperature == 94.0
+    assert coffee_boiler_widget.output.enabled is True
+    assert coffee_boiler_widget.output.status == BoilerStatus.READY
+
+    # Verify steam boiler widget
+    steam_boiler_widget = next(
+        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_STEAM_BOILER_LEVEL
+    )
+    assert steam_boiler_widget.output.target_level == SteamTargetLevel.LEVEL_3
+    assert steam_boiler_widget.output.enabled is True
+    assert steam_boiler_widget.output.status == BoilerStatus.READY
+
+
+async def test_get_dashboard_from_bluetooth_no_client(
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test getting dashboard from Bluetooth without Bluetooth client."""
+    machine = LaMarzoccoMachine(
+        serial_number="MR123456",
+        bluetooth_client=None,
+        cloud_client=mock_cloud_client,
+    )
+
+    with pytest.raises(BluetoothConnectionFailed, match="Bluetooth client is not initialized"):
+        await machine.get_dashboard_from_bluetooth()

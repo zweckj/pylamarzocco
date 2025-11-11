@@ -9,7 +9,10 @@ from bleak.exc import BleakError
 
 from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
+    BoilerStatus,
     BoilerType,
+    MachineMode,
+    MachineState,
     ModelCode,
     PreExtractionMode,
     SmartStandByType,
@@ -20,11 +23,16 @@ from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
+    CoffeeBoiler,
     LastCoffeeList,
+    MachineStatus,
     PrebrewSettingTimes,
     SecondsInOut,
+    SteamBoilerLevel,
+    ThingDashboardConfig,
     ThingSchedulingSettings,
     WakeUpScheduleSettings,
+    Widget,
 )
 
 from ._thing import LaMarzoccoThing, cloud_only, models_supported
@@ -37,6 +45,8 @@ STEAM_LEVEL_MAPPING = {
     SteamTargetLevel.LEVEL_2: 128,
     SteamTargetLevel.LEVEL_3: 131,
 }
+
+STEAM_LEVEL_REVERSE_MAPPING = {v: k for k, v in STEAM_LEVEL_MAPPING.items()}
 
 
 class LaMarzoccoMachine(LaMarzoccoThing):
@@ -57,6 +67,111 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         """Get the schedule for this machine."""
         assert self._cloud_client
         self.schedule = await self._cloud_client.get_thing_schedule(self.serial_number)
+
+    async def get_dashboard_from_bluetooth(self) -> None:
+        """Get the current boiler settings through Bluetooth and update dashboard.
+        
+        This method retrieves boiler information via Bluetooth and constructs a new
+        ThingDashboardConfig object with the received values, assigning it to self.dashboard.
+        
+        Raises:
+            BluetoothConnectionFailed: If Bluetooth client is not available or connection fails.
+        """
+        if self._bluetooth_client is None:
+            raise BluetoothConnectionFailed("Bluetooth client is not initialized")
+        
+        try:
+            async with self._bluetooth_client:
+                # Get boiler details from Bluetooth
+                boilers = await self._bluetooth_client.get_boilers()
+                machine_mode = await self._bluetooth_client.get_machine_mode()
+                
+                # Build widget list from Bluetooth data
+                widgets: list[Widget] = []
+                
+                # Add machine status widget
+                machine_state = (
+                    MachineState.POWERED_ON 
+                    if machine_mode == MachineMode.BREWING_MODE 
+                    else MachineState.STANDBY
+                )
+                machine_status = MachineStatus(
+                    status=machine_state,
+                    available_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+                    mode=machine_mode,
+                    next_status=None,
+                )
+                widgets.append(
+                    Widget(
+                        code=WidgetType.CM_MACHINE_STATUS,
+                        index=1,
+                        output=machine_status,
+                    )
+                )
+                
+                # Process boilers
+                for boiler in boilers:
+                    if boiler.id == BoilerType.COFFEE:
+                        # Add coffee boiler widget
+                        boiler_status = (
+                            BoilerStatus.READY 
+                            if boiler.is_enabled and boiler.current >= boiler.target - 1
+                            else BoilerStatus.HEATING if boiler.is_enabled
+                            else BoilerStatus.STAND_BY
+                        )
+                        coffee_boiler = CoffeeBoiler(
+                            status=boiler_status,
+                            enabled=boiler.is_enabled,
+                            enabled_supported=False,
+                            target_temperature=float(boiler.target),
+                            target_temperature_min=80,
+                            target_temperature_max=100,
+                            target_temperature_step=0.1,
+                        )
+                        widgets.append(
+                            Widget(
+                                code=WidgetType.CM_COFFEE_BOILER,
+                                index=1,
+                                output=coffee_boiler,
+                            )
+                        )
+                    elif boiler.id == BoilerType.STEAM:
+                        # Add steam boiler widget
+                        boiler_status = (
+                            BoilerStatus.READY 
+                            if boiler.is_enabled and boiler.current >= boiler.target - 1
+                            else BoilerStatus.HEATING if boiler.is_enabled
+                            else BoilerStatus.STAND_BY
+                        )
+                        # Map temperature to steam level
+                        target_level = STEAM_LEVEL_REVERSE_MAPPING.get(
+                            boiler.target, SteamTargetLevel.LEVEL_1
+                        )
+                        steam_boiler = SteamBoilerLevel(
+                            status=boiler_status,
+                            enabled=boiler.is_enabled,
+                            enabled_supported=True,
+                            target_level=target_level,
+                            target_level_supported=True,
+                        )
+                        widgets.append(
+                            Widget(
+                                code=WidgetType.CM_STEAM_BOILER_LEVEL,
+                                index=1,
+                                output=steam_boiler,
+                            )
+                        )
+                
+                # Create new dashboard config with Bluetooth data
+                self.dashboard = ThingDashboardConfig(
+                    serial_number=self.serial_number,
+                    widgets=widgets,
+                )
+                
+        except BleakError as exc:
+            raise BluetoothConnectionFailed(
+                f"Failed to get dashboard data via Bluetooth: {exc}"
+            ) from exc
 
     async def set_power(self, enabled: bool) -> bool:
         """Set the power of the machine.
