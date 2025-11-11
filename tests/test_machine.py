@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from syrupy import SnapshotAssertion
 
 from pylamarzocco import (
     LaMarzoccoBluetoothClient,
@@ -181,6 +182,7 @@ async def test_failing_command(
 async def test_get_dashboard_from_bluetooth(
     mock_machine: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
+    snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting dashboard from Bluetooth."""
     # Mock the Bluetooth client methods
@@ -206,32 +208,10 @@ async def test_get_dashboard_from_bluetooth(
     mock_bluetooth_client.get_boilers.assert_called_once()
     mock_bluetooth_client.get_machine_mode.assert_called_once()
 
-    # Verify the dashboard was updated
-    assert mock_machine.dashboard.serial_number == "MR123456"
-    assert len(mock_machine.dashboard.widgets) == 3
-
-    # Verify machine status widget
-    machine_status_widget = next(
-        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_MACHINE_STATUS
-    )
-    assert machine_status_widget.output.status == MachineState.POWERED_ON
-    assert machine_status_widget.output.mode == MachineMode.BREWING_MODE
-
-    # Verify coffee boiler widget
-    coffee_boiler_widget = next(
-        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_COFFEE_BOILER
-    )
-    assert coffee_boiler_widget.output.target_temperature == 94.0
-    assert coffee_boiler_widget.output.enabled is True
-    assert coffee_boiler_widget.output.status == BoilerStatus.READY
-
-    # Verify steam boiler widget
-    steam_boiler_widget = next(
-        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_STEAM_BOILER_LEVEL
-    )
-    assert steam_boiler_widget.output.target_level == SteamTargetLevel.LEVEL_3
-    assert steam_boiler_widget.output.enabled is True
-    assert steam_boiler_widget.output.status == BoilerStatus.READY
+    # Verify the dashboard was updated with snapshot (excluding dynamic connection_date)
+    dashboard_dict = mock_machine.dashboard.to_dict()
+    dashboard_dict.pop("connection_date")
+    assert dashboard_dict == snapshot
 
 
 async def test_get_dashboard_from_bluetooth_no_client(
