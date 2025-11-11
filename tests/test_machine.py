@@ -20,10 +20,7 @@ from pylamarzocco.const import (
     WidgetType,
 )
 from pylamarzocco.exceptions import BluetoothConnectionFailed
-from pylamarzocco.models import (
-    BluetoothBoilerDetails,
-    BluetoothSmartStandbyDetails,
-)
+from pylamarzocco.models import BluetoothBoilerDetails
 
 
 @pytest.fixture(name="mock_bluetooth_client")
@@ -205,13 +202,6 @@ async def test_get_dashboard_from_bluetooth(
     ]
     mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
     mock_bluetooth_client.get_tank_status.return_value = True
-    mock_bluetooth_client.get_smart_standby_settings.return_value = (
-        BluetoothSmartStandbyDetails(
-            mode=SmartStandByType.POWER_ON,
-            minutes=30,
-            enabled=True,
-        )
-    )
 
     await mock_machine.get_dashboard_from_bluetooth()
 
@@ -219,17 +209,11 @@ async def test_get_dashboard_from_bluetooth(
     mock_bluetooth_client.get_boilers.assert_called_once()
     mock_bluetooth_client.get_machine_mode.assert_called_once()
     mock_bluetooth_client.get_tank_status.assert_called_once()
-    mock_bluetooth_client.get_smart_standby_settings.assert_called_once()
 
     # Verify the dashboard was updated with snapshot (excluding dynamic connection_date)
     dashboard_dict = mock_machine.dashboard.to_dict()
     dashboard_dict.pop("connection_date")
     assert dashboard_dict == snapshot
-    
-    # Verify schedule was updated with smart standby settings
-    assert mock_machine.schedule.smart_stand_by_enabled is True
-    assert mock_machine.schedule.smart_stand_by_minutes == 30
-    assert mock_machine.schedule.smart_stand_by_after == SmartStandByType.POWER_ON
 
 
 async def test_get_dashboard_from_bluetooth_no_client(
@@ -268,13 +252,6 @@ async def test_get_dashboard_from_bluetooth_disabled_boilers(
     ]
     mock_bluetooth_client.get_machine_mode.return_value = MachineMode.STANDBY
     mock_bluetooth_client.get_tank_status.return_value = False
-    mock_bluetooth_client.get_smart_standby_settings.return_value = (
-        BluetoothSmartStandbyDetails(
-            mode=SmartStandByType.LAST_BREW,
-            minutes=10,
-            enabled=False,
-        )
-    )
 
     await mock_machine.get_dashboard_from_bluetooth()
 
