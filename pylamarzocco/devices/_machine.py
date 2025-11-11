@@ -26,6 +26,7 @@ from pylamarzocco.models import (
     CoffeeBoiler,
     LastCoffeeList,
     MachineStatus,
+    NoWater,
     PrebrewSettingTimes,
     SecondsInOut,
     SteamBoilerLevel,
@@ -71,8 +72,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     async def get_dashboard_from_bluetooth(self) -> None:
         """Get the current boiler settings through Bluetooth and update dashboard.
         
-        This method retrieves boiler information via Bluetooth and constructs a new
-        ThingDashboardConfig object with the received values, assigning it to self.dashboard.
+        This method retrieves boiler information, tank status, and smart standby settings
+        via Bluetooth and constructs a new ThingDashboardConfig object with the received
+        values, assigning it to self.dashboard and updating self.schedule.
         
         Raises:
             BluetoothConnectionFailed: If Bluetooth client is not available or connection fails.
@@ -82,9 +84,11 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         
         try:
             async with self._bluetooth_client:
-                # Get boiler details from Bluetooth
+                # Get all data from Bluetooth
                 boilers = await self._bluetooth_client.get_boilers()
                 machine_mode = await self._bluetooth_client.get_machine_mode()
+                tank_status = await self._bluetooth_client.get_tank_status()
+                smart_standby = await self._bluetooth_client.get_smart_standby_settings()
                 
                 # Build widget list from Bluetooth data
                 widgets: list[Widget] = []
@@ -162,11 +166,26 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                             )
                         )
                 
+                # Add tank status widget (no water alarm when tank_status is False)
+                no_water = NoWater(allarm=not tank_status)
+                widgets.append(
+                    Widget(
+                        code=WidgetType.CM_NO_WATER,
+                        index=1,
+                        output=no_water,
+                    )
+                )
+                
                 # Create new dashboard config with Bluetooth data
                 self.dashboard = ThingDashboardConfig(
                     serial_number=self.serial_number,
                     widgets=widgets,
                 )
+                
+                # Update schedule with smart standby settings from Bluetooth
+                self.schedule.smart_stand_by_enabled = smart_standby.enabled
+                self.schedule.smart_stand_by_minutes = smart_standby.minutes
+                self.schedule.smart_stand_by_after = smart_standby.mode
                 
         except BleakError as exc:
             raise BluetoothConnectionFailed(

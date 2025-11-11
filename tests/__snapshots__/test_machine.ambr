@@ -57,6 +57,13 @@
           'target_level_supported': True,
         }),
       }),
+      dict({
+        'code': 'CMNoWater',
+        'index': 1,
+        'output': dict({
+          'allarm': False,
+        }),
+      }),
     ]),
   })
 # ---
