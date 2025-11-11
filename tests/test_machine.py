@@ -246,3 +246,45 @@ async def test_get_dashboard_from_bluetooth_no_client(
 
     with pytest.raises(BluetoothConnectionFailed, match="Bluetooth client is not initialized"):
         await machine.get_dashboard_from_bluetooth()
+
+
+async def test_get_dashboard_from_bluetooth_disabled_boilers(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test getting dashboard from Bluetooth with disabled boilers."""
+    # Mock the Bluetooth client methods with disabled boilers
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE,
+            is_enabled=False,
+            target=94,
+            current=25,
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM,
+            is_enabled=False,
+            target=131,
+            current=25,
+        ),
+    ]
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.STANDBY
+
+    await mock_machine.get_dashboard_from_bluetooth()
+
+    # Verify the dashboard was updated
+    assert len(mock_machine.dashboard.widgets) == 3
+
+    # Verify coffee boiler widget has STAND_BY status
+    coffee_boiler_widget = next(
+        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_COFFEE_BOILER
+    )
+    assert coffee_boiler_widget.output.status == BoilerStatus.STAND_BY
+    assert coffee_boiler_widget.output.enabled is False
+
+    # Verify steam boiler widget has STAND_BY status
+    steam_boiler_widget = next(
+        w for w in mock_machine.dashboard.widgets if w.code == WidgetType.CM_STEAM_BOILER_LEVEL
+    )
+    assert steam_boiler_widget.output.status == BoilerStatus.STAND_BY
+    assert steam_boiler_widget.output.enabled is False
