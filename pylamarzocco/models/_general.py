@@ -22,7 +22,18 @@ from pylamarzocco.const import (
 
 
 def _deserialize_widget_code(value: str) -> WidgetType | str:
-    """Deserialize widget code, fallback to string if enum value not found."""
+    """Deserialize widget code, fallback to string if enum value not found.
+    
+    This allows the library to handle new widget types that La Marzocco may
+    release without breaking. Known widget codes are returned as WidgetType
+    enums for type safety, while unknown codes are returned as strings.
+    
+    Args:
+        value: The widget code string to deserialize.
+        
+    Returns:
+        WidgetType enum if the value is known, otherwise the raw string.
+    """
     try:
         return WidgetType(value)
     except ValueError:
