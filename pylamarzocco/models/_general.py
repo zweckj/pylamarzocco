@@ -21,6 +21,15 @@ from pylamarzocco.const import (
 )
 
 
+def _deserialize_widget_code(value: str) -> WidgetType | str:
+    """Deserialize widget code, fallback to string if enum value not found."""
+    try:
+        return WidgetType(value)
+    except ValueError:
+        # Return as string if the value is not a known WidgetType
+        return value
+
+
 @dataclass(kw_only=True)
 class CommandResponse(DataClassJSONMixin):
     """Response for change setting endpoint"""
@@ -79,7 +88,9 @@ class Thing(DataClassJSONMixin):
 class BaseWidget(DataClassJSONMixin):
     """Base widget configuration."""
 
-    code: WidgetType
+    code: WidgetType | str = field(
+        metadata=field_options(deserialize=_deserialize_widget_code)
+    )
     index: int
 
 

@@ -11,7 +11,12 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import DoseIndex, DoseMode, WidgetType
 
-from ._general import BaseWidgetOutput, Thing, Widget
+from ._general import BaseWidgetOutput, Thing, Widget, _deserialize_widget_code
+
+
+def _deserialize_widget_code_list(values: list[str]) -> list[WidgetType | str]:
+    """Deserialize list of widget codes, fallback to string if enum value not found."""
+    return [_deserialize_widget_code(value) for value in values]
 
 
 @dataclass(kw_only=True)
@@ -21,15 +26,17 @@ class ThingStatistics(Thing):
     firmwares: str | None = field(
         default=None,
     )
-    selected_widget_codes: list[WidgetType] = field(
+    selected_widget_codes: list[WidgetType | str] = field(
         metadata=field_options(
             alias="selectedWidgetCodes",
+            deserialize=_deserialize_widget_code_list,
         ),
         default_factory=list,
     )
-    all_widget_codes: list[WidgetType] = field(
+    all_widget_codes: list[WidgetType | str] = field(
         metadata=field_options(
             alias="allWidgetCodes",
+            deserialize=_deserialize_widget_code_list,
         ),
         default_factory=list,
     )
@@ -40,7 +47,7 @@ class ThingStatistics(Thing):
         default_factory=list,
     )
 
-    widgets: dict[WidgetType, BaseWidgetOutput] = field(default_factory=dict)
+    widgets: dict[WidgetType | str, BaseWidgetOutput] = field(default_factory=dict)
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:

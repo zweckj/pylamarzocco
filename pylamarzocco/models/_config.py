@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -40,7 +40,7 @@ class ThingConfig(DataClassJSONMixin):
     """Dashboard config with widgets."""
 
     widgets: list[Widget] = field(default_factory=list)
-    config: dict[WidgetType, BaseWidgetOutput] = field(default_factory=dict)
+    config: dict[WidgetType | str, BaseWidgetOutput] = field(default_factory=dict)
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
@@ -229,8 +229,11 @@ class PreBrewInfusionTime(DataClassJSONMixin):
     pre_brewing: float = field(metadata=field_options(alias="PreBrewing"))
 
 
+T = TypeVar("T")
+
+
 @dataclass(kw_only=True)
-class PreExtractionBaseTimes[T](DataClassJSONMixin):
+class PreExtractionBaseTimes(DataClassJSONMixin, Generic[T]):
     """Pre-extraction times configuration."""
 
     seconds_min: T = field(metadata=field_options(alias="secondsMin"))
