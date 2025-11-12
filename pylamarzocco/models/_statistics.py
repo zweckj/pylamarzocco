@@ -17,30 +17,33 @@ from ._general import BaseWidgetOutput, Thing, Widget
 _LOGGER = logging.getLogger(__name__)
 
 
-def _filter_valid_widget_codes(
-    codes: list[str], field_name: str
-) -> list[str]:
-    """Filter and return only valid WidgetType codes, logging warnings for invalid ones.
+def _filter_valid_widgets(
+    items: list[dict[str, Any] | str], field_name: str
+) -> list[dict[str, Any] | str]:
+    """Filter items with valid WidgetType codes, logging warnings for invalid ones.
     
     Args:
-        codes: List of widget code strings to validate
+        items: List of widget dicts or code strings
         field_name: Name of the field being filtered (for logging)
     
     Returns:
-        List of valid widget codes
+        List of items with valid widget codes
     """
-    valid_codes = []
-    for code in codes:
-        try:
-            WidgetType(code)
-            valid_codes.append(code)
-        except ValueError:
-            _LOGGER.warning(
-                "Unknown widget code '%s' in field '%s' will be discarded",
-                code,
-                field_name,
-            )
-    return valid_codes
+    valid_items = []
+    for item in items:
+        # Extract code - either directly if string, or from 'code' key if dict
+        code = item if isinstance(item, str) else item.get("code")
+        if code:
+            try:
+                WidgetType(code)
+                valid_items.append(item)
+            except ValueError:
+                _LOGGER.warning(
+                    "Unknown widget code '%s' in field '%s' will be discarded",
+                    code,
+                    field_name,
+                )
+    return valid_items
 
 
 @dataclass(kw_only=True)
@@ -74,22 +77,21 @@ class ThingStatistics(Thing):
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
         # Filter out widgets with unknown codes and log warnings
-        widgets = d.get("selectedWidgets", [])
-        valid_widgets = []
+        valid_widgets = _filter_valid_widgets(
+            d.get("selectedWidgets", []), "selectedWidgets"
+        )
         
-        for widget in widgets:
-            code = widget.get("code")
-            if code and _filter_valid_widget_codes([code], "selectedWidgets"):
-                widget["output"]["widget_type"] = code
-                valid_widgets.append(widget)
+        # Set widget_type for valid widgets
+        for widget in valid_widgets:
+            widget["output"]["widget_type"] = widget["code"]
         
         d["selectedWidgets"] = valid_widgets
         
         # Filter widget code lists using helper
-        d["selectedWidgetCodes"] = _filter_valid_widget_codes(
+        d["selectedWidgetCodes"] = _filter_valid_widgets(
             d.get("selectedWidgetCodes", []), "selectedWidgetCodes"
         )
-        d["allWidgetCodes"] = _filter_valid_widget_codes(
+        d["allWidgetCodes"] = _filter_valid_widgets(
             d.get("allWidgetCodes", []), "allWidgetCodes"
         )
         

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -38,30 +38,33 @@ from ._general import (
 from ._update import FirmwareSettings
 
 
-def _filter_valid_widget_codes(
-    codes: list[str], field_name: str
-) -> list[str]:
-    """Filter and return only valid WidgetType codes, logging warnings for invalid ones.
+def _filter_valid_widgets(
+    items: list[dict[str, Any] | str], field_name: str
+) -> list[dict[str, Any] | str]:
+    """Filter items with valid WidgetType codes, logging warnings for invalid ones.
     
     Args:
-        codes: List of widget code strings to validate
+        items: List of widget dicts or code strings
         field_name: Name of the field being filtered (for logging)
     
     Returns:
-        List of valid widget codes
+        List of items with valid widget codes
     """
-    valid_codes = []
-    for code in codes:
-        try:
-            WidgetType(code)
-            valid_codes.append(code)
-        except ValueError:
-            _LOGGER.warning(
-                "Unknown widget code '%s' in field '%s' will be discarded",
-                code,
-                field_name,
-            )
-    return valid_codes
+    valid_items = []
+    for item in items:
+        # Extract code - either directly if string, or from 'code' key if dict
+        code = item if isinstance(item, str) else item.get("code")
+        if code:
+            try:
+                WidgetType(code)
+                valid_items.append(item)
+            except ValueError:
+                _LOGGER.warning(
+                    "Unknown widget code '%s' in field '%s' will be discarded",
+                    code,
+                    field_name,
+                )
+    return valid_items
 
 
 @dataclass(kw_only=True)
@@ -75,13 +78,11 @@ class ThingConfig(DataClassJSONMixin):
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
         # Filter out widgets with unknown codes and log warnings
         widgets = d.get("widgets", [])
-        valid_widgets = []
+        valid_widgets = _filter_valid_widgets(widgets, "widgets")
         
-        for widget in widgets:
-            code = widget.get("code")
-            if code and _filter_valid_widget_codes([code], "widgets"):
-                widget["output"]["widget_type"] = code
-                valid_widgets.append(widget)
+        # Set widget_type for valid widgets
+        for widget in valid_widgets:
+            widget["output"]["widget_type"] = widget["code"]
         
         d["widgets"] = valid_widgets
         return d
@@ -116,15 +117,9 @@ class ThingDashboardWebsocketConfig(ThingConfig):
         d = super().__pre_deserialize__(d)
         
         # Filter out removed_widgets with unknown codes and log warnings
-        removed_widgets = d.get("removedWidgets", [])
-        valid_removed_widgets = []
-        
-        for widget in removed_widgets:
-            code = widget.get("code")
-            if code and _filter_valid_widget_codes([code], "removedWidgets"):
-                valid_removed_widgets.append(widget)
-        
-        d["removedWidgets"] = valid_removed_widgets
+        d["removedWidgets"] = _filter_valid_widgets(
+            d.get("removedWidgets", []), "removedWidgets"
+        )
         return d
 
 
@@ -281,11 +276,8 @@ class PreBrewInfusionTime(DataClassJSONMixin):
     pre_brewing: float = field(metadata=field_options(alias="PreBrewing"))
 
 
-T = TypeVar("T")
-
-
 @dataclass(kw_only=True)
-class PreExtractionBaseTimes(DataClassJSONMixin, Generic[T]):
+class PreExtractionBaseTimes[T](DataClassJSONMixin):
     """Pre-extraction times configuration."""
 
     seconds_min: T = field(metadata=field_options(alias="secondsMin"))
