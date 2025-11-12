@@ -17,6 +17,28 @@ from ._general import BaseWidgetOutput, Thing, Widget
 _LOGGER = logging.getLogger(__name__)
 
 
+def _filter_valid_widget_codes(
+    codes: list[str], log_message: str
+) -> list[str]:
+    """Filter and return only valid WidgetType codes, logging warnings for invalid ones.
+    
+    Args:
+        codes: List of widget code strings to validate
+        log_message: Message template for logging (should contain '%s' for code)
+    
+    Returns:
+        List of valid widget codes
+    """
+    valid_codes = []
+    for code in codes:
+        try:
+            WidgetType(code)
+            valid_codes.append(code)
+        except ValueError:
+            _LOGGER.warning(log_message, code)
+    return valid_codes
+
+
 @dataclass(kw_only=True)
 class ThingStatistics(Thing):
     """Statistics model."""
@@ -66,32 +88,15 @@ class ThingStatistics(Thing):
         
         d["selectedWidgets"] = valid_widgets
         
-        # Filter widget code lists
-        selected_codes = d.get("selectedWidgetCodes", [])
-        valid_selected_codes = []
-        for code in selected_codes:
-            try:
-                WidgetType(code)
-                valid_selected_codes.append(code)
-            except ValueError:
-                _LOGGER.warning(
-                    "Unknown selected widget code '%s' encountered and will be discarded",
-                    code,
-                )
-        d["selectedWidgetCodes"] = valid_selected_codes
-        
-        all_codes = d.get("allWidgetCodes", [])
-        valid_all_codes = []
-        for code in all_codes:
-            try:
-                WidgetType(code)
-                valid_all_codes.append(code)
-            except ValueError:
-                _LOGGER.warning(
-                    "Unknown widget code '%s' in allWidgetCodes encountered and will be discarded",
-                    code,
-                )
-        d["allWidgetCodes"] = valid_all_codes
+        # Filter widget code lists using helper
+        d["selectedWidgetCodes"] = _filter_valid_widget_codes(
+            d.get("selectedWidgetCodes", []),
+            "Unknown selected widget code '%s' encountered and will be discarded",
+        )
+        d["allWidgetCodes"] = _filter_valid_widget_codes(
+            d.get("allWidgetCodes", []),
+            "Unknown widget code '%s' in allWidgetCodes encountered and will be discarded",
+        )
         
         return d
 

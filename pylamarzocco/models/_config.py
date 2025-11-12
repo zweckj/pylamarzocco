@@ -38,6 +38,28 @@ from ._general import (
 from ._update import FirmwareSettings
 
 
+def _filter_valid_widget_codes(
+    codes: list[str], log_message: str
+) -> list[str]:
+    """Filter and return only valid WidgetType codes, logging warnings for invalid ones.
+    
+    Args:
+        codes: List of widget code strings to validate
+        log_message: Message template for logging (should contain '%s' for code)
+    
+    Returns:
+        List of valid widget codes
+    """
+    valid_codes = []
+    for code in codes:
+        try:
+            WidgetType(code)
+            valid_codes.append(code)
+        except ValueError:
+            _LOGGER.warning(log_message, code)
+    return valid_codes
+
+
 @dataclass(kw_only=True)
 class ThingConfig(DataClassJSONMixin):
     """Dashboard config with widgets."""
@@ -54,7 +76,6 @@ class ThingConfig(DataClassJSONMixin):
         for widget in widgets:
             code = widget.get("code")
             try:
-                # Check if the code is a valid WidgetType
                 WidgetType(code)
                 widget["output"]["widget_type"] = code
                 valid_widgets.append(widget)
@@ -102,7 +123,6 @@ class ThingDashboardWebsocketConfig(ThingConfig):
         for widget in removed_widgets:
             code = widget.get("code")
             try:
-                # Check if the code is a valid WidgetType
                 WidgetType(code)
                 valid_removed_widgets.append(widget)
             except (ValueError, KeyError):
