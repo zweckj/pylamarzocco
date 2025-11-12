@@ -36,13 +36,23 @@ def _filter_valid_widgets(
         if code:
             try:
                 WidgetType(code)
-                valid_items.append(item)
             except ValueError:
-                _LOGGER.warning(
-                    "Unknown widget code '%s' in field '%s' will be discarded",
-                    code,
-                    field_name,
-                )
+                # Log entire JSON if it's a dict, otherwise just the code
+                if isinstance(item, dict):
+                    import json
+                    _LOGGER.warning(
+                        "Unknown widget in field '%s' will be discarded: %s",
+                        field_name,
+                        json.dumps(item),
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Unknown widget code '%s' in field '%s' will be discarded",
+                        code,
+                        field_name,
+                    )
+            else:
+                valid_items.append(item)
     return valid_items
 
 
