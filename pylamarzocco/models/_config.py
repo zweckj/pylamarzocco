@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Generic, TypeVar
@@ -24,6 +25,8 @@ from pylamarzocco.const import (
     WidgetType,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 from ._general import (
     BaseWidget,
     BaseWidgetOutput,
@@ -40,15 +43,27 @@ class ThingConfig(DataClassJSONMixin):
     """Dashboard config with widgets."""
 
     widgets: list[Widget] = field(default_factory=list)
-    config: dict[WidgetType | str, BaseWidgetOutput] = field(default_factory=dict)
+    config: dict[WidgetType, BaseWidgetOutput] = field(default_factory=dict)
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
-        # move code to widget_type for mashumaro annotated serialization
-        widgets = d["widgets"]
+        # Filter out widgets with unknown codes and log warnings
+        widgets = d.get("widgets", [])
+        valid_widgets = []
+        
         for widget in widgets:
-            widget["output"]["widget_type"] = widget["code"]
-        d["widgets"] = widgets
+            code = widget.get("code")
+            try:
+                # Check if the code is a valid WidgetType
+                WidgetType(code)
+                widget["output"]["widget_type"] = code
+                valid_widgets.append(widget)
+            except (ValueError, KeyError):
+                _LOGGER.warning(
+                    "Unknown widget code '%s' encountered and will be discarded", code
+                )
+        
+        d["widgets"] = valid_widgets
         return d
 
     @classmethod
@@ -74,6 +89,30 @@ class ThingDashboardWebsocketConfig(ThingConfig):
     connection_date: int = field(metadata=field_options(alias="connectionDate"))
     uuid: str
     commands: list[CommandResponse]
+
+    @classmethod
+    def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
+        # First call parent's __pre_deserialize__ to handle widgets
+        d = super().__pre_deserialize__(d)
+        
+        # Filter out removed_widgets with unknown codes and log warnings
+        removed_widgets = d.get("removedWidgets", [])
+        valid_removed_widgets = []
+        
+        for widget in removed_widgets:
+            code = widget.get("code")
+            try:
+                # Check if the code is a valid WidgetType
+                WidgetType(code)
+                valid_removed_widgets.append(widget)
+            except (ValueError, KeyError):
+                _LOGGER.warning(
+                    "Unknown removed widget code '%s' encountered and will be discarded",
+                    code,
+                )
+        
+        d["removedWidgets"] = valid_removed_widgets
+        return d
 
 
 @dataclass(kw_only=True)

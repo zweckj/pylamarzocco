@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -11,12 +12,9 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import DoseIndex, DoseMode, WidgetType
 
-from ._general import BaseWidgetOutput, Thing, Widget, _deserialize_widget_code
+from ._general import BaseWidgetOutput, Thing, Widget
 
-
-def _deserialize_widget_code_list(values: list[str]) -> list[WidgetType | str]:
-    """Deserialize list of widget codes, fallback to string if enum value not found."""
-    return [_deserialize_widget_code(value) for value in values]
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(kw_only=True)
@@ -26,17 +24,15 @@ class ThingStatistics(Thing):
     firmwares: str | None = field(
         default=None,
     )
-    selected_widget_codes: list[WidgetType | str] = field(
+    selected_widget_codes: list[WidgetType] = field(
         metadata=field_options(
             alias="selectedWidgetCodes",
-            deserialize=_deserialize_widget_code_list,
         ),
         default_factory=list,
     )
-    all_widget_codes: list[WidgetType | str] = field(
+    all_widget_codes: list[WidgetType] = field(
         metadata=field_options(
             alias="allWidgetCodes",
-            deserialize=_deserialize_widget_code_list,
         ),
         default_factory=list,
     )
@@ -47,15 +43,56 @@ class ThingStatistics(Thing):
         default_factory=list,
     )
 
-    widgets: dict[WidgetType | str, BaseWidgetOutput] = field(default_factory=dict)
+    widgets: dict[WidgetType, BaseWidgetOutput] = field(default_factory=dict)
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
-        # move code to widget_type for mashumaro annotated serialization
-        widgets = d["selectedWidgets"]
+        # Filter out widgets with unknown codes and log warnings
+        widgets = d.get("selectedWidgets", [])
+        valid_widgets = []
+        
         for widget in widgets:
-            widget["output"]["widget_type"] = widget["code"]
-        d["selectedWidgets"] = widgets
+            code = widget.get("code")
+            try:
+                # Check if the code is a valid WidgetType
+                WidgetType(code)
+                widget["output"]["widget_type"] = code
+                valid_widgets.append(widget)
+            except (ValueError, KeyError):
+                _LOGGER.warning(
+                    "Unknown widget code '%s' in statistics encountered and will be discarded",
+                    code,
+                )
+        
+        d["selectedWidgets"] = valid_widgets
+        
+        # Filter widget code lists
+        selected_codes = d.get("selectedWidgetCodes", [])
+        valid_selected_codes = []
+        for code in selected_codes:
+            try:
+                WidgetType(code)
+                valid_selected_codes.append(code)
+            except ValueError:
+                _LOGGER.warning(
+                    "Unknown selected widget code '%s' encountered and will be discarded",
+                    code,
+                )
+        d["selectedWidgetCodes"] = valid_selected_codes
+        
+        all_codes = d.get("allWidgetCodes", [])
+        valid_all_codes = []
+        for code in all_codes:
+            try:
+                WidgetType(code)
+                valid_all_codes.append(code)
+            except ValueError:
+                _LOGGER.warning(
+                    "Unknown widget code '%s' in allWidgetCodes encountered and will be discarded",
+                    code,
+                )
+        d["allWidgetCodes"] = valid_all_codes
+        
         return d
 
     @classmethod

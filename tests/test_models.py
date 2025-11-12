@@ -1,5 +1,8 @@
 """Testing models serialization and deserialization."""
 
+import logging
+
+import pytest
 from syrupy import SnapshotAssertion
 
 from pylamarzocco.const import WidgetType
@@ -7,7 +10,6 @@ from pylamarzocco.models import (
     SmartWakeUpScheduleWebsocketConfig,
     ThingDashboardWebsocketConfig,
 )
-from pylamarzocco.models._general import BaseWidget
 
 from .conftest import load_fixture
 
@@ -28,46 +30,14 @@ async def test_scheduling_websocket_config(snapshot: SnapshotAssertion) -> None:
     assert schedule.to_dict() == snapshot
 
 
-async def test_unknown_widget_code() -> None:
-    """Test that unknown widget codes are handled gracefully."""
-    # Test with unknown widget code that's not in the WidgetType enum
-    unknown_widget = {"code": "UnknownNewWidget", "index": 1}
-    widget = BaseWidget.from_dict(unknown_widget)
-    
-    # Verify the unknown code is stored as a string
-    assert widget.code == "UnknownNewWidget"
-    assert isinstance(widget.code, str)
-    assert widget.index == 1
-    
-    # Verify serialization works
-    serialized = widget.to_dict()
-    assert serialized == unknown_widget
-
-
-async def test_known_widget_code() -> None:
-    """Test that known widget codes are still parsed as enums."""
-    # Test with known widget code
-    known_widget = {"code": "CMMachineStatus", "index": 1}
-    widget = BaseWidget.from_dict(known_widget)
-    
-    # Verify the known code is stored as enum
-    assert widget.code == WidgetType.CM_MACHINE_STATUS
-    assert isinstance(widget.code, WidgetType)
-    assert widget.index == 1
-    
-    # Verify serialization works
-    serialized = widget.to_dict()
-    assert serialized == known_widget
-
-
-async def test_removed_widgets_with_unknown_codes() -> None:
-    """Test that removed widgets with unknown codes are handled correctly."""
+async def test_removed_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:
+    """Test that removed widgets with unknown codes are filtered out and logged."""
     config_data = {
         "connected": True,
         "removedWidgets": [
-            {"code": "CMMachineGroupStatus", "index": 1},
-            {"code": "UnknownFutureWidget", "index": 2},
-            {"code": "CMMachineStatus", "index": 3},
+            {"code": "NewWidget2026", "index": 1},         # Unknown - will be filtered
+            {"code": "UnknownFutureWidget", "index": 2},   # Unknown - will be filtered
+            {"code": "CMMachineStatus", "index": 3},       # Known - will be kept
         ],
         "connectionDate": 1742439620235,
         "widgets": [],
@@ -75,19 +45,54 @@ async def test_removed_widgets_with_unknown_codes() -> None:
         "commands": [],
     }
     
-    config = ThingDashboardWebsocketConfig.from_dict(config_data)
+    with caplog.at_level(logging.WARNING):
+        config = ThingDashboardWebsocketConfig.from_dict(config_data)
     
-    # Verify all removed widgets are parsed correctly
-    assert len(config.removed_widgets) == 3
+    # Only the known widget should remain
+    assert len(config.removed_widgets) == 1
+    assert config.removed_widgets[0].code == WidgetType.CM_MACHINE_STATUS
+    assert isinstance(config.removed_widgets[0].code, WidgetType)
     
-    # First widget - unknown code (string)
-    assert config.removed_widgets[0].code == "CMMachineGroupStatus"
-    assert isinstance(config.removed_widgets[0].code, str)
+    # Verify warnings were logged for unknown codes
+    assert "NewWidget2026" in caplog.text
+    assert "UnknownFutureWidget" in caplog.text
+
+
+async def test_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:
+    """Test that active widgets with unknown codes are filtered out and logged."""
+    config_data = {
+        "connected": True,
+        "removedWidgets": [],
+        "connectionDate": 1742439620235,
+        "widgets": [
+            {
+                "code": "UnknownWidget",
+                "index": 1,
+                "output": {"widget_type": "UnknownWidget"},
+            },
+            {
+                "code": "CMMachineStatus",
+                "index": 2,
+                "output": {
+                    "widget_type": "CMMachineStatus",
+                    "status": "StandBy",
+                    "availableModes": ["BrewingMode", "StandBy"],
+                    "mode": "StandBy",
+                    "nextStatus": None,
+                    "brewingStartTime": None,
+                },
+            },
+        ],
+        "uuid": "test-uuid",
+        "commands": [],
+    }
     
-    # Second widget - unknown code (string)
-    assert config.removed_widgets[1].code == "UnknownFutureWidget"
-    assert isinstance(config.removed_widgets[1].code, str)
+    with caplog.at_level(logging.WARNING):
+        config = ThingDashboardWebsocketConfig.from_dict(config_data)
     
-    # Third widget - known code (enum)
-    assert config.removed_widgets[2].code == WidgetType.CM_MACHINE_STATUS
-    assert isinstance(config.removed_widgets[2].code, WidgetType)
+    # Only the known widget should remain
+    assert len(config.widgets) == 1
+    assert config.widgets[0].code == WidgetType.CM_MACHINE_STATUS
+    
+    # Verify warning was logged for unknown code
+    assert "UnknownWidget" in caplog.text
