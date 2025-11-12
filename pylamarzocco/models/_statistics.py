@@ -18,13 +18,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _filter_valid_widget_codes(
-    codes: list[str], log_message: str
+    codes: list[str], field_name: str
 ) -> list[str]:
     """Filter and return only valid WidgetType codes, logging warnings for invalid ones.
     
     Args:
         codes: List of widget code strings to validate
-        log_message: Message template for logging (should contain '%s' for code)
+        field_name: Name of the field being filtered (for logging)
     
     Returns:
         List of valid widget codes
@@ -35,7 +35,11 @@ def _filter_valid_widget_codes(
             WidgetType(code)
             valid_codes.append(code)
         except ValueError:
-            _LOGGER.warning(log_message, code)
+            _LOGGER.warning(
+                "Unknown widget code '%s' in field '%s' will be discarded",
+                code,
+                field_name,
+            )
     return valid_codes
 
 
@@ -75,27 +79,18 @@ class ThingStatistics(Thing):
         
         for widget in widgets:
             code = widget.get("code")
-            try:
-                # Check if the code is a valid WidgetType
-                WidgetType(code)
+            if code and _filter_valid_widget_codes([code], "selectedWidgets"):
                 widget["output"]["widget_type"] = code
                 valid_widgets.append(widget)
-            except (ValueError, KeyError):
-                _LOGGER.warning(
-                    "Unknown widget code '%s' in statistics encountered and will be discarded",
-                    code,
-                )
         
         d["selectedWidgets"] = valid_widgets
         
         # Filter widget code lists using helper
         d["selectedWidgetCodes"] = _filter_valid_widget_codes(
-            d.get("selectedWidgetCodes", []),
-            "Unknown selected widget code '%s' encountered and will be discarded",
+            d.get("selectedWidgetCodes", []), "selectedWidgetCodes"
         )
         d["allWidgetCodes"] = _filter_valid_widget_codes(
-            d.get("allWidgetCodes", []),
-            "Unknown widget code '%s' in allWidgetCodes encountered and will be discarded",
+            d.get("allWidgetCodes", []), "allWidgetCodes"
         )
         
         return d
