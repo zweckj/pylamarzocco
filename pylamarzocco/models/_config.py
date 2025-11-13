@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -34,7 +35,6 @@ from ._general import (
     Thing,
     Widget,
 )
-
 from ._update import FirmwareSettings
 
 
@@ -42,25 +42,23 @@ def _filter_valid_widgets(
     items: list[dict[str, Any] | str], field_name: str
 ) -> list[dict[str, Any] | str]:
     """Filter items with valid WidgetType codes, logging warnings for invalid ones.
-    
+
     Args:
         items: List of widget dicts or code strings
         field_name: Name of the field being filtered (for logging)
-    
+
     Returns:
         List of items with valid widget codes
     """
     valid_items = []
     for item in items:
         # Extract code - either directly if string, or from 'code' key if dict
-        code = item if isinstance(item, str) else item.get("code")
-        if code:
+        if code := (item if isinstance(item, str) else item.get("code")):
             try:
                 WidgetType(code)
             except ValueError:
                 # Log entire JSON if it's a dict, otherwise just the code
                 if isinstance(item, dict):
-                    import json
                     _LOGGER.warning(
                         "Unknown widget in field '%s' will be discarded: %s",
                         field_name,
@@ -89,12 +87,12 @@ class ThingConfig(DataClassJSONMixin):
         # Filter out widgets with unknown codes and log warnings
         widgets = d.get("widgets", [])
         valid_widgets = _filter_valid_widgets(widgets, "widgets")
-        
+
         # Set widget_type for valid widgets
         for item in valid_widgets:
-            if isinstance(item, dict):
-                item["output"]["widget_type"] = item["code"]
-        
+            assert isinstance(item, dict)
+            item["output"]["widget_type"] = item["code"]
+
         d["widgets"] = valid_widgets
         return d
 
@@ -126,7 +124,7 @@ class ThingDashboardWebsocketConfig(ThingConfig):
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
         # First call parent's __pre_deserialize__ to handle widgets
         d = super().__pre_deserialize__(d)
-        
+
         # Filter out removed_widgets with unknown codes and log warnings
         d["removedWidgets"] = _filter_valid_widgets(
             d.get("removedWidgets", []), "removedWidgets"
