@@ -3,14 +3,24 @@
 from unittest.mock import MagicMock
 
 import pytest
+from syrupy import SnapshotAssertion
 
 from pylamarzocco import (
     LaMarzoccoBluetoothClient,
     LaMarzoccoCloudClient,
     LaMarzoccoMachine,
 )
-from pylamarzocco.const import BoilerType, SteamTargetLevel, SmartStandByType
+from pylamarzocco.const import (
+    BoilerStatus,
+    BoilerType,
+    MachineMode,
+    MachineState,
+    SteamTargetLevel,
+    SmartStandByType,
+    WidgetType,
+)
 from pylamarzocco.exceptions import BluetoothConnectionFailed
+from pylamarzocco.models import BluetoothBoilerDetails
 
 
 @pytest.fixture(name="mock_bluetooth_client")
@@ -167,3 +177,86 @@ async def test_failing_command(
     )
     mock_cloud_client.set_power.return_value = False
     assert not await mock_machine.set_power(True)
+
+
+async def test_get_dashboard_from_bluetooth(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test getting dashboard from Bluetooth."""
+    # Mock the Bluetooth client methods
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE,
+            is_enabled=True,
+            target=94,
+            current=93,
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM,
+            is_enabled=True,
+            target=131,
+            current=130,
+        ),
+    ]
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
+    mock_bluetooth_client.get_tank_status.return_value = True
+
+    await mock_machine.get_dashboard_from_bluetooth()
+
+    # Verify the Bluetooth client methods were called
+    mock_bluetooth_client.get_boilers.assert_called_once()
+    mock_bluetooth_client.get_machine_mode.assert_called_once()
+    mock_bluetooth_client.get_tank_status.assert_called_once()
+
+    # Verify the dashboard was updated with snapshot (excluding dynamic connection_date)
+    dashboard_dict = mock_machine.dashboard.to_dict()
+    dashboard_dict.pop("connection_date")
+    assert dashboard_dict == snapshot
+
+
+async def test_get_dashboard_from_bluetooth_no_client(
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test getting dashboard from Bluetooth without Bluetooth client."""
+    machine = LaMarzoccoMachine(
+        serial_number="MR123456",
+        bluetooth_client=None,
+        cloud_client=mock_cloud_client,
+    )
+
+    with pytest.raises(BluetoothConnectionFailed, match="Bluetooth client is not initialized"):
+        await machine.get_dashboard_from_bluetooth()
+
+
+async def test_get_dashboard_from_bluetooth_disabled_boilers(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test getting dashboard from Bluetooth with disabled boilers."""
+    # Mock the Bluetooth client methods with disabled boilers
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE,
+            is_enabled=False,
+            target=94,
+            current=25,
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM,
+            is_enabled=False,
+            target=131,
+            current=25,
+        ),
+    ]
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.STANDBY
+    mock_bluetooth_client.get_tank_status.return_value = False
+
+    await mock_machine.get_dashboard_from_bluetooth()
+
+    # Verify the dashboard was updated with snapshot (excluding dynamic connection_date)
+    dashboard_dict = mock_machine.dashboard.to_dict()
+    dashboard_dict.pop("connection_date")
+    assert dashboard_dict == snapshot
