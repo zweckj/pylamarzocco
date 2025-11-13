@@ -61,6 +61,7 @@ from ._bluetooth import (
     BluetoothBoilerDetails,
     BluetoothMachineCapabilities,
     BluetoothSmartStandbyDetails,
+    MachineStatusSnapshot,
 )
 
 __all__ = [
@@ -92,6 +93,7 @@ __all__ = [
     "LastCoffee",
     "LastCoffeeList",
     "MachineStatus",
+    "MachineStatusSnapshot",
     "NoWater",
     "NextStatus",
     "PreBrewInfusionTime",
