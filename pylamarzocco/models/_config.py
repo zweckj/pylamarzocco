@@ -91,8 +91,9 @@ class ThingConfig(DataClassJSONMixin):
         valid_widgets = _filter_valid_widgets(widgets, "widgets")
         
         # Set widget_type for valid widgets
-        for widget in valid_widgets:
-            widget["output"]["widget_type"] = widget["code"]
+        for item in valid_widgets:
+            if isinstance(item, dict):
+                item["output"]["widget_type"] = item["code"]
         
         d["widgets"] = valid_widgets
         return d
