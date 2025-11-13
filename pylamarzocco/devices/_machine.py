@@ -21,6 +21,7 @@ from pylamarzocco.models import (
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
     LastCoffeeList,
+    MachineStatusSnapshot,
     PrebrewSettingTimes,
     SecondsInOut,
     ThingSchedulingSettings,
@@ -51,12 +52,95 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         """Set up machine."""
         super().__init__(serial_number, cloud_client, bluetooth_client)
         self.schedule = ThingSchedulingSettings(serial_number=serial_number)
+        self.status: MachineStatusSnapshot | None = None
 
     @cloud_only
     async def get_schedule(self) -> None:
         """Get the schedule for this machine."""
         assert self._cloud_client
         self.schedule = await self._cloud_client.get_thing_schedule(self.serial_number)
+
+    async def update_status_bluetooth(self) -> None:
+        """Update the status snapshot using Bluetooth.
+        
+        Fetches machine status via Bluetooth and populates the status attribute.
+        Requires a Bluetooth client to be configured.
+        
+        Raises:
+            AttributeError: If no Bluetooth client is configured.
+        """
+        if self._bluetooth_client is None:
+            raise AttributeError("Bluetooth client not configured")
+        
+        async with self._bluetooth_client:
+            self.status = await self._bluetooth_client.get_status_snapshot()
+
+    @cloud_only
+    async def update_status_cloud(self) -> None:
+        """Update the status snapshot using the Cloud dashboard.
+        
+        Fetches machine dashboard via Cloud API and populates the status attribute
+        from the dashboard data.
+        """
+        assert self._cloud_client
+        
+        # Ensure dashboard is populated
+        if not self.dashboard.config:
+            await self.get_dashboard()
+        
+        # Extract data from dashboard widgets
+        from pylamarzocco.const import WidgetType, MachineMode
+        from pylamarzocco.models import MachineStatus, CoffeeBoiler, SteamBoilerTemperature, SteamBoilerLevel, NoWater
+        
+        # Get machine status widget for power state
+        machine_status = self.dashboard.config.get(WidgetType.CM_MACHINE_STATUS)
+        power_on = False
+        if isinstance(machine_status, MachineStatus):
+            power_on = machine_status.mode == MachineMode.BREWING_MODE
+        
+        # Get coffee boiler widget
+        coffee_boiler = self.dashboard.config.get(WidgetType.CM_COFFEE_BOILER)
+        coffee_enabled = False
+        coffee_temp = 0.0
+        if isinstance(coffee_boiler, CoffeeBoiler):
+            coffee_enabled = coffee_boiler.enabled
+            coffee_temp = coffee_boiler.target_temperature
+        
+        # Get steam boiler widget (could be level or temperature depending on model)
+        steam_boiler_temp = self.dashboard.config.get(WidgetType.CM_STEAM_BOILER_TEMPERATURE)
+        steam_boiler_level = self.dashboard.config.get(WidgetType.CM_STEAM_BOILER_LEVEL)
+        steam_enabled = False
+        steam_temp = 0.0
+        
+        if isinstance(steam_boiler_temp, SteamBoilerTemperature):
+            steam_enabled = steam_boiler_temp.enabled
+            steam_temp = steam_boiler_temp.target_temperature
+        elif isinstance(steam_boiler_level, SteamBoilerLevel):
+            steam_enabled = steam_boiler_level.enabled
+            # For level-based boilers, use a mapping to temperature
+            # Level 1 = 126°C, Level 2 = 128°C, Level 3 = 131°C
+            level_to_temp = {
+                SteamTargetLevel.LEVEL_1: 126.0,
+                SteamTargetLevel.LEVEL_2: 128.0,
+                SteamTargetLevel.LEVEL_3: 131.0,
+            }
+            steam_temp = level_to_temp.get(steam_boiler_level.target_level, 0.0)
+        
+        # Get tank status widget
+        no_water = self.dashboard.config.get(WidgetType.CM_NO_WATER)
+        water_available = True  # Default to water available
+        if isinstance(no_water, NoWater):
+            # allarm=True means no water, so invert it
+            water_available = not no_water.allarm
+        
+        self.status = MachineStatusSnapshot(
+            power_on=power_on,
+            coffee_boiler_enabled=coffee_enabled,
+            coffee_target_temperature=coffee_temp,
+            steam_boiler_enabled=steam_enabled,
+            steam_target_temperature=steam_temp,
+            water_reservoir_contact=water_available,
+        )
 
     async def set_power(self, enabled: bool) -> bool:
         """Set the power of the machine.
@@ -174,9 +258,11 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     def to_dict(self) -> dict[Any, Any]:
         """Return self in dict represenation."""
+        from dataclasses import asdict
         return {
             **super().to_dict(),
             "schedule": self.schedule.to_dict() if self.schedule else None,
+            "status": asdict(self.status) if self.status else None,
         }
 
     async def __bluetooth_command_with_cloud_fallback(

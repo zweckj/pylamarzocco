@@ -44,3 +44,29 @@ class BluetoothSmartStandbyDetails(DataClassJSONMixin):
     mode: SmartStandByType
     minutes: int
     enabled: bool
+
+
+@dataclass(kw_only=True)
+class MachineStatusSnapshot:
+    """Minimal snapshot of machine status and settings available from both Cloud and Bluetooth.
+    
+    This dataclass contains only the essential information that can be retrieved
+    through both the Cloud API (get_dashboard) and Bluetooth, providing a unified
+    and simplified view of machine state.
+    
+    Note: Only includes attributes available through BOTH implementations to ensure
+    consistency regardless of data source.
+    """
+
+    # Power state - simplified from MachineMode (BrewingMode = True, StandBy/EcoMode = False)
+    power_on: bool
+    
+    # Boiler information (only target temperature, not current, as dashboard doesn't provide current)
+    coffee_boiler_enabled: bool
+    coffee_target_temperature: float
+    
+    steam_boiler_enabled: bool
+    steam_target_temperature: float
+    
+    # Tank status - True means water is available, False means no water
+    water_reservoir_contact: bool

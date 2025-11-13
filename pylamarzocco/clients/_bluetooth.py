@@ -129,6 +129,44 @@ class LaMarzoccoBluetoothClient:
         data = await self.__read_value_from_machine(BluetoothReadSetting.SMART_STAND_BY)
         return BluetoothSmartStandbyDetails.from_dict(data)
 
+    async def get_status_snapshot(self) -> "MachineStatusSnapshot":
+        """Get a complete status snapshot of the machine via Bluetooth.
+        
+        This fetches all available status information through Bluetooth and returns
+        a simplified snapshot containing power state, boiler information, and tank status.
+        
+        Returns:
+            MachineStatusSnapshot: Complete status snapshot of the machine
+        """
+        from pylamarzocco.models import MachineStatusSnapshot
+        
+        # Fetch all status information
+        machine_mode = await self.get_machine_mode()
+        boilers = await self.get_boilers()
+        tank_status = await self.get_tank_status()
+        
+        # Find coffee and steam boilers
+        coffee_boiler = next(
+            (b for b in boilers if b.id == BoilerType.COFFEE),
+            None
+        )
+        steam_boiler = next(
+            (b for b in boilers if b.id == BoilerType.STEAM),
+            None
+        )
+        
+        # Convert machine mode to boolean (power on = BrewingMode)
+        power_on = machine_mode == MachineMode.BREWING_MODE
+        
+        return MachineStatusSnapshot(
+            power_on=power_on,
+            coffee_boiler_enabled=coffee_boiler.is_enabled if coffee_boiler else False,
+            coffee_target_temperature=float(coffee_boiler.target) if coffee_boiler else 0.0,
+            steam_boiler_enabled=steam_boiler.is_enabled if steam_boiler else False,
+            steam_target_temperature=float(steam_boiler.target) if steam_boiler else 0.0,
+            water_reservoir_contact=tank_status,
+        )
+
     async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""
         mode = "BrewingMode" if enabled else "StandBy"
