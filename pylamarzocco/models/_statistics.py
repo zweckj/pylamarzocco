@@ -93,8 +93,8 @@ class ThingStatistics(Thing):
         
         # Set widget_type for valid widgets
         for item in valid_widgets:
-            if isinstance(item, dict):
-                item["output"]["widget_type"] = item["code"]
+            assert isinstance(item, dict)
+            item["output"]["widget_type"] = item["code"]
         
         d["selectedWidgets"] = valid_widgets
         
