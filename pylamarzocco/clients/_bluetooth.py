@@ -5,8 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from types import TracebackType
-from typing import Any, Type
+from typing import Any
 
 from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
 from bleak.backends.characteristic import BleakGATTCharacteristic
@@ -63,19 +62,7 @@ class LaMarzoccoBluetoothClient:
         self._disconnect_task = None
         self._idle_timeout = idle_timeout
 
-    async def __aenter__(self) -> LaMarzoccoBluetoothClient:
-        """Connect to the machine (for backward compatibility with context manager)."""
-        await self._ensure_connected()
-        return self
 
-    async def __aexit__(
-        self,
-        exc_type: Type[BaseException],
-        exc_val: BaseException,
-        exc_tb: TracebackType,
-    ) -> None:
-        """Disconnect from the machine (for backward compatibility with context manager)."""
-        await self.disconnect()
 
     @property
     def is_connected(self) -> bool:
@@ -183,7 +170,6 @@ class LaMarzoccoBluetoothClient:
     async def get_machine_mode(self) -> MachineMode:
         """Read the current machine mode"""
         try:
-            await self._ensure_connected()
             return MachineMode(
                 await self.__read_value_from_machine(BluetoothReadSetting.MACHINE_MODE)
             )
@@ -195,7 +181,6 @@ class LaMarzoccoBluetoothClient:
     async def get_machine_capabilities(self) -> BluetoothMachineCapabilities:
         """Get general machine information."""
         try:
-            await self._ensure_connected()
             capabilities = await self.__read_value_from_machine(
                 BluetoothReadSetting.MACHINE_CAPABILITIES
             )
@@ -207,7 +192,6 @@ class LaMarzoccoBluetoothClient:
     async def get_tank_status(self) -> bool:
         """Get the current tank status."""
         try:
-            await self._ensure_connected()
             return bool(
                 await self.__read_value_from_machine(BluetoothReadSetting.TANK_STATUS)
             )
@@ -218,7 +202,6 @@ class LaMarzoccoBluetoothClient:
     async def get_boilers(self) -> list[BluetoothBoilerDetails]:
         """Get the boiler status."""
         try:
-            await self._ensure_connected()
             boilers = await self.__read_value_from_machine(BluetoothReadSetting.BOILERS)
             return [BluetoothBoilerDetails.from_dict(boiler) for boiler in boilers]
         except Exception:
@@ -228,7 +211,6 @@ class LaMarzoccoBluetoothClient:
     async def get_smart_standby_settings(self) -> BluetoothSmartStandbyDetails:
         """Get the smart standby settings."""
         try:
-            await self._ensure_connected()
             data = await self.__read_value_from_machine(BluetoothReadSetting.SMART_STAND_BY)
             return BluetoothSmartStandbyDetails.from_dict(data)
         except Exception:
@@ -238,7 +220,6 @@ class LaMarzoccoBluetoothClient:
     async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""
         try:
-            await self._ensure_connected()
             mode = "BrewingMode" if enabled else "StandBy"
             data = {
                 "name": "MachineChangeMode",
@@ -254,7 +235,6 @@ class LaMarzoccoBluetoothClient:
     async def set_steam(self, enabled: bool) -> None:
         """Enable or disable the steam boiler."""
         try:
-            await self._ensure_connected()
             data = {
                 "name": "SettingBoilerEnable",
                 "parameter": {
@@ -272,7 +252,6 @@ class LaMarzoccoBluetoothClient:
     ) -> None:
         """Set the smart standby settings."""
         try:
-            await self._ensure_connected()
             data = {
                 "name": "SettingSmartStandby",
                 "parameter": {"minutes": minutes, "mode": mode.value, "enabled": enabled},
@@ -285,7 +264,6 @@ class LaMarzoccoBluetoothClient:
     async def set_temp(self, boiler: BoilerType, temperature: float) -> None:
         """Set boiler temperature (in Celsius)"""
         try:
-            await self._ensure_connected()
             data = {
                 "name": "SettingBoilerTarget",
                 "parameter": {
@@ -324,6 +302,8 @@ class LaMarzoccoBluetoothClient:
         self, characteristic: str = READ_CHARACTERISTIC
     ) -> str:
         """Read a bluetooth message."""
+        await self._ensure_connected()
+        
         if self._client is None:
             raise BluetoothConnectionFailed("Client is not connected")
 
@@ -337,6 +317,8 @@ class LaMarzoccoBluetoothClient:
         characteristic: str = WRITE_CHARACTERISTIC,
     ) -> None:
         """Connect to machine and write a message."""
+        await self._ensure_connected()
+        
         if self._client is None:
             raise BluetoothConnectionFailed("Client is not connected")
 
