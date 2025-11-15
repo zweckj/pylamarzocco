@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from functools import wraps
 import json
 import logging
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
 from bleak.backends.characteristic import BleakGATTCharacteristic
@@ -32,35 +33,45 @@ GET_TOKEN_CHARACTERISTIC = "0c0b7847-e12b-09a8-b04b-8e0922a9abab"
 AUTH_CHARACTERISTIC = "0d0b7847-e12b-09a8-b04b-8e0922a9abab"
 
 BT_MODEL_PREFIXES = ("MICRA", "MINI", "GS3")
+IDLE_TIMEOUT = 30.0
+
+T = TypeVar("T")
+
+
+def disconnect_on_exception(func: Callable[..., T]) -> Callable[..., T]:
+    """Decorator to disconnect on exception."""
+    @wraps(func)
+    async def wrapper(self: LaMarzoccoBluetoothClient, *args, **kwargs) -> T:
+        try:
+            return await func(self, *args, **kwargs)
+        except (BleakError, TimeoutError, BluetoothConnectionFailed):
+            # Disconnect on error (outside the lock to avoid deadlock)
+            asyncio.create_task(self.disconnect())
+            raise
+    return wrapper
 
 
 class LaMarzoccoBluetoothClient:
     """Class to interact with machine via Bluetooth."""
 
-    _client: BleakClientWithServiceCache | None
-    _lock: asyncio.Lock
-    _disconnect_task: asyncio.Task[None] | None
-
     def __init__(
         self,
         ble_device: BLEDevice,
         ble_token: str,
-        idle_timeout: float = 30.0,
     ) -> None:
         """Initializes a new bluetooth client instance.
         
         Args:
             ble_device: The BLE device to connect to
             ble_token: Authentication token for the device
-            idle_timeout: Time in seconds to wait before auto-disconnect (default: 30.0)
         """
         self._ble_token = ble_token
         self._address = ble_device.address
         self._ble_device = ble_device
-        self._client = None
-        self._lock = asyncio.Lock()
-        self._disconnect_task = None
-        self._idle_timeout = idle_timeout
+        self._client: BleakClientWithServiceCache | None = None
+        self._lock: asyncio.Lock = asyncio.Lock()
+        self._disconnect_task: asyncio.Task[None] | None = None
+        self._idle_timeout = IDLE_TIMEOUT
 
 
 
@@ -87,12 +98,13 @@ class LaMarzoccoBluetoothClient:
                 )
                 await self._authenticate()
                 _logger.debug("Successfully connected to Bluetooth device %s", self._address)
-                # Start the disconnect timer
-                self._reset_disconnect_timer()
-            except Exception as e:
+            except (BleakError, TimeoutError, BluetoothConnectionFailed) as e:
                 _logger.error("Failed to connect to Bluetooth device: %s", e)
                 self._client = None
                 raise
+            else:
+                # Start the disconnect timer
+                self._reset_disconnect_timer()
 
     def _reset_disconnect_timer(self) -> None:
         """Reset the auto-disconnect timer."""
@@ -107,11 +119,12 @@ class LaMarzoccoBluetoothClient:
         """Automatically disconnect after idle timeout."""
         try:
             await asyncio.sleep(self._idle_timeout)
-            _logger.debug("Auto-disconnect timer expired, disconnecting from %s", self._address)
-            await self.disconnect()
         except asyncio.CancelledError:
             # Timer was reset, this is normal
             pass
+        else:
+            _logger.debug("Auto-disconnect timer expired, disconnecting from %s", self._address)
+            await self.disconnect()
 
     async def _disconnect_internal(self) -> None:
         """Internal disconnect that doesn't acquire lock (assumes lock is already held)."""
@@ -167,114 +180,86 @@ class LaMarzoccoBluetoothClient:
 
         return self._address
 
+    @disconnect_on_exception
     async def get_machine_mode(self) -> MachineMode:
         """Read the current machine mode"""
-        try:
-            return MachineMode(
-                await self.__read_value_from_machine(BluetoothReadSetting.MACHINE_MODE)
-            )
-        except Exception:
-            # Disconnect on error (outside the lock to avoid deadlock)
-            asyncio.create_task(self.disconnect())
-            raise
+        return MachineMode(
+            await self.__read_value_from_machine(BluetoothReadSetting.MACHINE_MODE)
+        )
 
+    @disconnect_on_exception
     async def get_machine_capabilities(self) -> BluetoothMachineCapabilities:
         """Get general machine information."""
-        try:
-            capabilities = await self.__read_value_from_machine(
-                BluetoothReadSetting.MACHINE_CAPABILITIES
-            )
-            return BluetoothMachineCapabilities.from_dict(capabilities[0])
-        except Exception:
-            asyncio.create_task(self.disconnect())
-            raise
+        capabilities = await self.__read_value_from_machine(
+            BluetoothReadSetting.MACHINE_CAPABILITIES
+        )
+        return BluetoothMachineCapabilities.from_dict(capabilities[0])
 
+    @disconnect_on_exception
     async def get_tank_status(self) -> bool:
         """Get the current tank status."""
-        try:
-            return bool(
-                await self.__read_value_from_machine(BluetoothReadSetting.TANK_STATUS)
-            )
-        except Exception:
-            asyncio.create_task(self.disconnect())
-            raise
+        return bool(
+            await self.__read_value_from_machine(BluetoothReadSetting.TANK_STATUS)
+        )
 
+    @disconnect_on_exception
     async def get_boilers(self) -> list[BluetoothBoilerDetails]:
         """Get the boiler status."""
-        try:
-            boilers = await self.__read_value_from_machine(BluetoothReadSetting.BOILERS)
-            return [BluetoothBoilerDetails.from_dict(boiler) for boiler in boilers]
-        except Exception:
-            asyncio.create_task(self.disconnect())
-            raise
+        boilers = await self.__read_value_from_machine(BluetoothReadSetting.BOILERS)
+        return [BluetoothBoilerDetails.from_dict(boiler) for boiler in boilers]
 
+    @disconnect_on_exception
     async def get_smart_standby_settings(self) -> BluetoothSmartStandbyDetails:
         """Get the smart standby settings."""
-        try:
-            data = await self.__read_value_from_machine(BluetoothReadSetting.SMART_STAND_BY)
-            return BluetoothSmartStandbyDetails.from_dict(data)
-        except Exception:
-            asyncio.create_task(self.disconnect())
-            raise
+        data = await self.__read_value_from_machine(BluetoothReadSetting.SMART_STAND_BY)
+        return BluetoothSmartStandbyDetails.from_dict(data)
 
+    @disconnect_on_exception
     async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""
-        try:
-            mode = "BrewingMode" if enabled else "StandBy"
-            data = {
-                "name": "MachineChangeMode",
-                "parameter": {
-                    "mode": mode,
-                },
-            }
-            await self.__write_bluetooth_json_message(data)
-        except Exception:
-            asyncio.create_task(self.disconnect())
-            raise
+        mode = "BrewingMode" if enabled else "StandBy"
+        data = {
+            "name": "MachineChangeMode",
+            "parameter": {
+                "mode": mode,
+            },
+        }
+        await self.__write_bluetooth_json_message(data)
 
+    @disconnect_on_exception
     async def set_steam(self, enabled: bool) -> None:
         """Enable or disable the steam boiler."""
-        try:
-            data = {
-                "name": "SettingBoilerEnable",
-                "parameter": {
-                    "identifier": "SteamBoiler",
-                    "state": enabled,
-                },
-            }
-            await self.__write_bluetooth_json_message(data)
-        except Exception:
-            asyncio.create_task(self.disconnect())
-            raise
+        data = {
+            "name": "SettingBoilerEnable",
+            "parameter": {
+                "identifier": "SteamBoiler",
+                "state": enabled,
+            },
+        }
+        await self.__write_bluetooth_json_message(data)
 
+    @disconnect_on_exception
     async def set_smart_standby(
         self, enabled: bool, mode: SmartStandByType, minutes: int
     ) -> None:
         """Set the smart standby settings."""
-        try:
-            data = {
-                "name": "SettingSmartStandby",
-                "parameter": {"minutes": minutes, "mode": mode.value, "enabled": enabled},
-            }
-            await self.__write_bluetooth_json_message(data)
-        except Exception:
-            asyncio.create_task(self.disconnect())
-            raise
+        data = {
+            "name": "SettingSmartStandby",
+            "parameter": {"minutes": minutes, "mode": mode.value, "enabled": enabled},
+        }
+        await self.__write_bluetooth_json_message(data)
 
+    @disconnect_on_exception
     async def set_temp(self, boiler: BoilerType, temperature: float) -> None:
         """Set boiler temperature (in Celsius)"""
-        try:
-            data = {
-                "name": "SettingBoilerTarget",
-                "parameter": {
-                    "identifier": boiler.value,
-                    "value": temperature,
-                },
-            }
-            await self.__write_bluetooth_json_message(data)
-        except Exception:
-            asyncio.create_task(self.disconnect())
-            raise
+        data = {
+            "name": "SettingBoilerTarget",
+            "parameter": {
+                "identifier": boiler.value,
+                "value": temperature,
+            },
+        }
+        await self.__write_bluetooth_json_message(data)
 
     async def _authenticate(self) -> None:
         """Build authentication string and send it to the machine."""
@@ -377,7 +362,7 @@ class LaMarzoccoBluetoothClient:
             return resolved_characteristic
 
         # Can't resolve characteristic - clear cache and schedule disconnect
-        _logger.error(
+        _logger.info(
             "Could not find characteristic %s on machine. Clearing cache and disconnecting.",
             characteristic,
         )

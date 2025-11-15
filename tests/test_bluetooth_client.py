@@ -244,7 +244,7 @@ async def test_persistent_connection_reuse(
     mock_bleak_client: MagicMock, ble_device: BLEDevice
 ) -> None:
     """Test that connection is reused for multiple commands."""
-    client = LaMarzoccoBluetoothClient(ble_device, "token", idle_timeout=1.0)
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
     
     # Execute multiple commands
     await client.set_power(True)
@@ -267,7 +267,9 @@ async def test_auto_disconnect_after_idle(
     """Test that connection is automatically disconnected after idle timeout."""
     import asyncio
     
-    client = LaMarzoccoBluetoothClient(ble_device, "token", idle_timeout=0.1)
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    # Override the timeout for testing
+    client._idle_timeout = 0.1
     
     # Execute a command to establish connection
     await client.set_power(True)
@@ -287,7 +289,9 @@ async def test_timer_reset_on_new_command(
     """Test that disconnect timer is reset when a new command is issued."""
     import asyncio
     
-    client = LaMarzoccoBluetoothClient(ble_device, "token", idle_timeout=0.2)
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    # Override the timeout for testing
+    client._idle_timeout = 0.2
     
     # Execute a command
     await client.set_power(True)
