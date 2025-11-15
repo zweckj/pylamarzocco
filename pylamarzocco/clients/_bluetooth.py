@@ -8,6 +8,7 @@ from types import TracebackType
 from typing import Any, Type
 
 from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
+from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 
 from pylamarzocco.const import (
@@ -36,7 +37,7 @@ BT_MODEL_PREFIXES = ("MICRA", "MINI", "GS3")
 class LaMarzoccoBluetoothClient:
     """Class to interact with machine via Bluetooth."""
 
-    _client: BleakClient
+    _client: BleakClientWithServiceCache
 
     def __init__(
         self,
@@ -176,14 +177,7 @@ class LaMarzoccoBluetoothClient:
 
     async def _authenticate(self) -> None:
         """Build authentication string and send it to the machine."""
-
-        auth_characteristic = self._client.services.get_characteristic(
-            AUTH_CHARACTERISTIC
-        )
-        if auth_characteristic is None:
-            raise BluetoothConnectionFailed(
-                f"Could not find auth characteristic {AUTH_CHARACTERISTIC} on machine."
-            )
+        auth_characteristic = await self._resolve_characteristic(AUTH_CHARACTERISTIC)
 
         try:
             await self._client.write_gatt_char(
@@ -205,12 +199,7 @@ class LaMarzoccoBluetoothClient:
     ) -> str:
         """Read a bluetooth message."""
 
-        read_characteristic = self._client.services.get_characteristic(characteristic)
-        if read_characteristic is None:
-            raise BluetoothConnectionFailed(
-                f"Could not find auth characteristic {characteristic} on machine."
-            )
-
+        read_characteristic = await self._resolve_characteristic(characteristic)
         result = await self._client.read_gatt_char(read_characteristic)
         return result.decode()
 
@@ -230,13 +219,7 @@ class LaMarzoccoBluetoothClient:
 
         _logger.debug("Sending bluetooth message: %s to %s", message, characteristic)
 
-        settings_characteristic = self._client.services.get_characteristic(
-            characteristic
-        )
-        if settings_characteristic is None:
-            raise BluetoothConnectionFailed(
-                f"Could not find characteristic {characteristic} on machine."
-            )
+        settings_characteristic = await self._resolve_characteristic(characteristic)
 
         await self._client.write_gatt_char(
             char_specifier=settings_characteristic,
@@ -254,4 +237,30 @@ class LaMarzoccoBluetoothClient:
         await self.__write_bluetooth_message(
             characteristic=characteristic,
             message=json.dumps(data, separators=(",", ":")),
+        )
+
+    async def _resolve_characteristic(
+        self, characteristic: str
+    ) -> BleakGATTCharacteristic:
+        """Resolve characteristic UUID from machine services."""
+        resolved_characteristic = self._client.services.get_characteristic(
+            characteristic
+        )
+        if resolved_characteristic is not None:
+            return resolved_characteristic
+
+        _logger.debug(
+            "Characteristic %s not found in cache, clearing cache and retrying.",
+            characteristic,
+        )
+        await self._client.clear_cache()
+
+        resolved_characteristic = self._client.services.get_characteristic(
+            characteristic
+        )
+        if resolved_characteristic is not None:
+            return resolved_characteristic
+
+        raise BluetoothConnectionFailed(
+            f"Could not find characteristic {characteristic} on machine."
         )
