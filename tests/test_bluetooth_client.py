@@ -418,3 +418,31 @@ async def test_reconnect_after_disconnect(
     
     # Cleanup
     await client.disconnect()
+
+
+async def test_device_not_found_error() -> None:
+    """Test that device not found raises proper error message."""
+    from bleak.exc import BleakDeviceNotFoundError
+    
+    ble_device = BLEDevice(
+        address="test-address",
+        name="Test Device",
+        details=None,
+    )
+    
+    with patch(
+        "pylamarzocco.clients._bluetooth.establish_connection",
+        new_callable=AsyncMock,
+    ) as mock_establish_connection:
+        # Simulate device not found
+        mock_establish_connection.side_effect = BleakDeviceNotFoundError("Device not found")
+        
+        client = LaMarzoccoBluetoothClient(ble_device, "token")
+        
+        # Attempt to connect should raise proper error
+        with pytest.raises(BluetoothConnectionFailed) as exc_info:
+            await client.set_power(True)
+        
+        # Error message should indicate device is not present
+        assert "not present or out of range" in str(exc_info.value)
+        assert not client.is_connected

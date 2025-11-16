@@ -10,6 +10,7 @@ from typing import Any, Callable, Concatenate, Coroutine
 
 from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
 from bleak.backends.characteristic import BleakGATTCharacteristic
+from bleak.exc import BleakDeviceNotFoundError
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 
 from pylamarzocco.const import (
@@ -50,7 +51,7 @@ def disconnect_on_exception[
     ) -> _R:
         try:
             return await func(self, *args, **kwargs)
-        except (BleakError, TimeoutError, BluetoothConnectionFailed):
+        except (BleakError, BleakDeviceNotFoundError, TimeoutError, BluetoothConnectionFailed):
             # Disconnect on error (outside the lock to avoid deadlock)
             asyncio.create_task(self.disconnect())
             raise
@@ -103,6 +104,16 @@ class LaMarzoccoBluetoothClient:
                     max_attempts=3,
                 )
                 await self._authenticate()
+            except BleakDeviceNotFoundError as e:
+                _logger.error(
+                    "Bluetooth device %s is not present or out of range: %s",
+                    self._address,
+                    e,
+                )
+                self._client = None
+                raise BluetoothConnectionFailed(
+                    f"Bluetooth device {self._address} is not present or out of range"
+                ) from e
             except (BleakError, TimeoutError, BluetoothConnectionFailed) as e:
                 _logger.error("Failed to connect to Bluetooth device: %s", e)
                 self._client = None
@@ -381,12 +392,15 @@ class LaMarzoccoBluetoothClient:
 
         # Can't resolve characteristic - clear cache and schedule disconnect
         _logger.info(
-            "Could not find characteristic %s on machine. Clearing cache and disconnecting.",
+            "Could not find characteristic %s on machine. "
+            "The device may no longer be present or the connection is stale. "
+            "Clearing cache and disconnecting.",
             characteristic,
         )
         await self._client.clear_cache()
         # Schedule disconnect outside the lock to avoid deadlock
         asyncio.create_task(self.disconnect())
         raise BluetoothConnectionFailed(
-            f"Could not find characteristic {characteristic} on machine."
+            f"Could not find characteristic {characteristic} on machine. "
+            f"The device may no longer be present or the connection is stale."
         )
