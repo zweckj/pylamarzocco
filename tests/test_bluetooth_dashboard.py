@@ -232,7 +232,7 @@ async def test_set_power_updates_dashboard(
     """Test that set_power updates dashboard on success."""
     mock_bluetooth_client.set_power = AsyncMock(
         return_value=BluetoothCommandStatus(
-            id="123", message="Success", status="success"
+            id="ble", message="power on", status="success"
         )
     )
     
@@ -261,7 +261,7 @@ async def test_set_power_off_updates_dashboard(
     
     mock_bluetooth_client.set_power = AsyncMock(
         return_value=BluetoothCommandStatus(
-            id="123", message="Success", status="success"
+            id="ble", message="power on", status="success"
         )
     )
     
@@ -282,7 +282,7 @@ async def test_set_steam_updates_dashboard(
     """Test that set_steam updates dashboard on success."""
     mock_bluetooth_client.set_steam = AsyncMock(
         return_value=BluetoothCommandStatus(
-            id="123", message="Success", status="success"
+            id="ble", message="boiler enable success", status="success"
         )
     )
     
@@ -310,7 +310,7 @@ async def test_set_coffee_temp_updates_dashboard(
     """Test that set_coffee_target_temperature updates dashboard on success."""
     mock_bluetooth_client.set_temp = AsyncMock(
         return_value=BluetoothCommandStatus(
-            id="123", message="Success", status="success"
+            id="ble", message="Setting Temperature Success", status="success"
         )
     )
     
@@ -332,7 +332,7 @@ async def test_set_steam_temp_updates_dashboard(
     """Test that set_steam_level updates dashboard on success."""
     mock_bluetooth_client.set_temp = AsyncMock(
         return_value=BluetoothCommandStatus(
-            id="123", message="Success", status="success"
+            id="ble", message="Setting Temperature Success", status="success"
         )
     )
     
@@ -360,7 +360,7 @@ async def test_failed_command_does_not_update_dashboard(
     
     mock_bluetooth_client.set_power = AsyncMock(
         return_value=BluetoothCommandStatus(
-            id="123", message="Failed", status="error"
+            id="ble", message="Failed", status="error"
         )
     )
     

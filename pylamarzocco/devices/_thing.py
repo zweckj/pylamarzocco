@@ -114,6 +114,13 @@ class LaMarzoccoThing:
             return WebSocketDetails()
         return self._cloud_client.websocket
 
+    @property
+    def bluetooth_connected(self) -> bool:
+        """Return the status of the bluetooth connection."""
+        return (
+            self._bluetooth_client is not None and self._bluetooth_client.is_connected
+        )
+
     @cloud_only
     async def get_dashboard(self) -> None:
         """Get the dashboard for a thing."""
