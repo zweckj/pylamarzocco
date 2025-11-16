@@ -82,7 +82,7 @@ def mock_lm_machine_with_dashboard(
     return machine
 
 
-async def test_fill_dashboard_from_bluetooth(
+async def test_get_dashboard_from_bluetooth(
     mock_machine_with_dashboard: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
     snapshot,
@@ -109,7 +109,7 @@ async def test_fill_dashboard_from_bluetooth(
         ]
     )
     
-    await mock_machine_with_dashboard.fill_dashboard_from_bluetooth()
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
     
     # Verify calls
     mock_bluetooth_client.get_machine_mode.assert_called_once()
@@ -142,21 +142,21 @@ async def test_fill_dashboard_from_bluetooth(
     assert mock_machine_with_dashboard.dashboard.config == snapshot
 
 
-async def test_fill_dashboard_no_bluetooth(
+async def test_get_dashboard_no_bluetooth(
     mock_machine_with_dashboard: LaMarzoccoMachine,
 ) -> None:
     """Test filling dashboard without Bluetooth client."""
     mock_machine_with_dashboard._bluetooth_client = None
     
     with pytest.raises(BluetoothConnectionFailed):
-        await mock_machine_with_dashboard.fill_dashboard_from_bluetooth()
+        await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
 
-async def test_fill_dashboard_initializes_missing_widgets(
+async def test_get_dashboard_initializes_missing_widgets(
     mock_machine_with_dashboard: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
 ) -> None:
-    """Test that fill_dashboard_from_bluetooth initializes widgets if they don't exist."""
+    """Test that get_dashboard_from_bluetooth initializes widgets if they don't exist."""
     # Clear the dashboard to simulate widgets not existing
     mock_machine_with_dashboard.dashboard.config.clear()
     
@@ -181,7 +181,7 @@ async def test_fill_dashboard_initializes_missing_widgets(
         ]
     )
     
-    await mock_machine_with_dashboard.fill_dashboard_from_bluetooth()
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
     
     # Verify widgets were created
     assert WidgetType.CM_MACHINE_STATUS in mock_machine_with_dashboard.dashboard.config

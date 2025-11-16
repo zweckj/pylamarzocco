@@ -1,5 +1,5 @@
 # serializer version: 1
-# name: test_fill_dashboard_from_bluetooth
+# name: test_get_dashboard_from_bluetooth
   dict({
     <WidgetType.CM_COFFEE_BOILER: 'CMCoffeeBoiler'>: CoffeeBoiler(status='StandBy', enabled=True, enabled_supported=False, target_temperature=95.0, target_temperature_min=80, target_temperature_max=100, target_temperature_step=0.1, ready_start_time=None),
     <WidgetType.CM_MACHINE_STATUS: 'CMMachineStatus'>: MachineStatus(status='StandBy', available_modes=[<MachineMode.BREWING_MODE: 'BrewingMode'>, <MachineMode.STANDBY: 'StandBy'>], mode=<MachineMode.BREWING_MODE: 'BrewingMode'>, next_status=None, brewing_start_time=None),
