@@ -250,21 +250,15 @@ async def test_set_steam_temp_updates_dashboard(
     mock_machine_with_dashboard: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
 ) -> None:
-    """Test that set_steam temperature via set_temp updates dashboard on success."""
+    """Test that set_steam_level updates dashboard on success."""
     mock_bluetooth_client.set_temp = AsyncMock(
         return_value=BluetoothCommandStatus(
             id="123", message="Success", status="success"
         )
     )
     
-    # Manually call the internal method that set_steam_level would use
-    result = await mock_machine_with_dashboard._LaMarzoccoMachine__bluetooth_command_with_cloud_fallback(
-        command="set_temp",
-        bluetooth_kwargs={
-            "boiler": BoilerType.STEAM,
-            "temperature": 131,
-        },
-    )
+    # Call set_steam_level which uses set_temp for steam boiler
+    result = await mock_machine_with_dashboard.set_steam_level(SteamTargetLevel.LEVEL_3)
     
     assert result is True
     steam_temp = mock_machine_with_dashboard.dashboard.config[
