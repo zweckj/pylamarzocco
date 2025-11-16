@@ -134,7 +134,6 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
 
 
 @pytest.mark.parametrize("model", ["micra", "gs3av", "mini", "minir"])
-@pytest.mark.skip(reason="Generic type deserialization issue with PreExtractionPreBrewInfusionTimes - needs dataclass fix")
 async def test_get_thing_dashboard(
     mock_aioresponse: aioresponses,
     model: str,

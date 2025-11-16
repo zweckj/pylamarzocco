@@ -11,10 +11,6 @@ from pylamarzocco.util import decode_stomp_ws_message, encode_stomp_ws_message
 from .conftest import load_fixture
 
 
-import pytest
-
-
-@pytest.mark.skip(reason="Generic type deserialization issue with PreExtractionPreBrewInfusionTimes - needs dataclass fix")
 async def test_encode_stomp_ws_message(snapshot: SnapshotAssertion) -> None:
     """Test the encode_stomp_ws_message function."""
 
