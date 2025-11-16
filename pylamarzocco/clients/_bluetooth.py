@@ -21,6 +21,7 @@ from pylamarzocco.const import (
 from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
     BluetoothBoilerDetails,
+    BluetoothCommandStatus,
     BluetoothMachineCapabilities,
     BluetoothSmartStandbyDetails,
 )
@@ -220,7 +221,7 @@ class LaMarzoccoBluetoothClient:
         return BluetoothSmartStandbyDetails.from_dict(data)
 
     @disconnect_on_exception
-    async def set_power(self, enabled: bool) -> None:
+    async def set_power(self, enabled: bool) -> BluetoothCommandStatus:
         """Power on the machine."""
         mode = "BrewingMode" if enabled else "StandBy"
         data = {
@@ -230,9 +231,10 @@ class LaMarzoccoBluetoothClient:
             },
         }
         await self.__write_bluetooth_json_message(data)
+        return await self._check_command_status()
 
     @disconnect_on_exception
-    async def set_steam(self, enabled: bool) -> None:
+    async def set_steam(self, enabled: bool) -> BluetoothCommandStatus:
         """Enable or disable the steam boiler."""
         data = {
             "name": "SettingBoilerEnable",
@@ -242,20 +244,22 @@ class LaMarzoccoBluetoothClient:
             },
         }
         await self.__write_bluetooth_json_message(data)
+        return await self._check_command_status()
 
     @disconnect_on_exception
     async def set_smart_standby(
         self, enabled: bool, mode: SmartStandByType, minutes: int
-    ) -> None:
+    ) -> BluetoothCommandStatus:
         """Set the smart standby settings."""
         data = {
             "name": "SettingSmartStandby",
             "parameter": {"minutes": minutes, "mode": mode.value, "enabled": enabled},
         }
         await self.__write_bluetooth_json_message(data)
+        return await self._check_command_status()
 
     @disconnect_on_exception
-    async def set_temp(self, boiler: BoilerType, temperature: float) -> None:
+    async def set_temp(self, boiler: BoilerType, temperature: float) -> BluetoothCommandStatus:
         """Set boiler temperature (in Celsius)"""
         data = {
             "name": "SettingBoilerTarget",
@@ -265,6 +269,7 @@ class LaMarzoccoBluetoothClient:
             },
         }
         await self.__write_bluetooth_json_message(data)
+        return await self._check_command_status()
 
     async def _authenticate(self) -> None:
         """Build authentication string and send it to the machine."""
@@ -300,6 +305,14 @@ class LaMarzoccoBluetoothClient:
         read_characteristic = await self._resolve_characteristic(characteristic)
         result = await self._client.read_gatt_char(read_characteristic)
         return result.decode()
+    
+    async def _check_command_status(
+        self,
+        characteristic: str = WRITE_CHARACTERISTIC,
+    ) -> BluetoothCommandStatus:
+        """Check the status of a command sent via Bluetooth."""
+        result = await self._read_bluetooth_message(characteristic)
+        return BluetoothCommandStatus.from_json(result)
 
     async def __write_bluetooth_message(
         self,
