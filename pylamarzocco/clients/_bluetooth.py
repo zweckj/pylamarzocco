@@ -65,14 +65,12 @@ class LaMarzoccoBluetoothClient:
         self,
         ble_device: BLEDevice,
         ble_token: str,
-        idle_timeout: int = IDLE_TIMEOUT,
     ) -> None:
         """Initializes a new bluetooth client instance.
         
         Args:
             ble_device: The BLE device to connect to
             ble_token: Authentication token for the device
-            idle_timeout: Time in seconds before auto-disconnect (default: 30)
         """
         self._ble_token = ble_token
         self._address = ble_device.address
@@ -80,7 +78,6 @@ class LaMarzoccoBluetoothClient:
         self._client: BleakClientWithServiceCache | None = None
         self._lock: asyncio.Lock = asyncio.Lock()
         self._disconnect_task: asyncio.Task[None] | None = None
-        self._idle_timeout = idle_timeout
 
 
 
@@ -127,7 +124,7 @@ class LaMarzoccoBluetoothClient:
     async def _auto_disconnect(self) -> None:
         """Automatically disconnect after idle timeout."""
         try:
-            await asyncio.sleep(self._idle_timeout)
+            await asyncio.sleep(IDLE_TIMEOUT)
         except asyncio.CancelledError:
             # Timer was reset, this is normal
             pass

@@ -268,21 +268,22 @@ async def test_auto_disconnect_after_idle(
 ) -> None:
     """Test that connection is automatically disconnected after idle timeout."""
     import asyncio
+    from unittest.mock import patch
     
-    client = LaMarzoccoBluetoothClient(ble_device, "token")
-    # Override the timeout for testing
-    client._idle_timeout = 0.1
-    
-    # Execute a command to establish connection
-    await client.set_power(True)
-    assert client.is_connected
-    
-    # Wait for auto-disconnect
-    await asyncio.sleep(0.2)
-    
-    # Connection should be closed
-    assert not client.is_connected
-    mock_bleak_client.disconnect.assert_awaited()
+    # Mock the IDLE_TIMEOUT constant to speed up test
+    with patch("pylamarzocco.clients._bluetooth.IDLE_TIMEOUT", 0.1):
+        client = LaMarzoccoBluetoothClient(ble_device, "token")
+        
+        # Execute a command to establish connection
+        await client.set_power(True)
+        assert client.is_connected
+        
+        # Wait for auto-disconnect
+        await asyncio.sleep(0.2)
+        
+        # Connection should be closed
+        assert not client.is_connected
+        mock_bleak_client.disconnect.assert_awaited()
 
 
 async def test_timer_reset_on_new_command(
@@ -290,33 +291,34 @@ async def test_timer_reset_on_new_command(
 ) -> None:
     """Test that disconnect timer is reset when a new command is issued."""
     import asyncio
+    from unittest.mock import patch
     
-    client = LaMarzoccoBluetoothClient(ble_device, "token")
-    # Override the timeout for testing
-    client._idle_timeout = 0.2
-    
-    # Execute a command
-    await client.set_power(True)
-    assert client.is_connected
-    
-    # Wait a bit but not long enough to disconnect
-    await asyncio.sleep(0.1)
-    
-    # Execute another command (should reset timer)
-    await client.set_steam(True)
-    
-    # Wait again
-    await asyncio.sleep(0.1)
-    
-    # Connection should still be active (timer was reset)
-    assert client.is_connected
-    
-    # Wait for disconnect
-    await asyncio.sleep(0.2)
-    assert not client.is_connected
-    
-    # Cleanup
-    await client.disconnect()
+    # Mock the IDLE_TIMEOUT constant to speed up test
+    with patch("pylamarzocco.clients._bluetooth.IDLE_TIMEOUT", 0.2):
+        client = LaMarzoccoBluetoothClient(ble_device, "token")
+        
+        # Execute a command
+        await client.set_power(True)
+        assert client.is_connected
+        
+        # Wait a bit but not long enough to disconnect
+        await asyncio.sleep(0.1)
+        
+        # Execute another command (should reset timer)
+        await client.set_steam(True)
+        
+        # Wait again
+        await asyncio.sleep(0.1)
+        
+        # Connection should still be active (timer was reset)
+        assert client.is_connected
+        
+        # Wait for disconnect
+        await asyncio.sleep(0.2)
+        assert not client.is_connected
+        
+        # Cleanup
+        await client.disconnect()
 
 
 async def test_concurrent_commands_thread_safe(
