@@ -1,13 +1,16 @@
 """Test Bluetooth dashboard functionality."""
 
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoMachine
 from pylamarzocco.const import (
+    BoilerStatus,
     BoilerType,
     MachineMode,
+    MachineState,
     SteamTargetLevel,
     WidgetType,
 )
@@ -42,14 +45,14 @@ def mock_lm_machine_with_dashboard(
     # Set up dashboard config with widgets
     machine.dashboard.config = {
         WidgetType.CM_MACHINE_STATUS: MachineStatus(
-            status="StandBy",
+            status=MachineState.STANDBY,
             available_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
             mode=MachineMode.STANDBY,
             next_status=None,
             brewing_start_time=None,
         ),
         WidgetType.CM_COFFEE_BOILER: CoffeeBoiler(
-            status="StandBy",
+            status=BoilerStatus.STAND_BY,
             enabled=True,
             enabled_supported=False,
             target_temperature=93.0,
@@ -59,7 +62,7 @@ def mock_lm_machine_with_dashboard(
             ready_start_time=None,
         ),
         WidgetType.CM_STEAM_BOILER_LEVEL: SteamBoilerLevel(
-            status="StandBy",
+            status=BoilerStatus.STAND_BY,
             enabled=True,
             enabled_supported=True,
             target_level=SteamTargetLevel.LEVEL_1,
@@ -67,7 +70,7 @@ def mock_lm_machine_with_dashboard(
             ready_start_time=None,
         ),
         WidgetType.CM_STEAM_BOILER_TEMPERATURE: SteamBoilerTemperature(
-            status="StandBy",
+            status=BoilerStatus.STAND_BY,
             enabled=True,
             enabled_supported=False,
             target_temperature=126.0,
@@ -116,25 +119,29 @@ async def test_get_dashboard_from_bluetooth(
     mock_bluetooth_client.get_boilers.assert_called_once()
     
     # Verify dashboard was updated
-    machine_status = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_MACHINE_STATUS
-    ]
+    machine_status = cast(
+        MachineStatus,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS],
+    )
     assert machine_status.mode == MachineMode.BREWING_MODE
     
-    coffee_boiler = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_COFFEE_BOILER
-    ]
+    coffee_boiler = cast(
+        CoffeeBoiler,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_COFFEE_BOILER],
+    )
     assert coffee_boiler.enabled is True
     assert coffee_boiler.target_temperature == 95.0
     
-    steam_level = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_STEAM_BOILER_LEVEL
-    ]
+    steam_level = cast(
+        SteamBoilerLevel,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
+    )
     assert steam_level.enabled is False
     
-    steam_temp = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_STEAM_BOILER_TEMPERATURE
-    ]
+    steam_temp = cast(
+        SteamBoilerTemperature,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+    )
     assert steam_temp.enabled is False
     assert steam_temp.target_temperature == 128.0
     
@@ -190,17 +197,29 @@ async def test_get_dashboard_initializes_missing_widgets(
     assert WidgetType.CM_STEAM_BOILER_TEMPERATURE in mock_machine_with_dashboard.dashboard.config
     
     # Verify widgets have correct values from Bluetooth
-    machine_status = mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+    machine_status = cast(
+        MachineStatus,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS],
+    )
     assert machine_status.mode == MachineMode.BREWING_MODE
     
-    coffee_boiler = mock_machine_with_dashboard.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+    coffee_boiler = cast(
+        CoffeeBoiler,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_COFFEE_BOILER],
+    )
     assert coffee_boiler.enabled is True
     assert coffee_boiler.target_temperature == 92.0
     
-    steam_level = mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
+    steam_level = cast(
+        SteamBoilerLevel,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
+    )
     assert steam_level.enabled is True
     
-    steam_temp = mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+    steam_temp = cast(
+        SteamBoilerTemperature,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+    )
     assert steam_temp.enabled is True
     assert steam_temp.target_temperature == 130.0
 
@@ -220,9 +239,10 @@ async def test_set_power_updates_dashboard(
     result = await mock_machine_with_dashboard.set_power(True)
     
     assert result is True
-    machine_status = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_MACHINE_STATUS
-    ]
+    machine_status = cast(
+        MachineStatus,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS],
+    )
     assert machine_status.mode == MachineMode.BREWING_MODE
     assert machine_status == snapshot
 
@@ -233,9 +253,11 @@ async def test_set_power_off_updates_dashboard(
 ) -> None:
     """Test that set_power(False) updates dashboard on success."""
     # First set to brewing mode
-    mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_MACHINE_STATUS
-    ].mode = MachineMode.BREWING_MODE
+    machine_status_temp = cast(
+        MachineStatus,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS],
+    )
+    machine_status_temp.mode = MachineMode.BREWING_MODE
     
     mock_bluetooth_client.set_power = AsyncMock(
         return_value=BluetoothCommandStatus(
@@ -246,9 +268,10 @@ async def test_set_power_off_updates_dashboard(
     result = await mock_machine_with_dashboard.set_power(False)
     
     assert result is True
-    machine_status = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_MACHINE_STATUS
-    ]
+    machine_status = cast(
+        MachineStatus,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS],
+    )
     assert machine_status.mode == MachineMode.STANDBY
 
 
@@ -266,14 +289,16 @@ async def test_set_steam_updates_dashboard(
     result = await mock_machine_with_dashboard.set_steam(False)
     
     assert result is True
-    steam_level = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_STEAM_BOILER_LEVEL
-    ]
+    steam_level = cast(
+        SteamBoilerLevel,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
+    )
     assert steam_level.enabled is False
     
-    steam_temp = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_STEAM_BOILER_TEMPERATURE
-    ]
+    steam_temp = cast(
+        SteamBoilerTemperature,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+    )
     assert steam_temp.enabled is False
 
 
@@ -292,9 +317,10 @@ async def test_set_coffee_temp_updates_dashboard(
     result = await mock_machine_with_dashboard.set_coffee_target_temperature(96.5)
     
     assert result is True
-    coffee_boiler = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_COFFEE_BOILER
-    ]
+    coffee_boiler = cast(
+        CoffeeBoiler,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_COFFEE_BOILER],
+    )
     assert coffee_boiler.target_temperature == 96.5
     assert coffee_boiler == snapshot
 
@@ -314,9 +340,10 @@ async def test_set_steam_temp_updates_dashboard(
     result = await mock_machine_with_dashboard.set_steam_level(SteamTargetLevel.LEVEL_3)
     
     assert result is True
-    steam_temp = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_STEAM_BOILER_TEMPERATURE
-    ]
+    steam_temp = cast(
+        SteamBoilerTemperature,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+    )
     assert steam_temp.target_temperature == 131.0
 
 
@@ -325,9 +352,11 @@ async def test_failed_command_does_not_update_dashboard(
     mock_bluetooth_client: MagicMock,
 ) -> None:
     """Test that failed commands don't update dashboard."""
-    original_mode = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_MACHINE_STATUS
-    ].mode
+    machine_status_orig = cast(
+        MachineStatus,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS],
+    )
+    original_mode = machine_status_orig.mode
     
     mock_bluetooth_client.set_power = AsyncMock(
         return_value=BluetoothCommandStatus(
@@ -340,9 +369,10 @@ async def test_failed_command_does_not_update_dashboard(
     # Command returns False but doesn't raise exception
     assert result is False
     # Dashboard should not be updated
-    machine_status = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_MACHINE_STATUS
-    ]
+    machine_status = cast(
+        MachineStatus,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS],
+    )
     assert machine_status.mode == original_mode
 
 
@@ -351,9 +381,11 @@ async def test_bluetooth_exception_does_not_update_dashboard(
     mock_bluetooth_client: MagicMock,
 ) -> None:
     """Test that Bluetooth exceptions don't update dashboard."""
-    original_temp = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_COFFEE_BOILER
-    ].target_temperature
+    coffee_boiler_orig = cast(
+        CoffeeBoiler,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_COFFEE_BOILER],
+    )
+    original_temp = coffee_boiler_orig.target_temperature
     
     mock_bluetooth_client.set_temp = AsyncMock(
         side_effect=BluetoothConnectionFailed("Connection lost")
@@ -364,7 +396,8 @@ async def test_bluetooth_exception_does_not_update_dashboard(
     
     assert result is False
     # Dashboard should not be updated
-    coffee_boiler = mock_machine_with_dashboard.dashboard.config[
-        WidgetType.CM_COFFEE_BOILER
-    ]
+    coffee_boiler = cast(
+        CoffeeBoiler,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_COFFEE_BOILER],
+    )
     assert coffee_boiler.target_temperature == original_temp
