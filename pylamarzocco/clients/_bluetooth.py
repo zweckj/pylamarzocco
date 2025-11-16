@@ -6,7 +6,7 @@ import asyncio
 from functools import wraps
 import json
 import logging
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Concatenate, Coroutine
 
 from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
 from bleak.backends.characteristic import BleakGATTCharacteristic
@@ -33,21 +33,27 @@ GET_TOKEN_CHARACTERISTIC = "0c0b7847-e12b-09a8-b04b-8e0922a9abab"
 AUTH_CHARACTERISTIC = "0d0b7847-e12b-09a8-b04b-8e0922a9abab"
 
 BT_MODEL_PREFIXES = ("MICRA", "MINI", "GS3")
-IDLE_TIMEOUT = 30.0
-
-T = TypeVar("T")
+IDLE_TIMEOUT = 30  # seconds
 
 
-def disconnect_on_exception(func: Callable[..., T]) -> Callable[..., T]:
+def disconnect_on_exception[
+    T: "LaMarzoccoBluetoothClient", _R, **P
+](
+    func: Callable[Concatenate[T, P], Coroutine[Any, Any, _R]],
+) -> Callable[Concatenate[T, P], Coroutine[Any, Any, _R]]:
     """Decorator to disconnect on exception."""
+
     @wraps(func)
-    async def wrapper(self: LaMarzoccoBluetoothClient, *args, **kwargs) -> T:
+    async def wrapper(
+        self: T, *args: P.args, **kwargs: P.kwargs
+    ) -> _R:
         try:
             return await func(self, *args, **kwargs)
         except (BleakError, TimeoutError, BluetoothConnectionFailed):
             # Disconnect on error (outside the lock to avoid deadlock)
             asyncio.create_task(self.disconnect())
             raise
+
     return wrapper
 
 
@@ -71,7 +77,6 @@ class LaMarzoccoBluetoothClient:
         self._client: BleakClientWithServiceCache | None = None
         self._lock: asyncio.Lock = asyncio.Lock()
         self._disconnect_task: asyncio.Task[None] | None = None
-        self._idle_timeout = IDLE_TIMEOUT
 
 
 
@@ -87,9 +92,9 @@ class LaMarzoccoBluetoothClient:
                 # Reset the disconnect timer
                 self._reset_disconnect_timer()
                 return
-
+            
+            _logger.debug("Connecting to Bluetooth device %s", self._address)
             try:
-                _logger.debug("Connecting to Bluetooth device %s", self._address)
                 self._client = await establish_connection(
                     BleakClientWithServiceCache,
                     self._ble_device,
@@ -97,12 +102,12 @@ class LaMarzoccoBluetoothClient:
                     max_attempts=3,
                 )
                 await self._authenticate()
-                _logger.debug("Successfully connected to Bluetooth device %s", self._address)
             except (BleakError, TimeoutError, BluetoothConnectionFailed) as e:
                 _logger.error("Failed to connect to Bluetooth device: %s", e)
                 self._client = None
                 raise
             else:
+                _logger.debug("Successfully connected to Bluetooth device %s", self._address)
                 # Start the disconnect timer
                 self._reset_disconnect_timer()
 
@@ -118,7 +123,7 @@ class LaMarzoccoBluetoothClient:
     async def _auto_disconnect(self) -> None:
         """Automatically disconnect after idle timeout."""
         try:
-            await asyncio.sleep(self._idle_timeout)
+            await asyncio.sleep(IDLE_TIMEOUT)
         except asyncio.CancelledError:
             # Timer was reset, this is normal
             pass
@@ -134,8 +139,8 @@ class LaMarzoccoBluetoothClient:
             self._disconnect_task = None
 
         if self._client is not None and self._client.is_connected:
+            _logger.debug("Disconnecting from Bluetooth device %s", self._address)
             try:
-                _logger.debug("Disconnecting from Bluetooth device %s", self._address)
                 await self._client.disconnect()
             except Exception as e:
                 _logger.error("Error disconnecting from Bluetooth device: %s", e)
