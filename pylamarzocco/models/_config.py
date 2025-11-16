@@ -295,18 +295,24 @@ class PreExtractionBaseTimes[T](DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
-class PreExtractionPreBrewInfusionTimes(PreExtractionBaseTimes[PreBrewInfusionTime]):
+class PreExtractionPreBrewInfusionTimes(DataClassJSONMixin):
     """Pre-extraction times configuration."""
 
     seconds: float
+    seconds_min: PreBrewInfusionTime = field(metadata=field_options(alias="secondsMin"))
+    seconds_max: PreBrewInfusionTime = field(metadata=field_options(alias="secondsMax"))
+    seconds_step: PreBrewInfusionTime = field(metadata=field_options(alias="secondsStep"))
 
 
 @dataclass(kw_only=True)
-class PreExtractionInOutTimes(PreExtractionBaseTimes[SecondsInOut]):
+class PreExtractionInOutTimes(DataClassJSONMixin):
     """Pre-extraction times configuration."""
 
     dose_index: DoseIndex = field(metadata=field_options(alias="doseIndex"))
     seconds: SecondsInOut
+    seconds_min: SecondsInOut = field(metadata=field_options(alias="secondsMin"))
+    seconds_max: SecondsInOut = field(metadata=field_options(alias="secondsMax"))
+    seconds_step: SecondsInOut = field(metadata=field_options(alias="secondsStep"))
 
 
 @dataclass(kw_only=True)

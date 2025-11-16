@@ -204,10 +204,6 @@ async def test_set_steam_updates_dashboard(
     mock_bluetooth_client: MagicMock,
 ) -> None:
     """Test that set_steam updates dashboard on success."""
-    # set_steam is marked as cloud_only, so we need to add a cloud client
-    mock_cloud_client = MagicMock()
-    mock_machine_with_dashboard._cloud_client = mock_cloud_client
-    
     mock_bluetooth_client.set_steam = AsyncMock(
         return_value=BluetoothCommandStatus(
             id="123", message="Success", status="success"

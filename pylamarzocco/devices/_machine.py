@@ -73,7 +73,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             "set_power", enabled=enabled
         )
 
-    @cloud_only
     async def set_steam(self, enabled: bool) -> bool:
         """Set the steam of the machine.
 
