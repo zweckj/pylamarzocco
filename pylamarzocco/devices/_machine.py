@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from bleak.exc import BleakError
 
@@ -72,14 +72,16 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         result = await self.__bluetooth_command_with_cloud_fallback(
             "set_power", enabled=enabled
         )
-        
+
         # Update dashboard if command succeeded
         if result and WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
-            machine_status: MachineStatus = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+            machine_status = cast(
+                MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+            )
             machine_status.mode = (
                 MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
             )
-        
+
         return result
 
     async def set_steam(self, enabled: bool) -> bool:
@@ -92,16 +94,22 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             command="set_steam",
             enabled=enabled,
         )
-        
+
         # Update dashboard if command succeeded
         if result:
             if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
-                steam_level: SteamBoilerLevel = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
+                steam_level = cast(
+                    SteamBoilerLevel,
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
+                )
                 steam_level.enabled = enabled
             if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
-                steam_temp: SteamBoilerTemperature = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+                steam_temp = cast(
+                    SteamBoilerTemperature,
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+                )
                 steam_temp.enabled = enabled
-        
+
         return result
 
     @models_supported((ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R))
@@ -117,12 +125,15 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             cloud_command="set_steam_target_level",
             cloud_kwargs={"target_level": level},
         )
-        
+
         # Update dashboard if command succeeded
         if result and WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
-            steam_temp: SteamBoilerTemperature = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+            steam_temp = cast(
+                SteamBoilerTemperature,
+                self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+            )
             steam_temp.target_temperature = float(STEAM_LEVEL_MAPPING[level])
-        
+
         return result
 
     async def set_coffee_target_temperature(self, temperature: float) -> bool:
@@ -137,12 +148,14 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             cloud_command="set_coffee_target_temperature",
             cloud_kwargs={"target_temperature": temperature},
         )
-        
+
         # Update dashboard if command succeeded
         if result and WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
-            coffee_boiler: CoffeeBoiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+            coffee_boiler = cast(
+                CoffeeBoiler, self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+            )
             coffee_boiler.target_temperature = float(temperature)
-        
+
         return result
 
     @cloud_only
