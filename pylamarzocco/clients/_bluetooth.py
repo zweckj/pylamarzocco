@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+from functools import wraps
 import json
 import logging
-from types import TracebackType
-from typing import Any, Type
+from typing import Any, Callable, Concatenate, Coroutine
 
 from bleak import BaseBleakScanner, BleakClient, BleakError, BleakScanner, BLEDevice
 from bleak.backends.characteristic import BleakGATTCharacteristic
@@ -32,42 +33,124 @@ GET_TOKEN_CHARACTERISTIC = "0c0b7847-e12b-09a8-b04b-8e0922a9abab"
 AUTH_CHARACTERISTIC = "0d0b7847-e12b-09a8-b04b-8e0922a9abab"
 
 BT_MODEL_PREFIXES = ("MICRA", "MINI", "GS3")
+IDLE_TIMEOUT = 30  # seconds
+
+
+def disconnect_on_exception[
+    T: "LaMarzoccoBluetoothClient", _R, **P
+](
+    func: Callable[Concatenate[T, P], Coroutine[Any, Any, _R]],
+) -> Callable[Concatenate[T, P], Coroutine[Any, Any, _R]]:
+    """Decorator to disconnect on exception."""
+
+    @wraps(func)
+    async def wrapper(
+        self: T, *args: P.args, **kwargs: P.kwargs
+    ) -> _R:
+        try:
+            return await func(self, *args, **kwargs)
+        except (BleakError, TimeoutError, BluetoothConnectionFailed):
+            # Disconnect on error (outside the lock to avoid deadlock)
+            asyncio.create_task(self.disconnect())
+            raise
+
+    return wrapper
 
 
 class LaMarzoccoBluetoothClient:
     """Class to interact with machine via Bluetooth."""
-
-    _client: BleakClientWithServiceCache
 
     def __init__(
         self,
         ble_device: BLEDevice,
         ble_token: str,
     ) -> None:
-        """Initializes a new bluetooth client instance."""
+        """Initializes a new bluetooth client instance.
+        
+        Args:
+            ble_device: The BLE device to connect to
+            ble_token: Authentication token for the device
+        """
         self._ble_token = ble_token
         self._address = ble_device.address
         self._ble_device = ble_device
+        self._client: BleakClientWithServiceCache | None = None
+        self._lock: asyncio.Lock = asyncio.Lock()
+        self._disconnect_task: asyncio.Task[None] | None = None
 
-    async def __aenter__(self) -> LaMarzoccoBluetoothClient:
-        """Connect to the machine."""
-        self._client = await establish_connection(
-            BleakClientWithServiceCache,
-            self._ble_device,
-            self._ble_device.name or "Unknown",
-            max_attempts=3,
-        )
-        await self._authenticate()
-        return self
 
-    async def __aexit__(
-        self,
-        exc_type: Type[BaseException],
-        exc_val: BaseException,
-        exc_tb: TracebackType,
-    ) -> None:
-        """Disconnect from the machine."""
-        await self._client.disconnect()
+
+    @property
+    def is_connected(self) -> bool:
+        """Return whether the client is currently connected."""
+        return self._client is not None and self._client.is_connected
+
+    async def _ensure_connected(self) -> None:
+        """Ensure we're connected to the device, connecting if necessary."""
+        async with self._lock:
+            if self.is_connected:
+                # Reset the disconnect timer
+                self._reset_disconnect_timer()
+                return
+            
+            _logger.debug("Connecting to Bluetooth device %s", self._address)
+            try:
+                self._client = await establish_connection(
+                    BleakClientWithServiceCache,
+                    self._ble_device,
+                    self._ble_device.name or "Unknown",
+                    max_attempts=3,
+                )
+                await self._authenticate()
+            except (BleakError, TimeoutError, BluetoothConnectionFailed) as e:
+                _logger.error("Failed to connect to Bluetooth device: %s", e)
+                self._client = None
+                raise
+            else:
+                _logger.debug("Successfully connected to Bluetooth device %s", self._address)
+                # Start the disconnect timer
+                self._reset_disconnect_timer()
+
+    def _reset_disconnect_timer(self) -> None:
+        """Reset the auto-disconnect timer."""
+        # Cancel existing timer if any
+        if self._disconnect_task is not None and not self._disconnect_task.done():
+            self._disconnect_task.cancel()
+        
+        # Start new timer
+        self._disconnect_task = asyncio.create_task(self._auto_disconnect())
+
+    async def _auto_disconnect(self) -> None:
+        """Automatically disconnect after idle timeout."""
+        try:
+            await asyncio.sleep(IDLE_TIMEOUT)
+        except asyncio.CancelledError:
+            # Timer was reset, this is normal
+            pass
+        else:
+            _logger.debug("Auto-disconnect timer expired, disconnecting from %s", self._address)
+            await self.disconnect()
+
+    async def _disconnect_internal(self) -> None:
+        """Internal disconnect that doesn't acquire lock (assumes lock is already held)."""
+        # Cancel disconnect timer
+        if self._disconnect_task is not None and not self._disconnect_task.done():
+            self._disconnect_task.cancel()
+            self._disconnect_task = None
+
+        if self._client is not None and self._client.is_connected:
+            _logger.debug("Disconnecting from Bluetooth device %s", self._address)
+            try:
+                await self._client.disconnect()
+            except Exception as e:
+                _logger.error("Error disconnecting from Bluetooth device: %s", e)
+            finally:
+                self._client = None
+
+    async def disconnect(self) -> None:
+        """Disconnect from the device."""
+        async with self._lock:
+            await self._disconnect_internal()
 
     @staticmethod
     async def discover_devices(
@@ -102,12 +185,14 @@ class LaMarzoccoBluetoothClient:
 
         return self._address
 
+    @disconnect_on_exception
     async def get_machine_mode(self) -> MachineMode:
         """Read the current machine mode"""
         return MachineMode(
             await self.__read_value_from_machine(BluetoothReadSetting.MACHINE_MODE)
         )
 
+    @disconnect_on_exception
     async def get_machine_capabilities(self) -> BluetoothMachineCapabilities:
         """Get general machine information."""
         capabilities = await self.__read_value_from_machine(
@@ -115,22 +200,26 @@ class LaMarzoccoBluetoothClient:
         )
         return BluetoothMachineCapabilities.from_dict(capabilities[0])
 
+    @disconnect_on_exception
     async def get_tank_status(self) -> bool:
         """Get the current tank status."""
         return bool(
             await self.__read_value_from_machine(BluetoothReadSetting.TANK_STATUS)
         )
 
+    @disconnect_on_exception
     async def get_boilers(self) -> list[BluetoothBoilerDetails]:
         """Get the boiler status."""
         boilers = await self.__read_value_from_machine(BluetoothReadSetting.BOILERS)
         return [BluetoothBoilerDetails.from_dict(boiler) for boiler in boilers]
 
+    @disconnect_on_exception
     async def get_smart_standby_settings(self) -> BluetoothSmartStandbyDetails:
         """Get the smart standby settings."""
         data = await self.__read_value_from_machine(BluetoothReadSetting.SMART_STAND_BY)
         return BluetoothSmartStandbyDetails.from_dict(data)
 
+    @disconnect_on_exception
     async def set_power(self, enabled: bool) -> None:
         """Power on the machine."""
         mode = "BrewingMode" if enabled else "StandBy"
@@ -142,6 +231,7 @@ class LaMarzoccoBluetoothClient:
         }
         await self.__write_bluetooth_json_message(data)
 
+    @disconnect_on_exception
     async def set_steam(self, enabled: bool) -> None:
         """Enable or disable the steam boiler."""
         data = {
@@ -153,6 +243,7 @@ class LaMarzoccoBluetoothClient:
         }
         await self.__write_bluetooth_json_message(data)
 
+    @disconnect_on_exception
     async def set_smart_standby(
         self, enabled: bool, mode: SmartStandByType, minutes: int
     ) -> None:
@@ -163,9 +254,9 @@ class LaMarzoccoBluetoothClient:
         }
         await self.__write_bluetooth_json_message(data)
 
+    @disconnect_on_exception
     async def set_temp(self, boiler: BoilerType, temperature: float) -> None:
         """Set boiler temperature (in Celsius)"""
-
         data = {
             "name": "SettingBoilerTarget",
             "parameter": {
@@ -177,6 +268,9 @@ class LaMarzoccoBluetoothClient:
 
     async def _authenticate(self) -> None:
         """Build authentication string and send it to the machine."""
+        if self._client is None:
+            raise BluetoothConnectionFailed("Client is not connected")
+            
         auth_characteristic = await self._resolve_characteristic(AUTH_CHARACTERISTIC)
 
         try:
@@ -198,6 +292,10 @@ class LaMarzoccoBluetoothClient:
         self, characteristic: str = READ_CHARACTERISTIC
     ) -> str:
         """Read a bluetooth message."""
+        await self._ensure_connected()
+        
+        if self._client is None:
+            raise BluetoothConnectionFailed("Client is not connected")
 
         read_characteristic = await self._resolve_characteristic(characteristic)
         result = await self._client.read_gatt_char(read_characteristic)
@@ -209,6 +307,10 @@ class LaMarzoccoBluetoothClient:
         characteristic: str = WRITE_CHARACTERISTIC,
     ) -> None:
         """Connect to machine and write a message."""
+        await self._ensure_connected()
+        
+        if self._client is None:
+            raise BluetoothConnectionFailed("Client is not connected")
 
         # check if message is already bytes string
         if not isinstance(message, bytes):
@@ -243,6 +345,9 @@ class LaMarzoccoBluetoothClient:
         self, characteristic: str
     ) -> BleakGATTCharacteristic:
         """Resolve characteristic UUID from machine services."""
+        if self._client is None:
+            raise BluetoothConnectionFailed("Client is not connected")
+            
         resolved_characteristic = self._client.services.get_characteristic(
             characteristic
         )
@@ -261,6 +366,14 @@ class LaMarzoccoBluetoothClient:
         if resolved_characteristic is not None:
             return resolved_characteristic
 
+        # Can't resolve characteristic - clear cache and schedule disconnect
+        _logger.info(
+            "Could not find characteristic %s on machine. Clearing cache and disconnecting.",
+            characteristic,
+        )
+        await self._client.clear_cache()
+        # Schedule disconnect outside the lock to avoid deadlock
+        asyncio.create_task(self.disconnect())
         raise BluetoothConnectionFailed(
             f"Could not find characteristic {characteristic} on machine."
         )

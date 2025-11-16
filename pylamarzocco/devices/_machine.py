@@ -219,8 +219,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                     command,
                     str(bt_kwargs),
                 )
-                async with self._bluetooth_client:
-                    await func(**bt_kwargs)
+                await func(**bt_kwargs)
             except (BleakError, BluetoothConnectionFailed) as exc:
                 msg = "Could not send command to bluetooth device, even though initalized."
 
