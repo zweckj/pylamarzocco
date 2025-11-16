@@ -152,6 +152,59 @@ async def test_fill_dashboard_no_bluetooth(
         await mock_machine_with_dashboard.fill_dashboard_from_bluetooth()
 
 
+async def test_fill_dashboard_initializes_missing_widgets(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test that fill_dashboard_from_bluetooth initializes widgets if they don't exist."""
+    # Clear the dashboard to simulate widgets not existing
+    mock_machine_with_dashboard.dashboard.config.clear()
+    
+    # Set up mock responses
+    mock_bluetooth_client.get_machine_mode = AsyncMock(
+        return_value=MachineMode.BREWING_MODE
+    )
+    mock_bluetooth_client.get_boilers = AsyncMock(
+        return_value=[
+            BluetoothBoilerDetails(
+                id=BoilerType.COFFEE,
+                is_enabled=True,
+                target=92,
+                current=91,
+            ),
+            BluetoothBoilerDetails(
+                id=BoilerType.STEAM,
+                is_enabled=True,
+                target=130,
+                current=125,
+            ),
+        ]
+    )
+    
+    await mock_machine_with_dashboard.fill_dashboard_from_bluetooth()
+    
+    # Verify widgets were created
+    assert WidgetType.CM_MACHINE_STATUS in mock_machine_with_dashboard.dashboard.config
+    assert WidgetType.CM_COFFEE_BOILER in mock_machine_with_dashboard.dashboard.config
+    assert WidgetType.CM_STEAM_BOILER_LEVEL in mock_machine_with_dashboard.dashboard.config
+    assert WidgetType.CM_STEAM_BOILER_TEMPERATURE in mock_machine_with_dashboard.dashboard.config
+    
+    # Verify widgets have correct values from Bluetooth
+    machine_status = mock_machine_with_dashboard.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+    assert machine_status.mode == MachineMode.BREWING_MODE
+    
+    coffee_boiler = mock_machine_with_dashboard.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+    assert coffee_boiler.enabled is True
+    assert coffee_boiler.target_temperature == 92.0
+    
+    steam_level = mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
+    assert steam_level.enabled is True
+    
+    steam_temp = mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+    assert steam_temp.enabled is True
+    assert steam_temp.target_temperature == 130.0
+
+
 async def test_set_power_updates_dashboard(
     mock_machine_with_dashboard: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,

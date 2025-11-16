@@ -10,7 +10,15 @@ from typing import Any, Concatenate
 from bleak.exc import BleakError
 
 from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
-from pylamarzocco.const import BoilerType, MachineMode, ModelCode, WidgetType
+from pylamarzocco.const import (
+    BoilerStatus,
+    BoilerType,
+    MachineMode,
+    MachineState,
+    ModelCode,
+    SteamTargetLevel,
+    WidgetType,
+)
 from pylamarzocco.exceptions import (
     BluetoothConnectionFailed,
     CloudOnlyFunctionality,
@@ -146,7 +154,15 @@ class LaMarzoccoThing:
             _LOGGER.error("Failed to get machine mode from Bluetooth: %s", exc)
             raise
         
-        if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+        # Initialize or update machine status widget
+        if WidgetType.CM_MACHINE_STATUS not in self.dashboard.config:
+            self.dashboard.config[WidgetType.CM_MACHINE_STATUS] = MachineStatus(
+                status=MachineState.STANDBY,
+                available_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+                mode=machine_mode,
+                next_status=None,
+            )
+        else:
             machine_status: MachineStatus = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
             machine_status.mode = machine_mode
 
@@ -159,17 +175,48 @@ class LaMarzoccoThing:
         
         for boiler in boilers:
             if boiler.id == BoilerType.COFFEE:
-                if WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
+                # Initialize or update coffee boiler widget
+                if WidgetType.CM_COFFEE_BOILER not in self.dashboard.config:
+                    self.dashboard.config[WidgetType.CM_COFFEE_BOILER] = CoffeeBoiler(
+                        status=BoilerStatus.STAND_BY,
+                        enabled=boiler.is_enabled,
+                        enabled_supported=False,
+                        target_temperature=float(boiler.target),
+                        target_temperature_min=80,
+                        target_temperature_max=100,
+                        target_temperature_step=0.1,
+                    )
+                else:
                     coffee_boiler: CoffeeBoiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
                     coffee_boiler.enabled = boiler.is_enabled
                     coffee_boiler.target_temperature = float(boiler.target)
             elif boiler.id == BoilerType.STEAM:
-                # Update steam boiler level if present
-                if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
+                # Initialize or update steam boiler level widget
+                if WidgetType.CM_STEAM_BOILER_LEVEL not in self.dashboard.config:
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = SteamBoilerLevel(
+                        status=BoilerStatus.STAND_BY,
+                        enabled=boiler.is_enabled,
+                        enabled_supported=True,
+                        target_level=SteamTargetLevel.LEVEL_1,
+                        target_level_supported=True,
+                    )
+                else:
                     steam_level: SteamBoilerLevel = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
                     steam_level.enabled = boiler.is_enabled
-                # Update steam boiler temperature if present
-                if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+                
+                # Initialize or update steam boiler temperature widget
+                if WidgetType.CM_STEAM_BOILER_TEMPERATURE not in self.dashboard.config:
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE] = SteamBoilerTemperature(
+                        status=BoilerStatus.STAND_BY,
+                        enabled=boiler.is_enabled,
+                        enabled_supported=False,
+                        target_temperature=float(boiler.target),
+                        target_temperature_min=126,
+                        target_temperature_max=131,
+                        target_temperature_step=1.0,
+                        target_temperature_supported=True,
+                    )
+                else:
                     steam_temp: SteamBoilerTemperature = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
                     steam_temp.enabled = boiler.is_enabled
                     steam_temp.target_temperature = float(boiler.target)
