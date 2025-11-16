@@ -7,13 +7,20 @@ from collections.abc import Callable, Coroutine
 from functools import wraps
 from typing import Any, Concatenate
 
+from bleak.exc import BleakError
+
 from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
-from pylamarzocco.const import ModelCode
+from pylamarzocco.const import BoilerType, MachineMode, ModelCode, WidgetType
 from pylamarzocco.exceptions import (
+    BluetoothConnectionFailed,
     CloudOnlyFunctionality,
     UnsupportedModel,
 )
 from pylamarzocco.models import (
+    CoffeeBoiler,
+    MachineStatus,
+    SteamBoilerLevel,
+    SteamBoilerTemperature,
     ThingDashboardConfig,
     ThingDashboardWebsocketConfig,
     ThingSettings,
@@ -126,6 +133,44 @@ class LaMarzoccoThing:
         """Get the firmware details for a thing."""
         assert self._cloud_client
         return await self._cloud_client.get_thing_firmware(self.serial_number)
+
+    async def fill_dashboard_from_bluetooth(self) -> None:
+        """Fill the dashboard with data from Bluetooth (excluding standby settings)."""
+        if self._bluetooth_client is None:
+            raise BluetoothConnectionFailed("Bluetooth client not initialized")
+
+        try:
+            # Get machine mode and update machine status
+            machine_mode = await self._bluetooth_client.get_machine_mode()
+            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+                machine_status = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+                if isinstance(machine_status, MachineStatus):
+                    machine_status.mode = machine_mode
+
+            # Get boilers and update dashboard
+            boilers = await self._bluetooth_client.get_boilers()
+            for boiler in boilers:
+                if boiler.id == BoilerType.COFFEE:
+                    if WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
+                        coffee_boiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+                        if isinstance(coffee_boiler, CoffeeBoiler):
+                            coffee_boiler.enabled = boiler.is_enabled
+                            coffee_boiler.target_temperature = float(boiler.target)
+                elif boiler.id == BoilerType.STEAM:
+                    # Update steam boiler level if present
+                    if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
+                        steam_level = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
+                        if isinstance(steam_level, SteamBoilerLevel):
+                            steam_level.enabled = boiler.is_enabled
+                    # Update steam boiler temperature if present
+                    if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+                        steam_temp = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+                        if isinstance(steam_temp, SteamBoilerTemperature):
+                            steam_temp.enabled = boiler.is_enabled
+                            steam_temp.target_temperature = float(boiler.target)
+        except (BleakError, BluetoothConnectionFailed) as exc:
+            _LOGGER.error("Failed to fill dashboard from Bluetooth: %s", exc)
+            raise
 
     def _websocket_dashboard_update_received(
         self, config: ThingDashboardWebsocketConfig

@@ -10,6 +10,7 @@ from bleak.exc import BleakError
 from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
     BoilerType,
+    MachineMode,
     ModelCode,
     PreExtractionMode,
     SmartStandByType,
@@ -20,9 +21,13 @@ from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
+    CoffeeBoiler,
     LastCoffeeList,
+    MachineStatus,
     PrebrewSettingTimes,
     SecondsInOut,
+    SteamBoilerLevel,
+    SteamBoilerTemperature,
     ThingSchedulingSettings,
     WakeUpScheduleSettings,
 )
@@ -219,7 +224,11 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                     command,
                     str(bt_kwargs),
                 )
-                await func(**bt_kwargs)
+                result = await func(**bt_kwargs)
+                # Update dashboard if command succeeded
+                if result.status.lower() == "success":
+                    self._update_dashboard_from_command(command, bt_kwargs)
+                    return True
             except (BleakError, BluetoothConnectionFailed) as exc:
                 msg = "Could not send command to bluetooth device, even though initalized."
 
@@ -233,8 +242,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
                 _LOGGER.warning("%s Falling back to cloud", msg)
                 _LOGGER.debug("Full error: %s", exc)
-            else:
-                return True
 
         # no bluetooth or failed, try with cloud
         if self._cloud_client is not None:
@@ -247,6 +254,44 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             if await func(**cl_kwargs):
                 return True
         return False
+
+    def _update_dashboard_from_command(
+        self, command: str, kwargs: dict[str, Any]
+    ) -> None:
+        """Update dashboard config based on successful Bluetooth command.
+        
+        Args:
+            command: The Bluetooth command that was executed
+            kwargs: The arguments passed to the command
+        """
+        if command == "set_power":
+            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+                machine_status = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+                if isinstance(machine_status, MachineStatus):
+                    machine_status.mode = (
+                        MachineMode.BREWING_MODE if kwargs.get("enabled") else MachineMode.STANDBY
+                    )
+        elif command == "set_steam":
+            if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
+                steam_level = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
+                if isinstance(steam_level, SteamBoilerLevel):
+                    steam_level.enabled = kwargs.get("enabled", steam_level.enabled)
+            if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+                steam_temp = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+                if isinstance(steam_temp, SteamBoilerTemperature):
+                    steam_temp.enabled = kwargs.get("enabled", steam_temp.enabled)
+        elif command == "set_temp":
+            boiler = kwargs.get("boiler")
+            temperature = kwargs.get("temperature")
+            if boiler == BoilerType.COFFEE and WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
+                coffee_boiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+                if isinstance(coffee_boiler, CoffeeBoiler):
+                    coffee_boiler.target_temperature = float(temperature)
+            elif boiler == BoilerType.STEAM:
+                if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+                    steam_temp = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+                    if isinstance(steam_temp, SteamBoilerTemperature):
+                        steam_temp.target_temperature = float(temperature)
 
     @cloud_only
     async def get_coffee_and_flush_trend(
