@@ -147,9 +147,8 @@ class LaMarzoccoThing:
             raise
         
         if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
-            machine_status = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
-            if isinstance(machine_status, MachineStatus):
-                machine_status.mode = machine_mode
+            machine_status: MachineStatus = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+            machine_status.mode = machine_mode
 
         # Get boilers and update dashboard
         try:
@@ -161,22 +160,19 @@ class LaMarzoccoThing:
         for boiler in boilers:
             if boiler.id == BoilerType.COFFEE:
                 if WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
-                    coffee_boiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
-                    if isinstance(coffee_boiler, CoffeeBoiler):
-                        coffee_boiler.enabled = boiler.is_enabled
-                        coffee_boiler.target_temperature = float(boiler.target)
+                    coffee_boiler: CoffeeBoiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+                    coffee_boiler.enabled = boiler.is_enabled
+                    coffee_boiler.target_temperature = float(boiler.target)
             elif boiler.id == BoilerType.STEAM:
                 # Update steam boiler level if present
                 if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
-                    steam_level = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
-                    if isinstance(steam_level, SteamBoilerLevel):
-                        steam_level.enabled = boiler.is_enabled
+                    steam_level: SteamBoilerLevel = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
+                    steam_level.enabled = boiler.is_enabled
                 # Update steam boiler temperature if present
                 if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
-                    steam_temp = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
-                    if isinstance(steam_temp, SteamBoilerTemperature):
-                        steam_temp.enabled = boiler.is_enabled
-                        steam_temp.target_temperature = float(boiler.target)
+                    steam_temp: SteamBoilerTemperature = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+                    steam_temp.enabled = boiler.is_enabled
+                    steam_temp.target_temperature = float(boiler.target)
 
     def _websocket_dashboard_update_received(
         self, config: ThingDashboardWebsocketConfig

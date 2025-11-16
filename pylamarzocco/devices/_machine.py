@@ -73,14 +73,12 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             "set_power", enabled=enabled
         )
         
-        # Update dashboard if command succeeded via Bluetooth
-        if result and self._bluetooth_client is not None:
-            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
-                machine_status = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
-                if isinstance(machine_status, MachineStatus):
-                    machine_status.mode = (
-                        MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
-                    )
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+            machine_status: MachineStatus = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+            machine_status.mode = (
+                MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
+            )
         
         return result
 
@@ -95,16 +93,14 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             enabled=enabled,
         )
         
-        # Update dashboard if command succeeded via Bluetooth
-        if result and self._bluetooth_client is not None:
+        # Update dashboard if command succeeded
+        if result:
             if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
-                steam_level = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
-                if isinstance(steam_level, SteamBoilerLevel):
-                    steam_level.enabled = enabled
+                steam_level: SteamBoilerLevel = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
+                steam_level.enabled = enabled
             if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
-                steam_temp = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
-                if isinstance(steam_temp, SteamBoilerTemperature):
-                    steam_temp.enabled = enabled
+                steam_temp: SteamBoilerTemperature = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+                steam_temp.enabled = enabled
         
         return result
 
@@ -122,12 +118,10 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             cloud_kwargs={"target_level": level},
         )
         
-        # Update dashboard if command succeeded via Bluetooth
-        if result and self._bluetooth_client is not None:
-            if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
-                steam_temp = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
-                if isinstance(steam_temp, SteamBoilerTemperature):
-                    steam_temp.target_temperature = float(STEAM_LEVEL_MAPPING[level])
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+            steam_temp: SteamBoilerTemperature = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+            steam_temp.target_temperature = float(STEAM_LEVEL_MAPPING[level])
         
         return result
 
@@ -144,12 +138,10 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             cloud_kwargs={"target_temperature": temperature},
         )
         
-        # Update dashboard if command succeeded via Bluetooth
-        if result and self._bluetooth_client is not None:
-            if WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
-                coffee_boiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
-                if isinstance(coffee_boiler, CoffeeBoiler):
-                    coffee_boiler.target_temperature = float(temperature)
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
+            coffee_boiler: CoffeeBoiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+            coffee_boiler.target_temperature = float(temperature)
         
         return result
 
