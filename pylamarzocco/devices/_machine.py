@@ -10,6 +10,7 @@ from bleak.exc import BleakError
 from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
     BoilerType,
+    MachineMode,
     ModelCode,
     PreExtractionMode,
     SmartStandByType,
@@ -20,9 +21,13 @@ from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
+    CoffeeBoiler,
     LastCoffeeList,
+    MachineStatus,
     PrebrewSettingTimes,
     SecondsInOut,
+    SteamBoilerLevel,
+    SteamBoilerTemperature,
     ThingSchedulingSettings,
     WakeUpScheduleSettings,
 )
@@ -64,27 +69,46 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         Args:
             power (bool): True to turn on, False to turn off.
         """
-        return await self.__bluetooth_command_with_cloud_fallback(
+        result = await self.__bluetooth_command_with_cloud_fallback(
             "set_power", enabled=enabled
         )
+        
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+            machine_status: MachineStatus = self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+            machine_status.mode = (
+                MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
+            )
+        
+        return result
 
-    @cloud_only
     async def set_steam(self, enabled: bool) -> bool:
         """Set the steam of the machine.
 
         Args:
             enabled (bool): True to turn on, False to turn off.
         """
-        return await self.__bluetooth_command_with_cloud_fallback(
+        result = await self.__bluetooth_command_with_cloud_fallback(
             command="set_steam",
             enabled=enabled,
         )
+        
+        # Update dashboard if command succeeded
+        if result:
+            if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
+                steam_level: SteamBoilerLevel = self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL]
+                steam_level.enabled = enabled
+            if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+                steam_temp: SteamBoilerTemperature = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+                steam_temp.enabled = enabled
+        
+        return result
 
     @models_supported((ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R))
     async def set_steam_level(self, level: SteamTargetLevel) -> bool:
         """Set the steam target level."""
 
-        return await self.__bluetooth_command_with_cloud_fallback(
+        result = await self.__bluetooth_command_with_cloud_fallback(
             command="set_temp",
             bluetooth_kwargs={
                 "boiler": BoilerType.STEAM,
@@ -93,11 +117,18 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             cloud_command="set_steam_target_level",
             cloud_kwargs={"target_level": level},
         )
+        
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+            steam_temp: SteamBoilerTemperature = self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE]
+            steam_temp.target_temperature = float(STEAM_LEVEL_MAPPING[level])
+        
+        return result
 
     async def set_coffee_target_temperature(self, temperature: float) -> bool:
         """Set the coffee target temperature of the machine."""
 
-        return await self.__bluetooth_command_with_cloud_fallback(
+        result = await self.__bluetooth_command_with_cloud_fallback(
             command="set_temp",
             bluetooth_kwargs={
                 "boiler": BoilerType.COFFEE,
@@ -106,6 +137,13 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             cloud_command="set_coffee_target_temperature",
             cloud_kwargs={"target_temperature": temperature},
         )
+        
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
+            coffee_boiler: CoffeeBoiler = self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+            coffee_boiler.target_temperature = float(temperature)
+        
+        return result
 
     @cloud_only
     async def start_backflush(self) -> bool:
@@ -219,7 +257,10 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                     command,
                     str(bt_kwargs),
                 )
-                await func(**bt_kwargs)
+                result = await func(**bt_kwargs)
+                # Check if command succeeded
+                if result.status.lower() == "success":
+                    return True
             except (BleakError, BluetoothConnectionFailed) as exc:
                 msg = "Could not send command to bluetooth device, even though initalized."
 
@@ -233,8 +274,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
                 _LOGGER.warning("%s Falling back to cloud", msg)
                 _LOGGER.debug("Full error: %s", exc)
-            else:
-                return True
 
         # no bluetooth or failed, try with cloud
         if self._cloud_client is not None:

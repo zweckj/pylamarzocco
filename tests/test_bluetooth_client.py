@@ -38,7 +38,9 @@ def bleak_client() -> Generator[MagicMock, None, None]:
     ) as mock_establish_connection:
         mock_client = MagicMock()
         mock_client.write_gatt_char = AsyncMock()
-        mock_client.read_gatt_char = AsyncMock(return_value=b'{"id":"test-id","message":"","status":"Success"}')
+        mock_client.read_gatt_char = AsyncMock(
+            return_value=b'{"id":"test-id","message":"Success","status":"success"}'
+        )
         mock_client.disconnect = AsyncMock()
         mock_client.services = MagicMock()
         mock_establish_connection.return_value = mock_client
