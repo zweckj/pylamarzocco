@@ -171,12 +171,12 @@ class LaMarzoccoBluetoothClient:
         return ble_devices
 
     @staticmethod
-    async def read_token(address: str) -> str:
+    async def read_token(address_or_ble_device: BLEDevice | str) -> str:
         """Read the token from the machine.
 
         Only possible when machine is in pairing mode.
         """
-        async with BleakClient(address) as client:
+        async with BleakClient(address_or_ble_device) as client:
             token = await client.read_gatt_char(GET_TOKEN_CHARACTERISTIC)
             return token.decode()
 

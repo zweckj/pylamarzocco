@@ -107,7 +107,7 @@ bluetooth_devices = await LaMarzoccoBluetoothClient.discover_devices()
 if bluetooth_devices:
     # Put your machine in pairing mode first!
     # Then read the token directly from the machine
-    ble_token = await LaMarzoccoBluetoothClient.read_token(bluetooth_devices[0].address)
+    ble_token = await LaMarzoccoBluetoothClient.read_token(bluetooth_devices[0])
 ```
 
 **Note:** This method only works when the machine is in pairing mode. Consult your machine's manual for instructions on how to enable pairing mode.
