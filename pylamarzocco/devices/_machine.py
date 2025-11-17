@@ -14,6 +14,7 @@ from pylamarzocco.const import (
     MachineMode,
     MachineState,
     ModelCode,
+    ModelName,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -70,22 +71,27 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         if self._bluetooth_client is None:
             raise BluetoothConnectionFailed("Bluetooth client not initialized")
 
-        # Get machine capabilities and update model information
-        try:
-            capabilities = await self._bluetooth_client.get_machine_capabilities()
-        except (BleakError, BluetoothConnectionFailed) as exc:
-            _LOGGER.error("Failed to get machine capabilities from Bluetooth: %s", exc)
-            raise
+        # Get machine capabilities and update model information only if not already set
+        # Check if model information hasn't been populated yet (both are at default values)
+        if (
+            self.dashboard.model_code == ModelCode.LINEA_MICRA
+            and self.dashboard.model_name == ModelName.LINEA_MICRA
+        ):
+            try:
+                capabilities = await self._bluetooth_client.get_machine_capabilities()
+            except (BleakError, BluetoothConnectionFailed) as exc:
+                _LOGGER.error("Failed to get machine capabilities from Bluetooth: %s", exc)
+                raise
 
-        # Update dashboard with capabilities information
-        self.dashboard.model_name = capabilities.family
-        # Set model_code based on model_name (enum names match)
-        try:
-            self.dashboard.model_code = ModelCode[capabilities.family.name]
-        except KeyError:
-            _LOGGER.warning(
-                "Could not map model_name %s to model_code", capabilities.family
-            )
+            # Update dashboard with capabilities information
+            self.dashboard.model_name = capabilities.family
+            # Set model_code based on model_name (enum names match)
+            try:
+                self.dashboard.model_code = ModelCode[capabilities.family.name]
+            except KeyError:
+                _LOGGER.warning(
+                    "Could not map model_name %s to model_code", capabilities.family
+                )
 
         # Get machine mode and update machine status
         try:

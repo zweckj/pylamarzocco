@@ -180,6 +180,121 @@ async def test_get_dashboard_no_bluetooth(
         await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
 
+async def test_get_dashboard_skips_capabilities_when_already_set(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test that capabilities are not fetched if model info is already set."""
+    # Pre-set model_name and model_code to non-default values
+    mock_machine_with_dashboard.dashboard.model_name = ModelName.GS3
+    mock_machine_with_dashboard.dashboard.model_code = ModelCode.GS3
+
+    # Set up mock responses for non-capabilities calls
+    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
+        return_value=BluetoothMachineCapabilities(
+            family=ModelName.LINEA_MICRA,
+            groups_number=1,
+            coffee_boilers_number=1,
+            has_cup_warmer=False,
+            steam_boilers_number=1,
+            tea_doses_number=0,
+            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+            scheduling_type="weekly",
+        )
+    )
+    mock_bluetooth_client.get_machine_mode = AsyncMock(
+        return_value=MachineMode.BREWING_MODE
+    )
+    mock_bluetooth_client.get_boilers = AsyncMock(
+        return_value=[
+            BluetoothBoilerDetails(
+                id=BoilerType.COFFEE,
+                is_enabled=True,
+                target=94,
+                current=93,
+            ),
+            BluetoothBoilerDetails(
+                id=BoilerType.STEAM,
+                is_enabled=True,
+                target=128,
+                current=120,
+            ),
+        ]
+    )
+
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+
+    # Verify that capabilities were NOT called since model info was already set
+    mock_bluetooth_client.get_machine_capabilities.assert_not_called()
+
+    # Verify other calls were still made
+    mock_bluetooth_client.get_machine_mode.assert_called_once()
+    mock_bluetooth_client.get_boilers.assert_called_once()
+
+    # Verify model info was NOT changed
+    assert mock_machine_with_dashboard.dashboard.model_name == ModelName.GS3
+    assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.GS3
+
+
+async def test_get_dashboard_fetches_capabilities_only_once(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test that capabilities are fetched on first call but not on subsequent calls."""
+    # Set up mock responses
+    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
+        return_value=BluetoothMachineCapabilities(
+            family=ModelName.GS3,
+            groups_number=3,
+            coffee_boilers_number=2,
+            has_cup_warmer=True,
+            steam_boilers_number=1,
+            tea_doses_number=0,
+            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+            scheduling_type="weekly",
+        )
+    )
+    mock_bluetooth_client.get_machine_mode = AsyncMock(
+        return_value=MachineMode.BREWING_MODE
+    )
+    mock_bluetooth_client.get_boilers = AsyncMock(
+        return_value=[
+            BluetoothBoilerDetails(
+                id=BoilerType.COFFEE,
+                is_enabled=True,
+                target=94,
+                current=93,
+            ),
+            BluetoothBoilerDetails(
+                id=BoilerType.STEAM,
+                is_enabled=True,
+                target=128,
+                current=120,
+            ),
+        ]
+    )
+
+    # First call - should fetch capabilities
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+
+    # Verify capabilities were called once
+    assert mock_bluetooth_client.get_machine_capabilities.call_count == 1
+
+    # Verify model info was set
+    assert mock_machine_with_dashboard.dashboard.model_name == ModelName.GS3
+    assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.GS3
+
+    # Second call - should NOT fetch capabilities again
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+
+    # Verify capabilities were still only called once (not twice)
+    assert mock_bluetooth_client.get_machine_capabilities.call_count == 1
+
+    # Verify model info remains the same
+    assert mock_machine_with_dashboard.dashboard.model_name == ModelName.GS3
+    assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.GS3
+
+
 async def test_get_dashboard_initializes_missing_widgets(
     mock_machine_with_dashboard: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
