@@ -11,6 +11,7 @@ from pylamarzocco.const import (
     BoilerType,
     MachineMode,
     MachineState,
+    ModelName,
     SteamTargetLevel,
     WidgetType,
 )
@@ -18,6 +19,7 @@ from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
     BluetoothBoilerDetails,
     BluetoothCommandStatus,
+    BluetoothMachineCapabilities,
     CoffeeBoiler,
     MachineStatus,
     SteamBoilerLevel,
@@ -92,6 +94,18 @@ async def test_get_dashboard_from_bluetooth(
 ) -> None:
     """Test filling dashboard from Bluetooth."""
     # Set up mock responses
+    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
+        return_value=BluetoothMachineCapabilities(
+            family=ModelName.LINEA_MICRA,
+            groups_number=1,
+            coffee_boilers_number=1,
+            has_cup_warmer=False,
+            steam_boilers_number=1,
+            tea_doses_number=0,
+            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+            scheduling_type="weekly",
+        )
+    )
     mock_bluetooth_client.get_machine_mode = AsyncMock(
         return_value=MachineMode.BREWING_MODE
     )
@@ -115,8 +129,12 @@ async def test_get_dashboard_from_bluetooth(
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
     
     # Verify calls
+    mock_bluetooth_client.get_machine_capabilities.assert_called_once()
     mock_bluetooth_client.get_machine_mode.assert_called_once()
     mock_bluetooth_client.get_boilers.assert_called_once()
+    
+    # Verify model_name was set from capabilities
+    assert mock_machine_with_dashboard.dashboard.model_name == ModelName.LINEA_MICRA
     
     # Verify dashboard was updated
     machine_status = cast(
@@ -168,6 +186,18 @@ async def test_get_dashboard_initializes_missing_widgets(
     mock_machine_with_dashboard.dashboard.config.clear()
     
     # Set up mock responses
+    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
+        return_value=BluetoothMachineCapabilities(
+            family=ModelName.LINEA_MINI_R,
+            groups_number=1,
+            coffee_boilers_number=1,
+            has_cup_warmer=True,
+            steam_boilers_number=1,
+            tea_doses_number=0,
+            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+            scheduling_type="weekly",
+        )
+    )
     mock_bluetooth_client.get_machine_mode = AsyncMock(
         return_value=MachineMode.BREWING_MODE
     )
@@ -189,6 +219,9 @@ async def test_get_dashboard_initializes_missing_widgets(
     )
     
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+    
+    # Verify model_name was set from capabilities
+    assert mock_machine_with_dashboard.dashboard.model_name == ModelName.LINEA_MINI_R
     
     # Verify widgets were created
     assert WidgetType.CM_MACHINE_STATUS in mock_machine_with_dashboard.dashboard.config
