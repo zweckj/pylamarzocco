@@ -1,5 +1,6 @@
 """Test Bluetooth dashboard functionality."""
 
+from datetime import datetime, timezone
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
@@ -45,6 +46,9 @@ def mock_lm_machine_with_dashboard(
         serial_number="MR123456",
         bluetooth_client=mock_bluetooth_client,
     )
+
+    # Mock the connection_date to a fixed value for snapshot tests
+    machine.dashboard.connection_date = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     # Set up dashboard config with widgets
     machine.dashboard.config = {
