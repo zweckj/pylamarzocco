@@ -68,7 +68,62 @@ async with ClientSession() as session:
 
 The `LaMarzoccoBluetoothClient` discovers bluetooth devices and connects to them to send local bluetooth commands. Some commands, like turning the machine on and off, can be sent through bluetooth.
 
-To use Bluetooth:
+### Obtaining the Bluetooth Token
+
+Before you can use the Bluetooth client, you need to obtain the Bluetooth authentication token. There are three ways to get this token:
+
+#### Method 1: Through the Cloud Client
+
+The easiest method is to retrieve the token from the cloud API after initializing the cloud client:
+
+```python
+from pylamarzocco import LaMarzoccoCloudClient
+
+# Initialize and authenticate with the cloud client
+cloud_client = LaMarzoccoCloudClient(
+    username=username,
+    password=password,
+    installation_key=installation_key,
+    client=session,
+)
+
+# Get all machines associated with your account
+things = await cloud_client.list_things()
+
+# The token is available in the ble_auth_token field
+ble_token = things[0].ble_auth_token
+```
+
+#### Method 2: Through the Static Method (Pairing Mode)
+
+If you don't have cloud credentials or prefer to use Bluetooth directly, you can read the token from the machine when it's in pairing mode:
+
+```python
+from pylamarzocco import LaMarzoccoBluetoothClient
+
+# Discover available bluetooth devices
+bluetooth_devices = await LaMarzoccoBluetoothClient.discover_devices()
+
+if bluetooth_devices:
+    # Put your machine in pairing mode first!
+    # Then read the token directly from the machine
+    ble_token = await LaMarzoccoBluetoothClient.read_token(bluetooth_devices[0].address)
+```
+
+**Note:** This method only works when the machine is in pairing mode. Consult your machine's manual for instructions on how to enable pairing mode.
+
+#### Method 3: Scanning the QR Code
+
+The Bluetooth token is printed as a QR code on a label inside the machine's chassis. You can scan this QR code with a standard QR code reader app to obtain the token string.
+
+1. Open the machine's chassis (consult your machine's manual for instructions)
+2. Locate the QR code label
+3. Scan the QR code with a QR code reader app
+4. The scanned value is your Bluetooth token
+
+### Using the Bluetooth Client
+
+Once you have the token from any of the above methods, you can initialize the Bluetooth client:
 
 ```python
 from pylamarzocco import LaMarzoccoBluetoothClient
@@ -77,13 +132,9 @@ from pylamarzocco import LaMarzoccoBluetoothClient
 if bluetooth_devices := await LaMarzoccoBluetoothClient.discover_devices():
     print("Found bluetooth device:", bluetooth_devices[0])
     
-    # Read the token from the machine (only works in pairing mode)
-    # Or use a previously saved token
-    ble_token = await LaMarzoccoBluetoothClient.read_token(bluetooth_devices[0].address)
-
     bluetooth_client = LaMarzoccoBluetoothClient(
         ble_device=bluetooth_devices[0],
-        ble_token=ble_token,
+        ble_token=ble_token,  # Use the token from any of the three methods above
     )
 ```
 
