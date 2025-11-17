@@ -11,6 +11,7 @@ from pylamarzocco.const import (
     BoilerType,
     MachineMode,
     MachineState,
+    ModelCode,
     ModelName,
     SteamTargetLevel,
     WidgetType,
@@ -133,8 +134,12 @@ async def test_get_dashboard_from_bluetooth(
     mock_bluetooth_client.get_machine_mode.assert_called_once()
     mock_bluetooth_client.get_boilers.assert_called_once()
     
-    # Verify model_name was set from capabilities
+    # Verify model_name and model_code were set from capabilities
     assert mock_machine_with_dashboard.dashboard.model_name == ModelName.LINEA_MICRA
+    assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.LINEA_MICRA
+    
+    # Snapshot test for config (excluding timestamp fields)
+    assert mock_machine_with_dashboard.dashboard.config == snapshot
     
     # Verify dashboard was updated
     machine_status = cast(
@@ -162,9 +167,6 @@ async def test_get_dashboard_from_bluetooth(
     )
     assert steam_temp.enabled is False
     assert steam_temp.target_temperature == 128.0
-    
-    # Snapshot test
-    assert mock_machine_with_dashboard.dashboard.config == snapshot
 
 
 async def test_get_dashboard_no_bluetooth(
@@ -220,10 +222,11 @@ async def test_get_dashboard_initializes_missing_widgets(
     
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
     
-    # Verify model_name was set from capabilities
+    # Verify model_name and model_code were set from capabilities
     assert mock_machine_with_dashboard.dashboard.model_name == ModelName.LINEA_MINI_R
+    assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.LINEA_MINI_R
     
-    # Verify widgets were created
+    # Verify widgets were created (Linea Mini R supports steam level)
     assert WidgetType.CM_MACHINE_STATUS in mock_machine_with_dashboard.dashboard.config
     assert WidgetType.CM_COFFEE_BOILER in mock_machine_with_dashboard.dashboard.config
     assert WidgetType.CM_STEAM_BOILER_LEVEL in mock_machine_with_dashboard.dashboard.config
@@ -255,6 +258,68 @@ async def test_get_dashboard_initializes_missing_widgets(
     )
     assert steam_temp.enabled is True
     assert steam_temp.target_temperature == 130.0
+
+
+async def test_get_dashboard_without_steam_level_support(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test that models without steam level support only get temperature widget."""
+    # Clear the dashboard to simulate widgets not existing
+    mock_machine_with_dashboard.dashboard.config.clear()
+    
+    # Set up mock responses for GS3 (does not support steam level)
+    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
+        return_value=BluetoothMachineCapabilities(
+            family=ModelName.GS3,
+            groups_number=3,
+            coffee_boilers_number=2,
+            has_cup_warmer=True,
+            steam_boilers_number=1,
+            tea_doses_number=0,
+            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+            scheduling_type="weekly",
+        )
+    )
+    mock_bluetooth_client.get_machine_mode = AsyncMock(
+        return_value=MachineMode.BREWING_MODE
+    )
+    mock_bluetooth_client.get_boilers = AsyncMock(
+        return_value=[
+            BluetoothBoilerDetails(
+                id=BoilerType.COFFEE,
+                is_enabled=True,
+                target=94,
+                current=93,
+            ),
+            BluetoothBoilerDetails(
+                id=BoilerType.STEAM,
+                is_enabled=True,
+                target=128,
+                current=120,
+            ),
+        ]
+    )
+    
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+    
+    # Verify model_name and model_code were set from capabilities
+    assert mock_machine_with_dashboard.dashboard.model_name == ModelName.GS3
+    assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.GS3
+    
+    # Verify widgets were created - GS3 should NOT have steam level widget
+    assert WidgetType.CM_MACHINE_STATUS in mock_machine_with_dashboard.dashboard.config
+    assert WidgetType.CM_COFFEE_BOILER in mock_machine_with_dashboard.dashboard.config
+    assert WidgetType.CM_STEAM_BOILER_LEVEL not in mock_machine_with_dashboard.dashboard.config
+    assert WidgetType.CM_STEAM_BOILER_TEMPERATURE in mock_machine_with_dashboard.dashboard.config
+    
+    # Verify temperature widget has correct values
+    steam_temp = cast(
+        SteamBoilerTemperature,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+    )
+    assert steam_temp.enabled is True
+    assert steam_temp.target_temperature == 128.0
 
 
 async def test_set_power_updates_dashboard(

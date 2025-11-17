@@ -73,10 +73,19 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         # Get machine capabilities and update model information
         try:
             capabilities = await self._bluetooth_client.get_machine_capabilities()
-            self.dashboard.model_name = capabilities.family
         except (BleakError, BluetoothConnectionFailed) as exc:
             _LOGGER.error("Failed to get machine capabilities from Bluetooth: %s", exc)
             raise
+
+        # Update dashboard with capabilities information
+        self.dashboard.model_name = capabilities.family
+        # Set model_code based on model_name (enum names match)
+        try:
+            self.dashboard.model_code = ModelCode[capabilities.family.name]
+        except KeyError:
+            _LOGGER.warning(
+                "Could not map model_name %s to model_code", capabilities.family
+            )
 
         # Get machine mode and update machine status
         try:
@@ -130,24 +139,29 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 coffee_boiler.target_temperature = float(boiler.target)
                 self.dashboard.config[WidgetType.CM_COFFEE_BOILER] = coffee_boiler
             elif boiler.id == BoilerType.STEAM:
-                # Initialize or update steam boiler level widget
-                steam_level = cast(
-                    SteamBoilerLevel,
-                    self.dashboard.config.get(
-                        WidgetType.CM_STEAM_BOILER_LEVEL,
-                        SteamBoilerLevel(
-                            status=BoilerStatus.STAND_BY,
-                            enabled=boiler.is_enabled,
-                            enabled_supported=True,
-                            target_level=SteamTargetLevel.LEVEL_1,
-                            target_level_supported=True,
+                # Models that support steam level (Micra and Mini R)
+                if self.dashboard.model_code in (
+                    ModelCode.LINEA_MICRA,
+                    ModelCode.LINEA_MINI_R,
+                ):
+                    # Initialize or update steam boiler level widget
+                    steam_level = cast(
+                        SteamBoilerLevel,
+                        self.dashboard.config.get(
+                            WidgetType.CM_STEAM_BOILER_LEVEL,
+                            SteamBoilerLevel(
+                                status=BoilerStatus.STAND_BY,
+                                enabled=boiler.is_enabled,
+                                enabled_supported=True,
+                                target_level=SteamTargetLevel.LEVEL_1,
+                                target_level_supported=True,
+                            ),
                         ),
-                    ),
-                )
-                steam_level.enabled = boiler.is_enabled
-                self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = steam_level
+                    )
+                    steam_level.enabled = boiler.is_enabled
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = steam_level
 
-                # Initialize or update steam boiler temperature widget
+                # Always set steam boiler temperature widget for all models
                 steam_temp = cast(
                     SteamBoilerTemperature,
                     self.dashboard.config.get(
