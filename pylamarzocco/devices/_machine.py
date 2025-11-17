@@ -160,29 +160,33 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                     )
                     steam_level.enabled = boiler.is_enabled
                     self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = steam_level
-
-                # Always set steam boiler temperature widget for all models
-                steam_temp = cast(
-                    SteamBoilerTemperature,
-                    self.dashboard.config.get(
-                        WidgetType.CM_STEAM_BOILER_TEMPERATURE,
-                        SteamBoilerTemperature(
-                            status=BoilerStatus.STAND_BY,
-                            enabled=boiler.is_enabled,
-                            enabled_supported=False,
-                            target_temperature=float(boiler.target),
-                            target_temperature_min=126,
-                            target_temperature_max=131,
-                            target_temperature_step=1.0,
-                            target_temperature_supported=True,
+                    # Remove temperature widget if it exists (not applicable for this model)
+                    self.dashboard.config.pop(WidgetType.CM_STEAM_BOILER_TEMPERATURE, None)
+                else:
+                    # Other models (GS3, original Mini) use steam temperature widget
+                    steam_temp = cast(
+                        SteamBoilerTemperature,
+                        self.dashboard.config.get(
+                            WidgetType.CM_STEAM_BOILER_TEMPERATURE,
+                            SteamBoilerTemperature(
+                                status=BoilerStatus.STAND_BY,
+                                enabled=boiler.is_enabled,
+                                enabled_supported=False,
+                                target_temperature=float(boiler.target),
+                                target_temperature_min=126,
+                                target_temperature_max=131,
+                                target_temperature_step=1.0,
+                                target_temperature_supported=True,
+                            ),
                         ),
-                    ),
-                )
-                steam_temp.enabled = boiler.is_enabled
-                steam_temp.target_temperature = float(boiler.target)
-                self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE] = (
-                    steam_temp
-                )
+                    )
+                    steam_temp.enabled = boiler.is_enabled
+                    steam_temp.target_temperature = float(boiler.target)
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE] = (
+                        steam_temp
+                    )
+                    # Remove level widget if it exists (not applicable for this model)
+                    self.dashboard.config.pop(WidgetType.CM_STEAM_BOILER_LEVEL, None)
 
     async def set_power(self, enabled: bool) -> bool:
         """Set the power of the machine.
