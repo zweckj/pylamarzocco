@@ -14,6 +14,7 @@ from pylamarzocco.const import (
     MachineMode,
     MachineState,
     ModelCode,
+    ModelName,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -65,13 +66,24 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         assert self._cloud_client
         self.schedule = await self._cloud_client.get_thing_schedule(self.serial_number)
 
-    async def get_dashboard_from_bluetooth(self) -> None:
-        """Fill the dashboard with data from Bluetooth (excluding standby settings)."""
+    async def _update_model_info_from_bluetooth(self) -> None:
+        """Fetch and update model information from Bluetooth if not already set.
+        
+        This method checks if model information has already been populated
+        (e.g., from cloud API or websocket) and only fetches capabilities
+        from Bluetooth if the information is not available.
+        """
         if self._bluetooth_client is None:
             raise BluetoothConnectionFailed("Bluetooth client not initialized")
-
-        # Get machine capabilities and update model information only if not already fetched
-        if not self._capabilities_fetched:
+        
+        # Check if model information has already been set (from any source)
+        # We check if either model_code or model_name has changed from the default
+        # If both are still at defaults, we need to fetch capabilities
+        if (
+            self.dashboard.model_code == ModelCode.LINEA_MICRA
+            and self.dashboard.model_name == ModelName.LINEA_MICRA
+        ):
+            # Model info not yet populated, fetch from Bluetooth
             try:
                 capabilities = await self._bluetooth_client.get_machine_capabilities()
             except (BleakError, BluetoothConnectionFailed) as exc:
@@ -87,9 +99,14 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 _LOGGER.warning(
                     "Could not map model_name %s to model_code", capabilities.family
                 )
-            
-            # Mark capabilities as fetched
-            self._capabilities_fetched = True
+
+    async def get_dashboard_from_bluetooth(self) -> None:
+        """Fill the dashboard with data from Bluetooth (excluding standby settings)."""
+        if self._bluetooth_client is None:
+            raise BluetoothConnectionFailed("Bluetooth client not initialized")
+
+        # Update model information if not already available
+        await self._update_model_info_from_bluetooth()
 
         # Get machine mode and update machine status
         try:

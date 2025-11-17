@@ -85,7 +85,6 @@ class LaMarzoccoThing:
         self._update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = (
             None
         )
-        self._capabilities_fetched = False
         self.dashboard = ThingDashboardConfig(serial_number=serial_number)
         self.settings = ThingSettings(serial_number=serial_number)
         self.statistics = ThingStatistics(serial_number=serial_number)
@@ -111,8 +110,6 @@ class LaMarzoccoThing:
         self.dashboard = await self._cloud_client.get_thing_dashboard(
             self.serial_number
         )
-        # Mark capabilities as fetched since cloud API returns model information
-        self._capabilities_fetched = True
 
     @cloud_only
     async def get_settings(self) -> None:
@@ -140,8 +137,6 @@ class LaMarzoccoThing:
         """Handler for receiving a websocket message."""
         self.dashboard.widgets = config.widgets
         self.dashboard.config = config.config
-        # Mark capabilities as fetched since websocket updates include model information
-        self._capabilities_fetched = True
 
         if self._update_callback is not None:
             self._update_callback(config)
