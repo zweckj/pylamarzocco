@@ -134,12 +134,16 @@ async def test_get_dashboard_from_bluetooth(
     mock_bluetooth_client.get_machine_mode.assert_called_once()
     mock_bluetooth_client.get_boilers.assert_called_once()
     
+    # Snapshot test includes model_name, model_code, and config
+    assert {
+        "model_name": mock_machine_with_dashboard.dashboard.model_name,
+        "model_code": mock_machine_with_dashboard.dashboard.model_code,
+        "config": mock_machine_with_dashboard.dashboard.config,
+    } == snapshot
+    
     # Verify model_name and model_code were set from capabilities
     assert mock_machine_with_dashboard.dashboard.model_name == ModelName.LINEA_MICRA
     assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.LINEA_MICRA
-    
-    # Snapshot test for config (excluding timestamp fields)
-    assert mock_machine_with_dashboard.dashboard.config == snapshot
     
     # Verify dashboard was updated
     machine_status = cast(
