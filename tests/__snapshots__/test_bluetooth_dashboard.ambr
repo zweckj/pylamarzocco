@@ -1,10 +1,13 @@
 # serializer version: 1
 # name: test_get_dashboard_from_bluetooth
   dict({
-    <WidgetType.CM_COFFEE_BOILER: 'CMCoffeeBoiler'>: CoffeeBoiler(status=<BoilerStatus.STAND_BY: 'StandBy'>, enabled=True, enabled_supported=False, target_temperature=95.0, target_temperature_min=80, target_temperature_max=100, target_temperature_step=0.1, ready_start_time=None),
-    <WidgetType.CM_MACHINE_STATUS: 'CMMachineStatus'>: MachineStatus(status=<MachineState.STANDBY: 'StandBy'>, available_modes=[<MachineMode.BREWING_MODE: 'BrewingMode'>, <MachineMode.STANDBY: 'StandBy'>], mode=<MachineMode.BREWING_MODE: 'BrewingMode'>, next_status=None, brewing_start_time=None),
-    <WidgetType.CM_STEAM_BOILER_LEVEL: 'CMSteamBoilerLevel'>: SteamBoilerLevel(status=<BoilerStatus.STAND_BY: 'StandBy'>, enabled=False, enabled_supported=True, target_level=<SteamTargetLevel.LEVEL_1: 'Level1'>, target_level_supported=True, ready_start_time=None),
-    <WidgetType.CM_STEAM_BOILER_TEMPERATURE: 'CMSteamBoilerTemperature'>: SteamBoilerTemperature(status=<BoilerStatus.STAND_BY: 'StandBy'>, enabled=False, enabled_supported=False, target_temperature=128.0, target_temperature_min=126, target_temperature_max=131, target_temperature_step=1.0, ready_start_time=None, target_temperature_supported=True),
+    'config': dict({
+      <WidgetType.CM_COFFEE_BOILER: 'CMCoffeeBoiler'>: CoffeeBoiler(status=<BoilerStatus.STAND_BY: 'StandBy'>, enabled=True, enabled_supported=False, target_temperature=95.0, target_temperature_min=80, target_temperature_max=100, target_temperature_step=0.1, ready_start_time=None),
+      <WidgetType.CM_MACHINE_STATUS: 'CMMachineStatus'>: MachineStatus(status=<MachineState.STANDBY: 'StandBy'>, available_modes=[<MachineMode.BREWING_MODE: 'BrewingMode'>, <MachineMode.STANDBY: 'StandBy'>], mode=<MachineMode.BREWING_MODE: 'BrewingMode'>, next_status=None, brewing_start_time=None),
+      <WidgetType.CM_STEAM_BOILER_LEVEL: 'CMSteamBoilerLevel'>: SteamBoilerLevel(status=<BoilerStatus.STAND_BY: 'StandBy'>, enabled=False, enabled_supported=True, target_level=<SteamTargetLevel.LEVEL_1: 'Level1'>, target_level_supported=True, ready_start_time=None),
+    }),
+    'model_code': <ModelCode.LINEA_MICRA: 'LINEAMICRA'>,
+    'model_name': <ModelName.LINEA_MICRA: 'Linea Micra'>,
   })
 # ---
 # name: test_set_coffee_temp_updates_dashboard
