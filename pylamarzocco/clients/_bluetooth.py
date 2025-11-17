@@ -150,8 +150,6 @@ class LaMarzoccoBluetoothClient:
 
     async def disconnect(self) -> None:
         """Disconnect from the device."""
-        if not self.is_connected:
-            return
         async with self._lock:
             await self._disconnect_internal()
 
