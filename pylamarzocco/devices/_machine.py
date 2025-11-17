@@ -65,12 +65,15 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         assert self._cloud_client
         self.schedule = await self._cloud_client.get_thing_schedule(self.serial_number)
 
-    async def get_dashboard_from_bluetooth(self) -> None:
-        """Fill the dashboard with data from Bluetooth (excluding standby settings)."""
+    async def get_model_info_from_bluetooth(self) -> None:
+        """Fetch and update model information from Bluetooth.
+        
+        Retrieves machine capabilities via Bluetooth and updates the dashboard
+        with model_name and model_code information.
+        """
         if self._bluetooth_client is None:
             raise BluetoothConnectionFailed("Bluetooth client not initialized")
-
-        # Get machine capabilities and update model information
+        
         try:
             capabilities = await self._bluetooth_client.get_machine_capabilities()
         except (BleakError, BluetoothConnectionFailed) as exc:
@@ -86,6 +89,11 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             _LOGGER.warning(
                 "Could not map model_name %s to model_code", capabilities.family
             )
+
+    async def get_dashboard_from_bluetooth(self) -> None:
+        """Fill the dashboard with data from Bluetooth (excluding standby settings)."""
+        if self._bluetooth_client is None:
+            raise BluetoothConnectionFailed("Bluetooth client not initialized")
 
         # Get machine mode and update machine status
         try:

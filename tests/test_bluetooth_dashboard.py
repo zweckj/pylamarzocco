@@ -1,5 +1,6 @@
 """Test Bluetooth dashboard functionality."""
 
+from datetime import datetime, timezone
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
@@ -45,6 +46,9 @@ def mock_lm_machine_with_dashboard(
         serial_number="MR123456",
         bluetooth_client=mock_bluetooth_client,
     )
+
+    # Mock the connection_date to a fixed value for snapshot tests
+    machine.dashboard.connection_date = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     # Set up dashboard config with widgets
     machine.dashboard.config = {
@@ -130,17 +134,13 @@ async def test_get_dashboard_from_bluetooth(
 
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
-    # Verify calls
-    mock_bluetooth_client.get_machine_capabilities.assert_called_once()
+    # Verify calls - capabilities should NOT be called automatically anymore
+    mock_bluetooth_client.get_machine_capabilities.assert_not_called()
     mock_bluetooth_client.get_machine_mode.assert_called_once()
     mock_bluetooth_client.get_boilers.assert_called_once()
 
     # Snapshot test includes model_name, model_code, and config
     assert mock_machine_with_dashboard.dashboard.to_dict() == snapshot
-
-    # Verify model_name and model_code were set from capabilities
-    assert mock_machine_with_dashboard.dashboard.model_name == ModelName.LINEA_MICRA
-    assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.LINEA_MICRA
 
     # Verify dashboard was updated
     machine_status = cast(
@@ -178,6 +178,36 @@ async def test_get_dashboard_no_bluetooth(
 
     with pytest.raises(BluetoothConnectionFailed):
         await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+
+
+async def test_get_model_info_from_bluetooth(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test fetching model information from Bluetooth."""
+    # Set up mock responses
+    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
+        return_value=BluetoothMachineCapabilities(
+            family=ModelName.GS3,
+            groups_number=3,
+            coffee_boilers_number=2,
+            has_cup_warmer=True,
+            steam_boilers_number=1,
+            tea_doses_number=0,
+            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+            scheduling_type="weekly",
+        )
+    )
+
+    # Call the method to fetch model info
+    await mock_machine_with_dashboard.get_model_info_from_bluetooth()
+
+    # Verify capabilities were called
+    mock_bluetooth_client.get_machine_capabilities.assert_called_once()
+
+    # Verify model info was set correctly
+    assert mock_machine_with_dashboard.dashboard.model_name == ModelName.GS3
+    assert mock_machine_with_dashboard.dashboard.model_code == ModelCode.GS3
 
 
 async def test_get_dashboard_initializes_missing_widgets(
@@ -222,6 +252,10 @@ async def test_get_dashboard_initializes_missing_widgets(
         ]
     )
 
+    # First fetch model info explicitly
+    await mock_machine_with_dashboard.get_model_info_from_bluetooth()
+
+    # Then get dashboard
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
     # Verify model_name and model_code were set from capabilities
@@ -284,6 +318,10 @@ async def test_get_dashboard_without_steam_level_support(
         ]
     )
 
+    # First fetch model info explicitly
+    await mock_machine_with_dashboard.get_model_info_from_bluetooth()
+
+    # Then get dashboard
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
     # Verify model_name and model_code were set from capabilities
@@ -354,6 +392,10 @@ async def test_get_dashboard_mini_original_temperature_only(
         ]
     )
 
+    # First fetch model info explicitly
+    await mock_machine_with_dashboard.get_model_info_from_bluetooth()
+
+    # Then get dashboard
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
     # Verify model_name and model_code were set from capabilities
