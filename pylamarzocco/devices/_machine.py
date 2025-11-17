@@ -14,7 +14,6 @@ from pylamarzocco.const import (
     MachineMode,
     MachineState,
     ModelCode,
-    ModelName,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -71,12 +70,8 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         if self._bluetooth_client is None:
             raise BluetoothConnectionFailed("Bluetooth client not initialized")
 
-        # Get machine capabilities and update model information only if not already set
-        # Check if model information hasn't been populated yet (both are at default values)
-        if (
-            self.dashboard.model_code == ModelCode.LINEA_MICRA
-            and self.dashboard.model_name == ModelName.LINEA_MICRA
-        ):
+        # Get machine capabilities and update model information only if not already fetched
+        if not self._capabilities_fetched:
             try:
                 capabilities = await self._bluetooth_client.get_machine_capabilities()
             except (BleakError, BluetoothConnectionFailed) as exc:
@@ -92,6 +87,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 _LOGGER.warning(
                     "Could not map model_name %s to model_code", capabilities.family
                 )
+            
+            # Mark capabilities as fetched
+            self._capabilities_fetched = True
 
         # Get machine mode and update machine status
         try:

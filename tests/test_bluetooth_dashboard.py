@@ -192,6 +192,8 @@ async def test_get_dashboard_skips_capabilities_when_already_set(
     # Pre-set model_name and model_code to non-default values
     mock_machine_with_dashboard.dashboard.model_name = ModelName.GS3
     mock_machine_with_dashboard.dashboard.model_code = ModelCode.GS3
+    # Mark capabilities as already fetched (simulating cloud/websocket update)
+    mock_machine_with_dashboard._capabilities_fetched = True  # pylint: disable=protected-access
 
     # Set up mock responses for non-capabilities calls
     mock_bluetooth_client.get_machine_capabilities = AsyncMock(
