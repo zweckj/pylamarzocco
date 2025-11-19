@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from bleak.exc import BleakError
 
 from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
+    BoilerStatus,
     BoilerType,
+    MachineMode,
+    MachineState,
     ModelCode,
     PreExtractionMode,
     SmartStandByType,
@@ -20,9 +23,13 @@ from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
+    CoffeeBoiler,
     LastCoffeeList,
+    MachineStatus,
     PrebrewSettingTimes,
     SecondsInOut,
+    SteamBoilerLevel,
+    SteamBoilerTemperature,
     ThingSchedulingSettings,
     WakeUpScheduleSettings,
 )
@@ -58,31 +65,191 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         assert self._cloud_client
         self.schedule = await self._cloud_client.get_thing_schedule(self.serial_number)
 
+    async def get_model_info_from_bluetooth(self) -> None:
+        """Fetch and update model information from Bluetooth.
+        
+        Retrieves machine capabilities via Bluetooth and updates the dashboard
+        with model_name and model_code information.
+        """
+        if self._bluetooth_client is None:
+            raise BluetoothConnectionFailed("Bluetooth client not initialized")
+        
+        try:
+            capabilities = await self._bluetooth_client.get_machine_capabilities()
+        except (BleakError, BluetoothConnectionFailed) as exc:
+            _LOGGER.error("Failed to get machine capabilities from Bluetooth: %s", exc)
+            raise
+
+        # Update dashboard with capabilities information
+        self.dashboard.model_name = capabilities.family
+        # Set model_code based on model_name (enum names match)
+        try:
+            self.dashboard.model_code = ModelCode[capabilities.family.name]
+        except KeyError:
+            _LOGGER.warning(
+                "Could not map model_name %s to model_code", capabilities.family
+            )
+
+    async def get_dashboard_from_bluetooth(self) -> None:
+        """Fill the dashboard with data from Bluetooth (excluding standby settings)."""
+        if self._bluetooth_client is None:
+            raise BluetoothConnectionFailed("Bluetooth client not initialized")
+
+        # Get machine mode and update machine status
+        try:
+            machine_mode = await self._bluetooth_client.get_machine_mode()
+        except (BleakError, BluetoothConnectionFailed) as exc:
+            _LOGGER.error("Failed to get machine mode from Bluetooth: %s", exc)
+            raise
+
+        # Initialize or update machine status widget
+        machine_status = cast(
+            MachineStatus,
+            self.dashboard.config.get(
+                WidgetType.CM_MACHINE_STATUS,
+                MachineStatus(
+                    status=MachineState.STANDBY,
+                    available_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+                    mode=machine_mode,
+                    next_status=None,
+                ),
+            ),
+        )
+        machine_status.mode = machine_mode
+        self.dashboard.config[WidgetType.CM_MACHINE_STATUS] = machine_status
+
+        # Get boilers and update dashboard
+        try:
+            boilers = await self._bluetooth_client.get_boilers()
+        except (BleakError, BluetoothConnectionFailed) as exc:
+            _LOGGER.error("Failed to get boilers from Bluetooth: %s", exc)
+            raise
+
+        for boiler in boilers:
+            if boiler.id == BoilerType.COFFEE:
+                # Initialize or update coffee boiler widget
+                coffee_boiler = cast(
+                    CoffeeBoiler,
+                    self.dashboard.config.get(
+                        WidgetType.CM_COFFEE_BOILER,
+                        CoffeeBoiler(
+                            status=BoilerStatus.STAND_BY,
+                            enabled=boiler.is_enabled,
+                            enabled_supported=False,
+                            target_temperature=float(boiler.target),
+                            target_temperature_min=80,
+                            target_temperature_max=100,
+                            target_temperature_step=0.1,
+                        ),
+                    ),
+                )
+                coffee_boiler.enabled = boiler.is_enabled
+                coffee_boiler.target_temperature = float(boiler.target)
+                self.dashboard.config[WidgetType.CM_COFFEE_BOILER] = coffee_boiler
+            elif boiler.id == BoilerType.STEAM:
+                # Models that support steam level (Micra and Mini R)
+                if self.dashboard.model_code in (
+                    ModelCode.LINEA_MICRA,
+                    ModelCode.LINEA_MINI_R,
+                ):
+                    # Initialize or update steam boiler level widget
+                    steam_level = cast(
+                        SteamBoilerLevel,
+                        self.dashboard.config.get(
+                            WidgetType.CM_STEAM_BOILER_LEVEL,
+                            SteamBoilerLevel(
+                                status=BoilerStatus.STAND_BY,
+                                enabled=boiler.is_enabled,
+                                enabled_supported=True,
+                                target_level=SteamTargetLevel.LEVEL_1,
+                                target_level_supported=True,
+                            ),
+                        ),
+                    )
+                    steam_level.enabled = boiler.is_enabled
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = steam_level
+                    # Remove temperature widget if it exists (not applicable for this model)
+                    self.dashboard.config.pop(WidgetType.CM_STEAM_BOILER_TEMPERATURE, None)
+                else:
+                    # Other models (GS3, original Mini) use steam temperature widget
+                    steam_temp = cast(
+                        SteamBoilerTemperature,
+                        self.dashboard.config.get(
+                            WidgetType.CM_STEAM_BOILER_TEMPERATURE,
+                            SteamBoilerTemperature(
+                                status=BoilerStatus.STAND_BY,
+                                enabled=boiler.is_enabled,
+                                enabled_supported=False,
+                                target_temperature=float(boiler.target),
+                                target_temperature_min=126,
+                                target_temperature_max=131,
+                                target_temperature_step=1.0,
+                                target_temperature_supported=True,
+                            ),
+                        ),
+                    )
+                    steam_temp.enabled = boiler.is_enabled
+                    steam_temp.target_temperature = float(boiler.target)
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE] = (
+                        steam_temp
+                    )
+                    # Remove level widget if it exists (not applicable for this model)
+                    self.dashboard.config.pop(WidgetType.CM_STEAM_BOILER_LEVEL, None)
+
     async def set_power(self, enabled: bool) -> bool:
         """Set the power of the machine.
 
         Args:
             power (bool): True to turn on, False to turn off.
         """
-        return await self.__bluetooth_command_with_cloud_fallback(
+        result = await self.__bluetooth_command_with_cloud_fallback(
             "set_power", enabled=enabled
         )
 
-    @cloud_only
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+            machine_status = cast(
+                MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+            )
+            machine_status.mode = (
+                MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
+            )
+
+        return result
+
     async def set_steam(self, enabled: bool) -> bool:
         """Set the steam of the machine.
 
         Args:
             enabled (bool): True to turn on, False to turn off.
         """
-        assert self._cloud_client
-        return await self._cloud_client.set_steam(self.serial_number, enabled)
+        result = await self.__bluetooth_command_with_cloud_fallback(
+            command="set_steam",
+            enabled=enabled,
+        )
+
+        # Update dashboard if command succeeded
+        if result:
+            if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
+                steam_level = cast(
+                    SteamBoilerLevel,
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
+                )
+                steam_level.enabled = enabled
+            if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+                steam_temp = cast(
+                    SteamBoilerTemperature,
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+                )
+                steam_temp.enabled = enabled
+
+        return result
 
     @models_supported((ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R))
     async def set_steam_level(self, level: SteamTargetLevel) -> bool:
         """Set the steam target level."""
 
-        return await self.__bluetooth_command_with_cloud_fallback(
+        result = await self.__bluetooth_command_with_cloud_fallback(
             command="set_temp",
             bluetooth_kwargs={
                 "boiler": BoilerType.STEAM,
@@ -92,10 +259,20 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             cloud_kwargs={"target_level": level},
         )
 
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+            steam_temp = cast(
+                SteamBoilerTemperature,
+                self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+            )
+            steam_temp.target_temperature = float(STEAM_LEVEL_MAPPING[level])
+
+        return result
+
     async def set_coffee_target_temperature(self, temperature: float) -> bool:
         """Set the coffee target temperature of the machine."""
 
-        return await self.__bluetooth_command_with_cloud_fallback(
+        result = await self.__bluetooth_command_with_cloud_fallback(
             command="set_temp",
             bluetooth_kwargs={
                 "boiler": BoilerType.COFFEE,
@@ -104,6 +281,15 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             cloud_command="set_coffee_target_temperature",
             cloud_kwargs={"target_temperature": temperature},
         )
+
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
+            coffee_boiler = cast(
+                CoffeeBoiler, self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+            )
+            coffee_boiler.target_temperature = float(temperature)
+
+        return result
 
     @cloud_only
     async def start_backflush(self) -> bool:
@@ -217,8 +403,10 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                     command,
                     str(bt_kwargs),
                 )
-                async with self._bluetooth_client:
-                    await func(**bt_kwargs)
+                result = await func(**bt_kwargs)
+                # Check if command succeeded
+                if result.status.lower() == "success":
+                    return True
             except (BleakError, BluetoothConnectionFailed) as exc:
                 msg = "Could not send command to bluetooth device, even though initalized."
 
@@ -232,8 +420,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
                 _LOGGER.warning("%s Falling back to cloud", msg)
                 _LOGGER.debug("Full error: %s", exc)
-            else:
-                return True
 
         # no bluetooth or failed, try with cloud
         if self._cloud_client is not None:

@@ -64,6 +64,7 @@ class WidgetType(StrEnum):
     G_MIRROR_DOSES = "GMirrorDoses"
     G_MORE_DOSE = "GMoreDose"
     G_GRIND_WITH = "GGrindWith"
+    G_SPEED = "GSpeed"
     # scale
     THING_SCALE = "ThingScale"
     # statistic widgets

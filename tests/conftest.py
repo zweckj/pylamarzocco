@@ -38,6 +38,7 @@ def mock_access_token(mock_aioresponse: aioresponses) -> Generator[AsyncMock]:
         },
         repeat=True,
     )
+    yield AsyncMock()
 
 
 @pytest.fixture(name="serial")

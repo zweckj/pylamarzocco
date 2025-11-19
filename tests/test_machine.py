@@ -16,7 +16,22 @@ from pylamarzocco.exceptions import BluetoothConnectionFailed
 @pytest.fixture(name="mock_bluetooth_client")
 def mock_lm_bluetooth_client() -> MagicMock:
     """Mock the LaMarzoccoBluetoothClient."""
+    from pylamarzocco.models import BluetoothCommandStatus
+    
     client = MagicMock(spec=LaMarzoccoBluetoothClient)
+    # Set up default return values for Bluetooth commands
+    client.set_power.return_value = BluetoothCommandStatus(
+        id="ble", message="power on", status="success"
+    )
+    client.set_steam.return_value = BluetoothCommandStatus(
+        id="ble", message="boiler enable success", status="success"
+    )
+    client.set_temp.return_value = BluetoothCommandStatus(
+        id="ble", message="Setting Temperature Success", status="success"
+    )
+    client.set_smart_standby.return_value = BluetoothCommandStatus(
+        id="ble", message="Success", status="success"
+    )
     return client
 
 

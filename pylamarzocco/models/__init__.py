@@ -59,6 +59,7 @@ from ._update import FirmwareSettings, FirmwareVersion, UpdateDetails
 
 from ._bluetooth import (
     BluetoothBoilerDetails,
+    BluetoothCommandStatus,
     BluetoothMachineCapabilities,
     BluetoothSmartStandbyDetails,
 )
@@ -70,6 +71,7 @@ __all__ = [
     "BaseWidget",
     "BaseWidgetOutput",
     "BluetoothBoilerDetails",
+    "BluetoothCommandStatus",
     "BluetoothMachineCapabilities",
     "BluetoothSmartStandbyDetails",
     "BrewByWeightDoseSettings",

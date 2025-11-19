@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -24,6 +26,8 @@ from pylamarzocco.const import (
     WidgetType,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 from ._general import (
     BaseWidget,
     BaseWidgetOutput,
@@ -31,8 +35,44 @@ from ._general import (
     Thing,
     Widget,
 )
-
 from ._update import FirmwareSettings
+
+
+def _filter_valid_widgets(
+    items: list[dict[str, Any] | str], field_name: str
+) -> list[dict[str, Any] | str]:
+    """Filter items with valid WidgetType codes, logging warnings for invalid ones.
+
+    Args:
+        items: List of widget dicts or code strings
+        field_name: Name of the field being filtered (for logging)
+
+    Returns:
+        List of items with valid widget codes
+    """
+    valid_items = []
+    for item in items:
+        # Extract code - either directly if string, or from 'code' key if dict
+        if code := (item if isinstance(item, str) else item.get("code")):
+            try:
+                WidgetType(code)
+            except ValueError:
+                # Log entire JSON if it's a dict, otherwise just the code
+                if isinstance(item, dict):
+                    _LOGGER.warning(
+                        "Unknown widget in field '%s' will be discarded: %s",
+                        field_name,
+                        json.dumps(item),
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Unknown widget code '%s' in field '%s' will be discarded",
+                        code,
+                        field_name,
+                    )
+            else:
+                valid_items.append(item)
+    return valid_items
 
 
 @dataclass(kw_only=True)
@@ -44,11 +84,16 @@ class ThingConfig(DataClassJSONMixin):
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
-        # move code to widget_type for mashumaro annotated serialization
-        widgets = d["widgets"]
-        for widget in widgets:
-            widget["output"]["widget_type"] = widget["code"]
-        d["widgets"] = widgets
+        # Filter out widgets with unknown codes and log warnings
+        widgets = d.get("widgets", [])
+        valid_widgets = _filter_valid_widgets(widgets, "widgets")
+
+        # Set widget_type for valid widgets
+        for item in valid_widgets:
+            assert isinstance(item, dict)
+            item["output"]["widget_type"] = item["code"]
+
+        d["widgets"] = valid_widgets
         return d
 
     @classmethod
@@ -74,6 +119,17 @@ class ThingDashboardWebsocketConfig(ThingConfig):
     connection_date: int = field(metadata=field_options(alias="connectionDate"))
     uuid: str
     commands: list[CommandResponse]
+
+    @classmethod
+    def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
+        # First call parent's __pre_deserialize__ to handle widgets
+        d = super().__pre_deserialize__(d)
+
+        # Filter out removed_widgets with unknown codes and log warnings
+        d["removedWidgets"] = _filter_valid_widgets(
+            d.get("removedWidgets", []), "removedWidgets"
+        )
+        return d
 
 
 @dataclass(kw_only=True)

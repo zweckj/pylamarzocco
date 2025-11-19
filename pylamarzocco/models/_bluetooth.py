@@ -44,3 +44,11 @@ class BluetoothSmartStandbyDetails(DataClassJSONMixin):
     mode: SmartStandByType
     minutes: int
     enabled: bool
+
+@dataclass(kw_only=True)
+class BluetoothCommandStatus(DataClassJSONMixin):
+    """Status of a command sent via Bluetooth."""
+
+    id: str
+    message: str
+    status: str

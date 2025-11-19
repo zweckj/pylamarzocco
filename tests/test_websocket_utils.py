@@ -30,7 +30,7 @@ class TestWebSocketUtils:
 
     def test_encode_stomp_ws_message_empty_headers(self) -> None:
         """Test STOMP message encoding with empty headers."""
-        headers = {}
+        headers: dict[str, str] = {}
         body = "test"
         
         result = encode_stomp_ws_message(StompMessageType.CONNECT, headers, body)
