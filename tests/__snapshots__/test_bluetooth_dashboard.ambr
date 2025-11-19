@@ -1,0 +1,125 @@
+# serializer version: 1
+# name: test_get_dashboard_from_bluetooth
+  dict({
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'config': dict({
+      'CMCoffeeBoiler': dict({
+        'enabled': True,
+        'enabled_supported': False,
+        'ready_start_time': None,
+        'status': 'StandBy',
+        'target_temperature': 95.0,
+        'target_temperature_max': 100,
+        'target_temperature_min': 80,
+        'target_temperature_step': 0.1,
+      }),
+      'CMMachineStatus': dict({
+        'available_modes': list([
+          'BrewingMode',
+          'StandBy',
+        ]),
+        'brewing_start_time': None,
+        'mode': 'BrewingMode',
+        'next_status': None,
+        'status': 'StandBy',
+      }),
+      'CMSteamBoilerLevel': dict({
+        'enabled': False,
+        'enabled_supported': True,
+        'ready_start_time': None,
+        'status': 'StandBy',
+        'target_level': 'Level1',
+        'target_level_supported': True,
+      }),
+    }),
+    'connected': False,
+    'connection_date': '2024-01-01T12:00:00+00:00',
+    'image_url': '',
+    'location': None,
+    'model_code': 'LINEAMICRA',
+    'model_name': 'Linea Micra',
+    'name': '',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'MR123456',
+    'type': 'CoffeeMachine',
+    'widgets': list([
+    ]),
+  })
+# ---
+# name: test_get_dashboard_initializes_missing_widgets
+  dict({
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'config': dict({
+      'CMCoffeeBoiler': dict({
+        'enabled': True,
+        'enabled_supported': False,
+        'ready_start_time': None,
+        'status': 'StandBy',
+        'target_temperature': 92.0,
+        'target_temperature_max': 100,
+        'target_temperature_min': 80,
+        'target_temperature_step': 0.1,
+      }),
+      'CMMachineStatus': dict({
+        'available_modes': list([
+          'BrewingMode',
+          'StandBy',
+        ]),
+        'brewing_start_time': None,
+        'mode': 'BrewingMode',
+        'next_status': None,
+        'status': 'StandBy',
+      }),
+      'CMSteamBoilerLevel': dict({
+        'enabled': True,
+        'enabled_supported': True,
+        'ready_start_time': None,
+        'status': 'StandBy',
+        'target_level': 'Level1',
+        'target_level_supported': True,
+      }),
+    }),
+    'connected': False,
+    'connection_date': '2024-01-01T12:00:00+00:00',
+    'image_url': '',
+    'location': None,
+    'model_code': 'LINEAMINIR',
+    'model_name': 'Linea Mini R',
+    'name': '',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'MR123456',
+    'type': 'CoffeeMachine',
+    'widgets': list([
+    ]),
+  })
+# ---
+# name: test_set_coffee_temp_updates_dashboard
+  dict({
+    'enabled': True,
+    'enabled_supported': False,
+    'ready_start_time': None,
+    'status': 'StandBy',
+    'target_temperature': 96.5,
+    'target_temperature_max': 100,
+    'target_temperature_min': 80,
+    'target_temperature_step': 0.1,
+  })
+# ---
+# name: test_set_power_updates_dashboard
+  dict({
+    'available_modes': list([
+      'BrewingMode',
+      'StandBy',
+    ]),
+    'brewing_start_time': None,
+    'mode': 'BrewingMode',
+    'next_status': None,
+    'status': 'StandBy',
+  })
+# ---

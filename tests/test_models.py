@@ -10,6 +10,7 @@ from pylamarzocco.models import (
     SmartWakeUpScheduleWebsocketConfig,
     ThingDashboardWebsocketConfig,
 )
+from pylamarzocco.models._statistics import ThingStatistics
 
 from .conftest import load_fixture
 
@@ -102,8 +103,6 @@ async def test_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> N
 
 async def test_widget_code_strings_filtering(caplog: pytest.LogCaptureFixture) -> None:
     """Test that widget code strings (not dicts) are filtered properly."""
-    from pylamarzocco.models._statistics import ThingStatistics
-    
     stats_data = {
         "serialNumber": "test-serial",
         "selectedWidgetCodes": [

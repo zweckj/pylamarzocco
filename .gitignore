@@ -145,3 +145,4 @@ run_ble.py
 example.py
 installation_key.json
 test.py
+*.local.py
