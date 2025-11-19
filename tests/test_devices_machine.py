@@ -78,7 +78,7 @@ class TestLaMarzoccoMachine:
         result = await machine.set_steam(True)
         
         assert result is True
-        cloud_client.set_steam.assert_called_once_with(serial, True)
+        cloud_client.set_steam.assert_called_once_with(serial_number=serial, enabled=True)
 
     async def test_set_steam_with_false(self) -> None:
         """Test set_steam with False parameter."""
@@ -91,15 +91,17 @@ class TestLaMarzoccoMachine:
         result = await machine.set_steam(False)
         
         assert result is False
-        cloud_client.set_steam.assert_called_once_with(serial, False)
+        cloud_client.set_steam.assert_called_once_with(serial_number=serial, enabled=False)
 
-    async def test_set_steam_without_cloud_client(self) -> None:
-        """Test set_steam without cloud client raises exception."""
-        serial = "machine-no-steam-cloud"
+    async def test_set_steam_without_any_client(self) -> None:
+        """Test set_steam without any client returns False."""
+        serial = "machine-no-clients"
         machine = LaMarzoccoMachine(serial)
         
-        with pytest.raises(CloudOnlyFunctionality):
-            await machine.set_steam(True)
+        # set_steam now uses bluetooth_command_with_cloud_fallback
+        # which returns False when no clients are available
+        result = await machine.set_steam(True)
+        assert result is False
 
     def test_inheritance_from_thing(self) -> None:
         """Test that machine inherits properly from LaMarzoccoThing."""
