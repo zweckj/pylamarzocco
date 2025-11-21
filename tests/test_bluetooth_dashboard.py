@@ -25,6 +25,7 @@ from pylamarzocco.models import (
     BluetoothMachineCapabilities,
     CoffeeBoiler,
     MachineStatus,
+    NoWater,
     SteamBoilerLevel,
     SteamBoilerTemperature,
 )
@@ -131,6 +132,7 @@ async def test_get_dashboard_from_bluetooth(
             ),
         ]
     )
+    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
 
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
@@ -138,6 +140,7 @@ async def test_get_dashboard_from_bluetooth(
     mock_bluetooth_client.get_machine_capabilities.assert_not_called()
     mock_bluetooth_client.get_machine_mode.assert_called_once()
     mock_bluetooth_client.get_boilers.assert_called_once()
+    mock_bluetooth_client.get_tank_status.assert_called_once()
 
     # Snapshot test includes model_name, model_code, and config
     assert mock_machine_with_dashboard.dashboard.to_dict() == snapshot
@@ -168,6 +171,13 @@ async def test_get_dashboard_from_bluetooth(
         WidgetType.CM_STEAM_BOILER_TEMPERATURE
         not in mock_machine_with_dashboard.dashboard.config
     )
+
+    # Verify tank status widget
+    no_water = cast(
+        NoWater,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_NO_WATER],
+    )
+    assert no_water.allarm is False  # Tank status is True, so allarm should be False
 
 
 async def test_get_dashboard_no_bluetooth(
@@ -251,6 +261,7 @@ async def test_get_dashboard_initializes_missing_widgets(
             ),
         ]
     )
+    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
 
     # First fetch model info explicitly
     await mock_machine_with_dashboard.get_model_info_from_bluetooth()
@@ -317,6 +328,7 @@ async def test_get_dashboard_without_steam_level_support(
             ),
         ]
     )
+    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
 
     # First fetch model info explicitly
     await mock_machine_with_dashboard.get_model_info_from_bluetooth()
@@ -391,6 +403,7 @@ async def test_get_dashboard_mini_original_temperature_only(
             ),
         ]
     )
+    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
 
     # First fetch model info explicitly
     await mock_machine_with_dashboard.get_model_info_from_bluetooth()
