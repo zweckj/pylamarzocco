@@ -26,6 +26,7 @@ from pylamarzocco.models import (
     CoffeeBoiler,
     LastCoffeeList,
     MachineStatus,
+    NoWater,
     PrebrewSettingTimes,
     SecondsInOut,
     SteamBoilerLevel,
@@ -195,6 +196,24 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                     )
                     # Remove level widget if it exists (not applicable for this model)
                     self.dashboard.config.pop(WidgetType.CM_STEAM_BOILER_LEVEL, None)
+
+        # Get tank status and update dashboard
+        try:
+            tank_status = await self._bluetooth_client.get_tank_status()
+        except (BleakError, BluetoothConnectionFailed) as exc:
+            _LOGGER.error("Failed to get tank status from Bluetooth: %s", exc)
+            raise
+
+        # Initialize or update no water widget
+        no_water = cast(
+            NoWater,
+            self.dashboard.config.get(
+                WidgetType.CM_NO_WATER,
+                NoWater(allarm=not tank_status),
+            ),
+        )
+        no_water.allarm = not tank_status
+        self.dashboard.config[WidgetType.CM_NO_WATER] = no_water
 
     async def set_power(self, enabled: bool) -> bool:
         """Set the power of the machine.
