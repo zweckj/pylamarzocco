@@ -279,12 +279,12 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
-            steam_temp = cast(
-                SteamBoilerTemperature,
-                self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+        if result and WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
+            steam_level = cast(
+                SteamBoilerLevel,
+                self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
             )
-            steam_temp.target_temperature = float(STEAM_LEVEL_MAPPING[level])
+            steam_level.target_level = level
 
         return result
 
@@ -307,6 +307,30 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 CoffeeBoiler, self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
             )
             coffee_boiler.target_temperature = float(temperature)
+
+        return result
+    
+    @models_supported((ModelCode.GS3, ModelCode.GS3_AV, ModelCode.GS3_MP))
+    async def set_steam_target_temperature(self, temperature: float) -> bool:
+        """Set the steam target temperature."""
+
+        result = await self.__bluetooth_command_with_cloud_fallback(
+            command="set_temp",
+            bluetooth_kwargs={
+                "boiler": BoilerType.STEAM,
+                "temperature": temperature,
+            },
+            cloud_command="set_steam_target_temperature",
+            cloud_kwargs={"target_temperature": temperature},
+        )
+
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
+            steam_temp = cast(
+                SteamBoilerTemperature,
+                self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+            )
+            steam_temp.target_temperature = temperature
 
         return result
 

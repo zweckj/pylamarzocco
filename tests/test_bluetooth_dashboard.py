@@ -509,14 +509,6 @@ async def test_set_steam_updates_dashboard(
     )
     assert steam_level.enabled is False
 
-    steam_temp = cast(
-        SteamBoilerTemperature,
-        mock_machine_with_dashboard.dashboard.config[
-            WidgetType.CM_STEAM_BOILER_TEMPERATURE
-        ],
-    )
-    assert steam_temp.enabled is False
-
 
 async def test_set_coffee_temp_updates_dashboard(
     mock_machine_with_dashboard: LaMarzoccoMachine,
@@ -541,7 +533,7 @@ async def test_set_coffee_temp_updates_dashboard(
     assert coffee_boiler.to_dict() == snapshot
 
 
-async def test_set_steam_temp_updates_dashboard(
+async def test_set_steam_level_updates_dashboard(
     mock_machine_with_dashboard: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
 ) -> None:
@@ -556,14 +548,36 @@ async def test_set_steam_temp_updates_dashboard(
     result = await mock_machine_with_dashboard.set_steam_level(SteamTargetLevel.LEVEL_3)
 
     assert result is True
-    steam_temp = cast(
-        SteamBoilerTemperature,
+    steam_level = cast(
+        SteamBoilerLevel,
         mock_machine_with_dashboard.dashboard.config[
-            WidgetType.CM_STEAM_BOILER_TEMPERATURE
+            WidgetType.CM_STEAM_BOILER_LEVEL
         ],
     )
-    assert steam_temp.target_temperature == 131.0
+    assert steam_level.target_level == SteamTargetLevel.LEVEL_3
 
+async def test_set_steam_temp_updates_dashboard(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test that set_steam_target_temperature updates dashboard on success."""
+    mock_machine_with_dashboard.dashboard.model_code = ModelCode.GS3
+    mock_bluetooth_client.set_temp = AsyncMock(
+        return_value=BluetoothCommandStatus(
+            id="ble", message="Setting Temperature Success", status="success"
+        )
+    )
+
+    result = await mock_machine_with_dashboard.set_steam_target_temperature(122.5)
+
+    assert result is True
+    steam_boiler = cast(
+        SteamBoilerTemperature,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+    )
+    assert steam_boiler.target_temperature == 122.5
+    assert steam_boiler.to_dict() == snapshot
 
 async def test_failed_command_does_not_update_dashboard(
     mock_machine_with_dashboard: LaMarzoccoMachine,

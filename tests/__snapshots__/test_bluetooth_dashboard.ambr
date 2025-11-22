@@ -129,3 +129,16 @@
     'status': 'StandBy',
   })
 # ---
+# name: test_set_steam_temp_updates_dashboard
+  dict({
+    'enabled': True,
+    'enabled_supported': False,
+    'ready_start_time': None,
+    'status': 'StandBy',
+    'target_temperature': 122.5,
+    'target_temperature_max': 131,
+    'target_temperature_min': 126,
+    'target_temperature_step': 1.0,
+    'target_temperature_supported': True,
+  })
+# ---
