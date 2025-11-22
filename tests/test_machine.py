@@ -9,15 +9,15 @@ from pylamarzocco import (
     LaMarzoccoCloudClient,
     LaMarzoccoMachine,
 )
-from pylamarzocco.const import BoilerType, SteamTargetLevel, SmartStandByType
+from pylamarzocco.const import BoilerType, SteamTargetLevel, SmartStandByType, ModelCode
 from pylamarzocco.exceptions import BluetoothConnectionFailed
+from pylamarzocco.models import BluetoothCommandStatus
 
 
 @pytest.fixture(name="mock_bluetooth_client")
 def mock_lm_bluetooth_client() -> MagicMock:
     """Mock the LaMarzoccoBluetoothClient."""
-    from pylamarzocco.models import BluetoothCommandStatus
-    
+
     client = MagicMock(spec=LaMarzoccoBluetoothClient)
     # Set up default return values for Bluetooth commands
     client.set_power.return_value = BluetoothCommandStatus(
@@ -136,6 +136,34 @@ async def test_set_coffee_temp_cloud_fallback(
     )
     mock_cloud_client.set_coffee_target_temperature.assert_called_once_with(
         serial_number="MR123456", target_temperature=93
+    )
+
+
+async def test_set_steam_temp(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test the set_steam_temp method."""
+    mock_machine.dashboard.model_code = ModelCode.GS3
+    assert await mock_machine.set_steam_target_temperature(124)
+    mock_bluetooth_client.set_temp.assert_called_once_with(
+        boiler=BoilerType.STEAM, temperature=124
+    )
+
+
+async def test_set_steam_temp_cloud_fallback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_steam_temp method."""
+    mock_machine.dashboard.model_code = ModelCode.GS3
+    mock_bluetooth_client.set_temp.side_effect = BluetoothConnectionFailed(
+        "Bluetooth error"
+    )
+    assert await mock_machine.set_steam_target_temperature(124)
+    mock_cloud_client.set_steam_target_temperature.assert_called_once_with(
+        serial_number="MR123456", target_temperature=124
     )
 
 

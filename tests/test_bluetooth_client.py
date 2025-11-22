@@ -9,7 +9,6 @@ from bleak.backends.device import BLEDevice
 from bleak.exc import BleakError
 
 from pylamarzocco import LaMarzoccoBluetoothClient
-from pylamarzocco.clients._bluetooth import BleakClientWithServiceCache
 from pylamarzocco.const import BoilerType, MachineMode, ModelName, SmartStandByType
 from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
@@ -77,7 +76,7 @@ async def test_ble_set_temperature(
     """Test setting temperature on the machine."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     await client.set_temp(BoilerType.STEAM, 90)
-    
+
     mock_bleak_client.services.get_characteristic.assert_called_with(SETTINGS_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
         char_specifier="mock_characteristic",
@@ -93,7 +92,7 @@ async def test_ble_set_smart_standby(
     """Test setting smart standby on the machine."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     await client.set_smart_standby(True, SmartStandByType.POWER_ON, 42)
-    
+
     mock_bleak_client.services.get_characteristic.assert_called_with(SETTINGS_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
         char_specifier="mock_characteristic",
@@ -108,10 +107,10 @@ async def test_ble_get_machine_capability(
 ) -> None:
     """Test getting machine capability."""
     mock_bleak_client.read_gatt_char.return_value = b'[{"family":"MICRA","groupsNumber":1,"coffeeBoilersNumber":1,"hasCupWarmer":false,"steamBoilersNumber":1,"teaDosesNumber":0,"machineModes":["BrewingMode","StandBy"],"schedulingType":"smartWakeUpSleep"}]'
-    
+
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     response = await client.get_machine_capabilities()
-    
+
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
         char_specifier="mock_characteristic",
@@ -136,10 +135,10 @@ async def test_ble_get_boiler_details(
 ) -> None:
     """Test getting boiler details."""
     mock_bleak_client.read_gatt_char.return_value = b'[{"id":"SteamBoiler","isEnabled":true,"target":131,"current":45},{"id":"CoffeeBoiler1","isEnabled":true,"target":94,"current":65}]'
-    
+
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     response = await client.get_boilers()
-    
+
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
         char_specifier="mock_characteristic",
@@ -170,10 +169,10 @@ async def test_ble_get_smart_standby_details(
     mock_bleak_client.read_gatt_char.return_value = (
         b'{"mode":"PowerOn","minutes":42,"enabled":"true"}'
     )
-    
+
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     response = await client.get_smart_standby_settings()
-    
+
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
         char_specifier="mock_characteristic",
@@ -191,10 +190,10 @@ async def test_ble_get_tank_status(
 ) -> None:
     """Test getting tank status."""
     mock_bleak_client.read_gatt_char.return_value = b'"true"'
-    
+
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     response = await client.get_tank_status()
-    
+
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
         char_specifier="mock_characteristic",
@@ -210,10 +209,10 @@ async def test_get_machine_mode(
 ) -> None:
     """Test getting machine mode."""
     mock_bleak_client.read_gatt_char.return_value = b'"BrewingMode"'
-    
+
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     response = await client.get_machine_mode()
-    
+
     mock_bleak_client.services.get_characteristic.assert_called_with(READ_CHAR)
     mock_bleak_client.write_gatt_char.assert_called_with(
         char_specifier="mock_characteristic",
@@ -229,16 +228,16 @@ async def test_persistent_connection_auto_connect(
 ) -> None:
     """Test that connection is established automatically on first command."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    
+
     # Connection should not be established yet
     assert not client.is_connected
-    
+
     # First command should trigger connection
     await client.set_power(True)
-    
+
     # Connection should now be established
     mock_bleak_client.establish_mock.assert_awaited_once()
-    
+
     # Cleanup
     await client.disconnect()
 
@@ -248,18 +247,18 @@ async def test_persistent_connection_reuse(
 ) -> None:
     """Test that connection is reused for multiple commands."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    
+
     # Execute multiple commands
     await client.set_power(True)
     await client.set_power(False)
     await client.set_steam(True)
-    
+
     # Connection should only be established once
     mock_bleak_client.establish_mock.assert_awaited_once()
-    
+
     # Connection should still be active
     assert client.is_connected
-    
+
     # Cleanup
     await client.disconnect()
 
@@ -271,14 +270,14 @@ async def test_auto_disconnect_after_idle(
     # Override the timeout for testing
     with patch("pylamarzocco.clients._bluetooth.IDLE_TIMEOUT", 0.1):
         client = LaMarzoccoBluetoothClient(ble_device, "token")
-        
+
         # Execute a command to establish connection
         await client.set_power(True)
         assert client.is_connected
-        
+
         # Wait for auto-disconnect
         await asyncio.sleep(0.2)
-        
+
         # Connection should be closed
         assert not client.is_connected
         mock_bleak_client.disconnect.assert_awaited()
@@ -291,27 +290,27 @@ async def test_timer_reset_on_new_command(
     # Override the timeout for testing
     with patch("pylamarzocco.clients._bluetooth.IDLE_TIMEOUT", 0.2):
         client = LaMarzoccoBluetoothClient(ble_device, "token")
-        
+
         # Execute a command
         await client.set_power(True)
         assert client.is_connected
-        
+
         # Wait a bit but not long enough to disconnect
         await asyncio.sleep(0.1)
-        
+
         # Execute another command (should reset timer)
         await client.set_steam(True)
-        
+
         # Wait again
         await asyncio.sleep(0.1)
-        
+
         # Connection should still be active (timer was reset)
         assert client.is_connected
-        
+
         # Wait for disconnect
         await asyncio.sleep(0.2)
         assert not client.is_connected
-        
+
         # Cleanup
         await client.disconnect()
 
@@ -321,20 +320,20 @@ async def test_concurrent_commands_thread_safe(
 ) -> None:
     """Test that concurrent commands are handled safely with locks."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    
+
     # Execute commands concurrently
     await asyncio.gather(
         client.set_power(True),
         client.set_steam(True),
         client.set_power(False),
     )
-    
+
     # Connection should only be established once despite concurrent calls
     mock_bleak_client.establish_mock.assert_awaited_once()
-    
+
     # All commands should have executed
     assert mock_bleak_client.write_gatt_char.await_count >= 3
-    
+
     # Cleanup
     await client.disconnect()
 
@@ -344,21 +343,21 @@ async def test_exception_triggers_disconnect(
 ) -> None:
     """Test that an exception during command execution triggers disconnect."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    
+
     # First command succeeds to establish connection
     await client.set_power(True)
     assert client.is_connected
-    
+
     # Make subsequent write fail
     mock_bleak_client.write_gatt_char.side_effect = BleakError("Connection failed")
-    
+
     # Command should fail and trigger disconnect
     with pytest.raises(BleakError):
         await client.set_power(False)
-    
+
     # Give time for disconnect task to complete
     await asyncio.sleep(0.05)
-    
+
     # Disconnect should have been called
     assert not client.is_connected
 
@@ -368,15 +367,15 @@ async def test_characteristic_resolution_failure_clears_cache(
 ) -> None:
     """Test that failing to resolve characteristic clears cache and disconnects."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    
+
     # Make characteristic resolution fail
     mock_bleak_client.services.get_characteristic.return_value = None
     mock_bleak_client.clear_cache = AsyncMock()
-    
+
     # Command should fail
     with pytest.raises(BluetoothConnectionFailed):
         await client.set_power(True)
-    
+
     # Cache should be cleared and disconnected
     mock_bleak_client.clear_cache.assert_awaited()
     await asyncio.sleep(0.01)  # Give time for disconnect to complete
@@ -388,14 +387,14 @@ async def test_is_connected_property(
 ) -> None:
     """Test the is_connected property."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    
+
     # Should not be connected initially
     assert not client.is_connected
-    
+
     # Connect and check
     await client.set_power(True)
     assert client.is_connected
-    
+
     # Disconnect and check
     await client.disconnect()
     assert not client.is_connected
@@ -406,15 +405,15 @@ async def test_reconnect_after_disconnect(
 ) -> None:
     """Test that client can reconnect after manual disconnect."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    
+
     # Connect and disconnect
     await client.set_power(True)
     await client.disconnect()
     assert not client.is_connected
-    
+
     # Should be able to reconnect
     await client.set_steam(True)
     assert client.is_connected
-    
+
     # Cleanup
     await client.disconnect()

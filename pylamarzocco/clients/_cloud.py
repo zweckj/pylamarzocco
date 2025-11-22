@@ -571,6 +571,18 @@ class LaMarzoccoCloudClient:
         return await self.__execute_command(
             serial_number, "CoffeeMachineSettingCoffeeBoilerTargetTemperature", data
         )
+    
+    async def set_steam_target_temperature(
+        self, serial_number: str, target_temperature: float, boiler_index: int = 1
+    ) -> bool:
+        """Set the target temperature for the steam boiler."""
+        data = {
+            "boilerIndex": boiler_index,
+            "targetTemperature": round(target_temperature, 1),
+        }
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingSteamBoilerTargetTemperature", data
+        )
 
     async def start_backflush_cleaning(
         self,

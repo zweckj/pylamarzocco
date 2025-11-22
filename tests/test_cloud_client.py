@@ -412,6 +412,30 @@ async def test_set_steam_target_level(
     assert result is True
 
 
+async def test_set_steam_target_temperature(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the steam target temperature for a thing."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerTargetTemperature"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    result = await client.set_steam_target_temperature(serial, 122.1)
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "boilerIndex": 1,
+        "targetTemperature": 122.1,
+    }
+    assert result is True
+
+
 async def test_start_backflush_cleaning(
     mock_aioresponse: aioresponses,
     serial: str,
