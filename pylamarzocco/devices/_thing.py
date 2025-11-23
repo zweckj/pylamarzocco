@@ -97,11 +97,27 @@ class LaMarzoccoThing:
         return self._cloud_client.websocket
 
     @property
+    def bluetooth_client_available(self) -> bool:
+        """Return the availability of the bluetooth connection."""
+        return self._bluetooth_client is not None
+
+    @property
+    def cloud_client_available(self) -> bool:
+        """Return the availability of the cloud connection."""
+        return self._cloud_client is not None
+
+    @property
     def bluetooth_connected(self) -> bool:
         """Return the status of the bluetooth connection."""
         return (
             self._bluetooth_client is not None and self._bluetooth_client.is_connected
         )
+
+    @cloud_only
+    async def ensure_token_valid(self) -> None:
+        """Ensure the cloud token is valid."""
+        assert self._cloud_client
+        await self._cloud_client.async_get_access_token()
 
     @cloud_only
     async def get_dashboard(self) -> None:
