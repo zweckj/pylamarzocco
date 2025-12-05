@@ -26,6 +26,7 @@ from pylamarzocco.const import (
     BASE_URL,
     CUSTOMER_APP_URL,
     CommandStatus,
+    DoseMode,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -647,6 +648,34 @@ class LaMarzoccoCloudClient:
         """Set smart wakeup schedule"""
         return await self.__execute_command(
             serial_number, "CoffeeMachineSetWakeUpSchedule", schedule.to_dict()
+        )
+
+    async def change_brew_by_weight_dose_mode(
+        self,
+        serial_number: str,
+        mode: DoseMode,
+    ) -> bool:
+        """Change the brew by weight dose mode (Linea Mini R only)."""
+        data = {"mode": mode.value}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineBrewByWeightChangeMode", data
+        )
+
+    async def set_brew_by_weight_dose(
+        self,
+        serial_number: str,
+        dose_1: float,
+        dose_2: float,
+    ) -> bool:
+        """Set the brew by weight doses (Linea Mini R only)."""
+        data = {
+            "doses": {
+                "Dose1": round(dose_1, 1),
+                "Dose2": round(dose_2, 1),
+            }
+        }
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineBrewByWeightSettingDoses", data
         )
 
     async def update_firmware(

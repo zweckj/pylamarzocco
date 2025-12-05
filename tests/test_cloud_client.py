@@ -16,6 +16,7 @@ from pylamarzocco.clients import LaMarzoccoCloudClient
 from pylamarzocco.const import (
     CUSTOMER_APP_URL,
     CommandStatus,
+    DoseMode,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -640,3 +641,48 @@ async def test_start_update(
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.update_firmware(serial)
     assert result.to_dict() == snapshot
+
+
+async def test_change_brew_by_weight_dose_mode(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test changing the brew by weight dose mode."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBrewByWeightChangeMode"
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    result = await client.change_brew_by_weight_dose_mode(serial, DoseMode.DOSE_1)
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"mode": "Dose1"}
+    assert result is True
+
+
+async def test_set_brew_by_weight_dose(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the brew by weight doses."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBrewByWeightSettingDoses"
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    result = await client.set_brew_by_weight_dose(serial, 32.56, 45.67)
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "doses": {
+            "Dose1": 32.6,
+            "Dose2": 45.7,
+        }
+    }
+    assert result is True

@@ -11,6 +11,7 @@ from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
     BoilerStatus,
     BoilerType,
+    DoseMode,
     MachineMode,
     MachineState,
     ModelCode,
@@ -21,6 +22,7 @@ from pylamarzocco.const import (
 )
 from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
+    BrewByWeightDoses,
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
     CoffeeBoiler,
@@ -400,6 +402,74 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return await self._cloud_client.set_wakeup_schedule(
             self.serial_number, schedule
         )
+
+    @cloud_only
+    @models_supported((ModelCode.LINEA_MINI_R,))
+    async def set_brew_by_weight_dose_mode(self, mode: DoseMode) -> bool:
+        """Set the brew by weight dose mode (Linea Mini R only).
+
+        Args:
+            mode: The dose mode (DoseMode.DOSE_1, DoseMode.DOSE_2, or DoseMode.CONTINUOUS)
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.change_brew_by_weight_dose_mode(
+            self.serial_number, mode
+        )
+
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_BREW_BY_WEIGHT_DOSES in self.dashboard.config:
+            brew_by_weight = cast(
+                BrewByWeightDoses,
+                self.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES],
+            )
+            brew_by_weight.mode = mode
+
+        return result
+
+    @cloud_only
+    @models_supported((ModelCode.LINEA_MINI_R,))
+    async def set_brew_by_weight_dose(
+        self, dose: DoseMode, value: float
+    ) -> bool:
+        """Set a brew by weight dose value (Linea Mini R only).
+
+        Args:
+            dose: Which dose to set (DoseMode.DOSE_1 or DoseMode.DOSE_2)
+            value: The dose value in grams
+        """
+        assert self._cloud_client
+
+        # Get current doses from dashboard
+        if WidgetType.CM_BREW_BY_WEIGHT_DOSES not in self.dashboard.config:
+            return False
+
+        brew_by_weight = cast(
+            BrewByWeightDoses,
+            self.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES],
+        )
+
+        # Set the dose values, keeping the other one unchanged
+        if dose == DoseMode.DOSE_1:
+            dose_1 = value
+            dose_2 = brew_by_weight.doses.dose_2.dose
+        elif dose == DoseMode.DOSE_2:
+            dose_1 = brew_by_weight.doses.dose_1.dose
+            dose_2 = value
+        else:
+            return False
+
+        result = await self._cloud_client.set_brew_by_weight_dose(
+            self.serial_number, dose_1, dose_2
+        )
+
+        # Update dashboard if command succeeded
+        if result:
+            if dose == DoseMode.DOSE_1:
+                brew_by_weight.doses.dose_1.dose = value
+            else:
+                brew_by_weight.doses.dose_2.dose = value
+
+        return result
 
     def to_dict(self) -> dict[Any, Any]:
         """Return self in dict represenation."""

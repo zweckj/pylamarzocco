@@ -9,9 +9,21 @@ from pylamarzocco import (
     LaMarzoccoCloudClient,
     LaMarzoccoMachine,
 )
-from pylamarzocco.const import BoilerType, SteamTargetLevel, SmartStandByType, ModelCode
+from pylamarzocco.const import (
+    BoilerType,
+    DoseMode,
+    ModelCode,
+    SmartStandByType,
+    SteamTargetLevel,
+    WidgetType,
+)
 from pylamarzocco.exceptions import BluetoothConnectionFailed
-from pylamarzocco.models import BluetoothCommandStatus
+from pylamarzocco.models import (
+    BaseDoseSettings,
+    BluetoothCommandStatus,
+    BrewByWeightDoseSettings,
+    BrewByWeightDoses,
+)
 
 
 @pytest.fixture(name="mock_bluetooth_client")
@@ -210,3 +222,40 @@ async def test_failing_command(
     )
     mock_cloud_client.set_power.return_value = False
     assert not await mock_machine.set_power(True)
+
+
+async def test_set_brew_by_weight_dose_mode(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_brew_by_weight_dose_mode method."""
+    mock_machine.dashboard.model_code = ModelCode.LINEA_MINI_R
+    mock_cloud_client.change_brew_by_weight_dose_mode.return_value = True
+
+    assert await mock_machine.set_brew_by_weight_dose_mode(DoseMode.DOSE_1)
+    mock_cloud_client.change_brew_by_weight_dose_mode.assert_called_once_with(
+        "MR123456", DoseMode.DOSE_1
+    )
+
+
+async def test_set_brew_by_weight_dose(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_brew_by_weight_dose method."""
+    mock_machine.dashboard.model_code = ModelCode.LINEA_MINI_R
+    mock_cloud_client.set_brew_by_weight_dose.return_value = True
+
+    # Set up the dashboard with brew by weight widget
+    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = BrewByWeightDoses(
+        mode=DoseMode.DOSE_1,
+        doses=BrewByWeightDoseSettings(
+            dose_1=BaseDoseSettings(dose=32.0, dose_min=5, dose_max=100, dose_step=0.1),
+            dose_2=BaseDoseSettings(dose=34.0, dose_min=5, dose_max=100, dose_step=0.1),
+        ),
+    )
+
+    assert await mock_machine.set_brew_by_weight_dose(DoseMode.DOSE_1, 36.5)
+    mock_cloud_client.set_brew_by_weight_dose.assert_called_once_with(
+        "MR123456", 36.5, 34.0
+    )
