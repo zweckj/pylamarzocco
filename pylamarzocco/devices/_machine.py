@@ -434,8 +434,14 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         """Set a brew by weight dose value (Linea Mini R only).
 
         Args:
-            dose: Which dose to set (DoseMode.DOSE_1 or DoseMode.DOSE_2)
+            dose: Which dose to set (must be DoseMode.DOSE_1 or DoseMode.DOSE_2,
+                  CONTINUOUS is not valid for setting dose values)
             value: The dose value in grams
+
+        Returns:
+            True if the command was successful, False otherwise.
+            Returns False if dose is not DOSE_1 or DOSE_2 or if the brew by
+            weight widget is not available in the dashboard.
         """
         assert self._cloud_client
 
