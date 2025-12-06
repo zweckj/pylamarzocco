@@ -572,7 +572,7 @@ class LaMarzoccoCloudClient:
         return await self.__execute_command(
             serial_number, "CoffeeMachineSettingCoffeeBoilerTargetTemperature", data
         )
-    
+
     async def set_steam_target_temperature(
         self, serial_number: str, target_temperature: float, boiler_index: int = 1
     ) -> bool:

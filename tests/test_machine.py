@@ -21,8 +21,8 @@ from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
     BaseDoseSettings,
     BluetoothCommandStatus,
-    BrewByWeightDoseSettings,
     BrewByWeightDoses,
+    BrewByWeightDoseSettings,
 )
 
 
@@ -247,12 +247,18 @@ async def test_set_brew_by_weight_dose(
     mock_cloud_client.set_brew_by_weight_dose.return_value = True
 
     # Set up the dashboard with brew by weight widget
-    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = BrewByWeightDoses(
-        mode=DoseMode.DOSE_1,
-        doses=BrewByWeightDoseSettings(
-            dose_1=BaseDoseSettings(dose=32.0, dose_min=5, dose_max=100, dose_step=0.1),
-            dose_2=BaseDoseSettings(dose=34.0, dose_min=5, dose_max=100, dose_step=0.1),
-        ),
+    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = (
+        BrewByWeightDoses(
+            mode=DoseMode.DOSE_1,
+            doses=BrewByWeightDoseSettings(
+                dose_1=BaseDoseSettings(
+                    dose=32.0, dose_min=5, dose_max=100, dose_step=1
+                ),
+                dose_2=BaseDoseSettings(
+                    dose=34.0, dose_min=5, dose_max=100, dose_step=1
+                ),
+            ),
+        )
     )
 
     assert await mock_machine.set_brew_by_weight_dose(DoseMode.DOSE_1, 36.5)

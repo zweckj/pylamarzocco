@@ -70,13 +70,13 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     async def get_model_info_from_bluetooth(self) -> None:
         """Fetch and update model information from Bluetooth.
-        
+
         Retrieves machine capabilities via Bluetooth and updates the dashboard
         with model_name and model_code information.
         """
         if self._bluetooth_client is None:
             raise BluetoothConnectionFailed("Bluetooth client not initialized")
-        
+
         try:
             capabilities = await self._bluetooth_client.get_machine_capabilities()
         except (BleakError, BluetoothConnectionFailed) as exc:
@@ -170,9 +170,13 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                         ),
                     )
                     steam_level.enabled = boiler.is_enabled
-                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = steam_level
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = (
+                        steam_level
+                    )
                     # Remove temperature widget if it exists (not applicable for this model)
-                    self.dashboard.config.pop(WidgetType.CM_STEAM_BOILER_TEMPERATURE, None)
+                    self.dashboard.config.pop(
+                        WidgetType.CM_STEAM_BOILER_TEMPERATURE, None
+                    )
                 else:
                     # Other models (GS3, original Mini) use steam temperature widget
                     steam_temp = cast(
@@ -311,7 +315,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             coffee_boiler.target_temperature = float(temperature)
 
         return result
-    
+
     @models_supported((ModelCode.GS3, ModelCode.GS3_AV, ModelCode.GS3_MP))
     async def set_steam_target_temperature(self, temperature: float) -> bool:
         """Set the steam target temperature."""
@@ -428,9 +432,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     @cloud_only
     @models_supported((ModelCode.LINEA_MINI_R,))
-    async def set_brew_by_weight_dose(
-        self, dose: DoseMode, value: float
-    ) -> bool:
+    async def set_brew_by_weight_dose(self, dose: DoseMode, value: float) -> bool:
         """Set a brew by weight dose value (Linea Mini R only).
 
         Args:
