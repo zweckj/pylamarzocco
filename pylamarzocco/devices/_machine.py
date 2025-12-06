@@ -11,6 +11,7 @@ from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
     BoilerStatus,
     BoilerType,
+    DoseMode,
     MachineMode,
     MachineState,
     ModelCode,
@@ -21,6 +22,7 @@ from pylamarzocco.const import (
 )
 from pylamarzocco.exceptions import BluetoothConnectionFailed
 from pylamarzocco.models import (
+    BrewByWeightDoses,
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
     CoffeeBoiler,
@@ -68,13 +70,13 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     async def get_model_info_from_bluetooth(self) -> None:
         """Fetch and update model information from Bluetooth.
-        
+
         Retrieves machine capabilities via Bluetooth and updates the dashboard
         with model_name and model_code information.
         """
         if self._bluetooth_client is None:
             raise BluetoothConnectionFailed("Bluetooth client not initialized")
-        
+
         try:
             capabilities = await self._bluetooth_client.get_machine_capabilities()
         except (BleakError, BluetoothConnectionFailed) as exc:
@@ -168,9 +170,13 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                         ),
                     )
                     steam_level.enabled = boiler.is_enabled
-                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = steam_level
+                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = (
+                        steam_level
+                    )
                     # Remove temperature widget if it exists (not applicable for this model)
-                    self.dashboard.config.pop(WidgetType.CM_STEAM_BOILER_TEMPERATURE, None)
+                    self.dashboard.config.pop(
+                        WidgetType.CM_STEAM_BOILER_TEMPERATURE, None
+                    )
                 else:
                     # Other models (GS3, original Mini) use steam temperature widget
                     steam_temp = cast(
@@ -309,7 +315,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             coffee_boiler.target_temperature = float(temperature)
 
         return result
-    
+
     @models_supported((ModelCode.GS3, ModelCode.GS3_AV, ModelCode.GS3_MP))
     async def set_steam_target_temperature(self, temperature: float) -> bool:
         """Set the steam target temperature."""
@@ -400,6 +406,78 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return await self._cloud_client.set_wakeup_schedule(
             self.serial_number, schedule
         )
+
+    @cloud_only
+    @models_supported((ModelCode.LINEA_MINI_R,))
+    async def set_brew_by_weight_dose_mode(self, mode: DoseMode) -> bool:
+        """Set the brew by weight dose mode (Linea Mini R only).
+
+        Args:
+            mode: The dose mode (DoseMode.DOSE_1, DoseMode.DOSE_2, or DoseMode.CONTINUOUS)
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.change_brew_by_weight_dose_mode(
+            self.serial_number, mode
+        )
+
+        # Update dashboard if command succeeded
+        if result and WidgetType.CM_BREW_BY_WEIGHT_DOSES in self.dashboard.config:
+            brew_by_weight = cast(
+                BrewByWeightDoses,
+                self.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES],
+            )
+            brew_by_weight.mode = mode
+
+        return result
+
+    @cloud_only
+    @models_supported((ModelCode.LINEA_MINI_R,))
+    async def set_brew_by_weight_dose(self, dose: DoseMode, value: float) -> bool:
+        """Set a brew by weight dose value (Linea Mini R only).
+
+        Args:
+            dose: Which dose to set (must be DoseMode.DOSE_1 or DoseMode.DOSE_2,
+                  CONTINUOUS is not valid for setting dose values)
+            value: The dose value in grams
+
+        Returns:
+            True if the command was successful, False otherwise.
+            Returns False if dose is not DOSE_1 or DOSE_2 or if the brew by
+            weight widget is not available in the dashboard.
+        """
+        assert self._cloud_client
+
+        # Get current doses from dashboard
+        if WidgetType.CM_BREW_BY_WEIGHT_DOSES not in self.dashboard.config:
+            return False
+
+        brew_by_weight = cast(
+            BrewByWeightDoses,
+            self.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES],
+        )
+
+        # Set the dose values, keeping the other one unchanged
+        if dose == DoseMode.DOSE_1:
+            dose_1 = value
+            dose_2 = brew_by_weight.doses.dose_2.dose
+        elif dose == DoseMode.DOSE_2:
+            dose_1 = brew_by_weight.doses.dose_1.dose
+            dose_2 = value
+        else:
+            return False
+
+        result = await self._cloud_client.set_brew_by_weight_dose(
+            self.serial_number, dose_1, dose_2
+        )
+
+        # Update dashboard if command succeeded
+        if result:
+            if dose == DoseMode.DOSE_1:
+                brew_by_weight.doses.dose_1.dose = value
+            else:
+                brew_by_weight.doses.dose_2.dose = value
+
+        return result
 
     def to_dict(self) -> dict[Any, Any]:
         """Return self in dict represenation."""
