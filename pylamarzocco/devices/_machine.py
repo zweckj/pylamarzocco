@@ -408,9 +408,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
     @cloud_only
-    @models_supported((ModelCode.LINEA_MINI_R,))
+    @models_supported((ModelCode.LINEA_MINI, ModelCode.LINEA_MINI_R))
     async def set_brew_by_weight_dose_mode(self, mode: DoseMode) -> bool:
-        """Set the brew by weight dose mode (Linea Mini R only).
+        """Set the brew by weight dose mode (Linea Mini models only).
 
         Args:
             mode: The dose mode (DoseMode.DOSE_1, DoseMode.DOSE_2, or DoseMode.CONTINUOUS)
@@ -431,9 +431,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported((ModelCode.LINEA_MINI_R,))
+    @models_supported((ModelCode.LINEA_MINI, ModelCode.LINEA_MINI_R))
     async def set_brew_by_weight_dose(self, dose: DoseMode, value: float) -> bool:
-        """Set a brew by weight dose value (Linea Mini R only).
+        """Set a brew by weight dose value (Linea Mini models only).
 
         Args:
             dose: Which dose to set (must be DoseMode.DOSE_1 or DoseMode.DOSE_2,
