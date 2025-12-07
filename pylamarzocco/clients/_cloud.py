@@ -655,7 +655,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         mode: DoseMode,
     ) -> bool:
-        """Change the brew by weight dose mode (Linea Mini R only)."""
+        """Change the brew by weight dose mode (Linea Mini models only)."""
         data = {"mode": mode.value}
         return await self.__execute_command(
             serial_number, "CoffeeMachineBrewByWeightChangeMode", data
@@ -667,7 +667,7 @@ class LaMarzoccoCloudClient:
         dose_1: float,
         dose_2: float,
     ) -> bool:
-        """Set the brew by weight doses (Linea Mini R only)."""
+        """Set the brew by weight doses (Linea Mini models only)."""
         data = {
             "doses": {
                 "Dose1": round(dose_1, 1),
