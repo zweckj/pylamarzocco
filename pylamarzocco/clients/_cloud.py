@@ -121,6 +121,7 @@ class LaMarzoccoCloudClient:
             return
 
         if response.status == 401:
+            _LOGGER.debug("Authentication failed: %s", await response.text())
             raise AuthFail("Invalid username or password")
 
         raise RequestNotSuccessful(
@@ -182,6 +183,7 @@ class LaMarzoccoCloudClient:
             return AccessToken.from_dict(json_response)
 
         if response.status == 401:
+            _LOGGER.debug("Authentication failed: %s", await response.text())
             raise AuthFail("Invalid username or password")
 
         raise RequestNotSuccessful(
@@ -227,6 +229,7 @@ class LaMarzoccoCloudClient:
             return json_response
 
         if response.status == 401:
+            _LOGGER.debug("Authentication failed: %s", await response.text())
             raise AuthFail("Authentication failed.")
 
         raise RequestNotSuccessful(
