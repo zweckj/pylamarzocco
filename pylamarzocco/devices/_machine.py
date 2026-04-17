@@ -386,6 +386,18 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
     @cloud_only
+    async def set_auto_standby(self, mode: str) -> bool:
+        """Set auto standby."""
+        assert self._cloud_client
+        return await self._cloud_client.set_auto_standby(self.serial_number, mode)
+
+    @cloud_only
+    async def set_auto_on_off(self, schedule: str) -> bool:
+        """Set auto on off."""
+        assert self._cloud_client
+        return await self._cloud_client.set_auto_on_off(self.serial_number, schedule)
+
+    @cloud_only
     async def delete_wakeup_schedule(
         self,
         schedule_id: str,

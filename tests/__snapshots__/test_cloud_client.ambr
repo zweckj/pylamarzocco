@@ -1841,6 +1841,10 @@
 # ---
 # name: test_get_thing_schedule
   dict({
+    'auto_on_off': '00:30',
+    'auto_on_off_supported': True,
+    'auto_stand_by': '00:30',
+    'auto_stand_by_supported': True,
     'available_firmware_update': False,
     'ble_auth_token': None,
     'coffee_station': None,

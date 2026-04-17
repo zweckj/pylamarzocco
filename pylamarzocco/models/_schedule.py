@@ -87,6 +87,22 @@ class ThingSchedulingSettings(Thing):
         metadata=field_options(alias="smartWakeUpSleep"),
         default_factory=SmartWakeUpSleepSettings,
     )
+    auto_stand_by: str | None = field(
+        metadata=field_options(alias="autoStandBy"),
+        default=None,
+    )
+    auto_stand_by_supported: bool = field(
+        metadata=field_options(alias="autoStandBySupported"),
+        default=False,
+    )
+    auto_on_off: str | None = field(
+        metadata=field_options(alias="autoOnOff"),
+        default=None,
+    )
+    auto_on_off_supported: bool = field(
+        metadata=field_options(alias="autoOnOffSupported"),
+        default=False,
+    )
 
 
 # ws SUBSCRIBE /ws/sn/SERIAL/scheduling

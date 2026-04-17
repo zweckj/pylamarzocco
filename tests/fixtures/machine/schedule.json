@@ -44,10 +44,10 @@
   "weeklySupported": false,
   "weekly": null,
   "weeklyTutorialUrl": "https://www.lamarzocco.com/it/en/app/support/scheduling/#linea-classic-s",
-  "autoOnOffSupported": false,
-  "autoOnOff": null,
+  "autoOnOffSupported": true,
+  "autoOnOff": "00:30",
   "autoOnOffTutorialUrl": "https://www.lamarzocco.com/it/en/app/support/scheduling/#gb5-s-x-kb90-linea-pb-pbx-strada-s-x-commercial",
-  "autoStandBySupported": false,
-  "autoStandBy": null,
+  "autoStandBySupported": true,
+  "autoStandBy": "00:30",
   "autoStandByTutorialUrl": null
 }

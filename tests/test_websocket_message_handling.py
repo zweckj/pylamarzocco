@@ -203,7 +203,7 @@ class TestWebSocketMessageHandling:
             )
         
         # Verify CONNECT and SUBSCRIBE messages were sent
-        assert mock_ws.send_str.call_count == 2
+        assert mock_ws.send_str.call_count == 3
         
         # Verify websocket details were set
         assert mock_client.websocket is not None

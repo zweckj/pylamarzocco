@@ -16,6 +16,7 @@ from pylamarzocco.models import (
     ThingSettings,
     ThingStatistics,
     UpdateDetails,
+    SmartWakeUpScheduleWebsocketConfig,
     WebSocketDetails,
 )
 
@@ -82,7 +83,7 @@ class LaMarzoccoThing:
         self.serial_number = serial_number
         self._cloud_client = cloud_client
         self._bluetooth_client = bluetooth_client
-        self._update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = (
+        self._update_callback: Callable[[ThingDashboardWebsocketConfig | SmartWakeUpScheduleWebsocketConfig], Any] | None = (
             None
         )
         self.dashboard = ThingDashboardConfig(serial_number=serial_number)
@@ -148,11 +149,21 @@ class LaMarzoccoThing:
         return await self._cloud_client.get_thing_firmware(self.serial_number)
 
     def _websocket_dashboard_update_received(
-        self, config: ThingDashboardWebsocketConfig
+        self, config: ThingDashboardWebsocketConfig | SmartWakeUpScheduleWebsocketConfig
     ) -> None:
         """Handler for receiving a websocket message."""
-        self.dashboard.widgets = config.widgets
-        self.dashboard.config = config.config
+        if isinstance(config, ThingDashboardWebsocketConfig):
+            self.dashboard.widgets = config.widgets
+            self.dashboard.config = config.config
+        elif isinstance(config, SmartWakeUpScheduleWebsocketConfig):
+            if hasattr(self, "schedule"):
+                self.schedule.auto_stand_by = config.auto_stand_by
+                self.schedule.auto_stand_by_supported = config.auto_stand_by_supported
+                self.schedule.auto_on_off = config.auto_on_off
+                self.schedule.auto_on_off_supported = config.auto_on_off_supported
+                if config.smart_wake_up_sleep:
+                    self.schedule.smart_wake_up_sleep = config.smart_wake_up_sleep
+                self.schedule.smart_wake_up_sleep_supported = config.smart_wake_up_sleep_supported
 
         if self._update_callback is not None:
             self._update_callback(config)
@@ -160,7 +171,7 @@ class LaMarzoccoThing:
     @cloud_only
     async def connect_dashboard_websocket(
         self,
-        update_callback: Callable[[ThingDashboardWebsocketConfig], Any] | None = None,
+        update_callback: Callable[[ThingDashboardWebsocketConfig | SmartWakeUpScheduleWebsocketConfig], Any] | None = None,
         connect_callback: Callable[[], Any] | None = None,
         disconnect_callback: Callable[[], Any] | None = None,
         auto_reconnect: bool = True,
