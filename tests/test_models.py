@@ -7,7 +7,6 @@ from syrupy import SnapshotAssertion
 
 from pylamarzocco.const import WidgetType
 from pylamarzocco.models import (
-    SmartWakeUpScheduleWebsocketConfig,
     ThingDashboardWebsocketConfig,
 )
 from pylamarzocco.models._statistics import ThingStatistics
@@ -21,14 +20,6 @@ async def test_device_config(snapshot: SnapshotAssertion) -> None:
     fixture = load_fixture("machine", "config_micra.json")
     device = ThingDashboardWebsocketConfig.from_dict(fixture)
     assert device.to_dict() == snapshot
-
-
-async def test_scheduling_websocket_config(snapshot: SnapshotAssertion) -> None:
-    """Test the config model serialization."""
-
-    fixture = load_fixture("machine", "schedule_ws.json")
-    schedule = SmartWakeUpScheduleWebsocketConfig.from_dict(fixture)
-    assert schedule.to_dict() == snapshot
 
 
 async def test_removed_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:

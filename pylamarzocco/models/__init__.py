@@ -43,7 +43,7 @@ from ._general import (
 )
 from ._schedule import (
     ThingSchedulingSettings,
-    SmartWakeUpScheduleWebsocketConfig,
+    SmartStandBy,
     SmartWakeUpSleepSettings,
     WakeUpScheduleSettings,
 )
@@ -109,7 +109,7 @@ __all__ = [
     "ThingSchedulingSettings",
     "SecondsInOut",
     "SigninTokenRequest",
-    "SmartWakeUpScheduleWebsocketConfig",
+    "SmartStandBy",
     "SmartWakeUpSleepSettings",
     "SteamBoilerLevel",
     "SteamBoilerTemperature",
