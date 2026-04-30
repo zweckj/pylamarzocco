@@ -53,7 +53,6 @@ from pylamarzocco.models import (
     UpdateDetails,
     WakeUpScheduleSettings,
     WebSocketDetails,
-    SmartWakeUpScheduleWebsocketConfig,
 )
 from pylamarzocco.util import (
     InstallationKey,
@@ -329,7 +328,7 @@ class LaMarzoccoCloudClient:
     async def websocket_connect(
         self,
         serial_number: str,
-        notification_callback: Callable[[ThingDashboardWebsocketConfig | SmartWakeUpScheduleWebsocketConfig], Any]
+        notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
         | None = None,
         connect_callback: Callable[[], Any] | None = None,
         disconnect_callback: Callable[[], Any] | None = None,
@@ -413,18 +412,6 @@ class LaMarzoccoCloudClient:
         )
         await ws.send_str(subscribe_msg)
 
-        schedule_subscription_id = str(uuid.uuid4())
-        subscribe_schedule_msg = encode_stomp_ws_message(
-            StompMessageType.SUBSCRIBE,
-            {
-                "destination": f"/ws/sn/{serial_number}/scheduling",
-                "ack": "auto",
-                "id": schedule_subscription_id,
-                "content-length": "0",
-            },
-        )
-        await ws.send_str(subscribe_schedule_msg)
-
         async def disconnect_websocket() -> None:
             _LOGGER.debug("Disconnecting websocket")
             if ws.closed:
@@ -436,13 +423,6 @@ class LaMarzoccoCloudClient:
                 },
             )
             await ws.send_str(disconnect_msg)
-            disconnect_schedule_msg = encode_stomp_ws_message(
-                StompMessageType.UNSUBSCRIBE,
-                {
-                    "id": schedule_subscription_id,
-                },
-            )
-            await ws.send_str(disconnect_schedule_msg)
             await ws.close()
 
         self.websocket = WebSocketDetails(ws, disconnect_websocket)
@@ -451,7 +431,7 @@ class LaMarzoccoCloudClient:
         self,
         ws: ClientWebSocketResponse,
         msg: WSMessage,
-        notification_callback: Callable[[ThingDashboardWebsocketConfig | SmartWakeUpScheduleWebsocketConfig], Any]
+        notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
         | None = None,
     ) -> bool:
         """Handle receiving a websocket message. Return True for disconnect."""
@@ -481,26 +461,13 @@ class LaMarzoccoCloudClient:
     def __parse_websocket_message(
         self,
         message: str | None,
-        notification_callback: Callable[[ThingDashboardWebsocketConfig | SmartWakeUpScheduleWebsocketConfig], Any]
+        notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
         | None = None,
     ) -> None:
         """Parse the websocket message."""
         if message is None:
             return
-
-        try:
-            data = json.loads(message)
-        except json.JSONDecodeError:
-            _LOGGER.error("Failed to parse websocket message as JSON")
-            return
-
-        if "widgets" in data or "invalidWidgets" in data:
-            config = ThingDashboardWebsocketConfig.from_json(message)
-        elif "smartWakeUpSleep" in data or "autoStandBy" in data or "autoOnOff" in data:
-            config = SmartWakeUpScheduleWebsocketConfig.from_json(message)
-        else:
-            _LOGGER.debug("Unknown websocket message format: %s", message)
-            return
+        config = ThingDashboardWebsocketConfig.from_json(message)
 
         # notify if there is the result for a pending command
         for command in config.commands:
