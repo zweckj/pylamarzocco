@@ -76,9 +76,29 @@ class SmartWakeUpSleepSettings(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
+class SmartStandBy(DataClassJSONMixin):
+    """Smart standby settings (top level)."""
+
+    enabled: bool = False
+    minutes: int = 0
+    minutes_min: int = field(metadata=field_options(alias="minutesMin"), default=0)
+    minutes_max: int = field(metadata=field_options(alias="minutesMax"), default=0)
+    minutes_step: int = field(metadata=field_options(alias="minutesStep"), default=0)
+    after: SmartStandByType = field(default=SmartStandByType.POWER_ON)
+
+
+@dataclass(kw_only=True)
 class ThingSchedulingSettings(Thing):
     """Scheduling settings."""
 
+    smart_stand_by_supported: bool = field(
+        metadata=field_options(alias="smartStandBySupported"),
+        default=False,
+    )
+    smart_stand_by: SmartStandBy | None = field(
+        metadata=field_options(alias="smartStandBy"),
+        default=None,
+    )
     smart_wake_up_sleep_supported: bool = field(
         metadata=field_options(alias="smartWakeUpSleepSupported"),
         default=True,
@@ -87,45 +107,19 @@ class ThingSchedulingSettings(Thing):
         metadata=field_options(alias="smartWakeUpSleep"),
         default_factory=SmartWakeUpSleepSettings,
     )
-
-
-# ws SUBSCRIBE /ws/sn/SERIAL/scheduling
-@dataclass(kw_only=True)
-class SmartWakeUpScheduleWebsocketConfig(DataClassJSONMixin):
-    """Smart wake up schedule settings from websocket."""
-
-    connected: bool
     auto_stand_by: str | None = field(
         metadata=field_options(alias="autoStandBy"),
         default=None,
+    )
+    auto_stand_by_supported: bool = field(
+        metadata=field_options(alias="autoStandBySupported"),
+        default=False,
     )
     auto_on_off: str | None = field(
         metadata=field_options(alias="autoOnOff"),
         default=None,
     )
-    connection_date: datetime | None = field(
-        metadata=field_options(
-            alias="connectionDate",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
-            if ts
-            else None,
-        ),
-        default=None,
-    )
-    auto_stand_by_supported: bool = field(
-        metadata=field_options(alias="autoStandBySupported")
-    )
     auto_on_off_supported: bool = field(
-        metadata=field_options(alias="autoOnOffSupported")
-    )
-    smart_wake_up_sleep: SmartWakeUpSleepSettings | None = field(
-        metadata=field_options(alias="smartWakeUpSleep"),
-        default=None,
-    )
-    weekly_supported: bool = field(metadata=field_options(alias="weeklySupported"))
-    smart_wake_up_sleep_supported: bool = field(
-        metadata=field_options(alias="smartWakeUpSleepSupported")
-    )
-    commands: list[CommandResponse] = field(
-        default_factory=list,
+        metadata=field_options(alias="autoOnOffSupported"),
+        default=False,
     )

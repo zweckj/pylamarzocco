@@ -1841,6 +1841,10 @@
 # ---
 # name: test_get_thing_schedule
   dict({
+    'auto_on_off': '00:30',
+    'auto_on_off_supported': True,
+    'auto_stand_by': '00:30',
+    'auto_stand_by_supported': True,
     'available_firmware_update': False,
     'ble_auth_token': None,
     'coffee_station': None,
@@ -1854,6 +1858,8 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'MR123456',
+    'smart_stand_by': None,
+    'smart_stand_by_supported': False,
     'smart_wake_up_sleep': dict({
       'schedules': list([
         dict({

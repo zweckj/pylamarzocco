@@ -1,10 +1,10 @@
 {
   "connected": true,
-  "autoStandBy": null,
-  "autoOnOff": null,
+  "autoStandBy": "00:30",
+  "autoOnOff": "00:30",
   "connectionDate": 1742526019892,
-  "autoStandBySupported": false,
-  "autoOnOffSupported": false,
+  "autoStandBySupported": true,
+  "autoOnOffSupported": true,
   "smartWakeUpSleep": {
     "smartStandByEnabled": true,
     "smartStandByMinutes": 10,

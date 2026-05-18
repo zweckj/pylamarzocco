@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 import uuid
@@ -630,6 +631,26 @@ class LaMarzoccoCloudClient:
         data = {"enabled": enabled, "minutes": minutes, "after": after.value}
         return await self.__execute_command(
             serial_number, "CoffeeMachineSettingSmartStandBy", data
+        )
+
+    async def set_auto_standby(
+        self, serial_number: str, mode: str
+    ) -> bool:
+        """Set auto standby"""
+
+        data = {"mode": mode}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingAutoStandBy", data
+        )
+
+    async def set_auto_on_off(
+        self, serial_number: str, schedule: str
+    ) -> bool:
+        """Set auto on off"""
+
+        data = {"schedule": schedule}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingAutoOnOff", data
         )
 
     async def delete_wakeup_schedule(

@@ -371,6 +371,12 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         self, enabled: bool, minutes: int, mode: SmartStandByType
     ) -> bool:
         """Set the smart standby mode."""
+        if getattr(self.schedule, "auto_stand_by_supported", False):
+            assert self._cloud_client
+            # Format as HH:MM or Off based on enabled state
+            auto_mode = f"{minutes // 60:02d}:{minutes % 60:02d}" if enabled else "Off"
+            return await self._cloud_client.set_auto_standby(self.serial_number, auto_mode)
+
         return await self.__bluetooth_command_with_cloud_fallback(
             command="set_smart_standby",
             bluetooth_kwargs={
@@ -384,6 +390,12 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 "after": mode,
             },
         )
+
+    @cloud_only
+    async def set_auto_on_off(self, schedule: str) -> bool:
+        """Set auto on off."""
+        assert self._cloud_client
+        return await self._cloud_client.set_auto_on_off(self.serial_number, schedule)
 
     @cloud_only
     async def delete_wakeup_schedule(
