@@ -711,5 +711,4 @@ class LaMarzoccoCloudClient:
         response = await self._rest_api_call(url=url, method=HTTPMethod.POST)
         return UpdateDetails.from_dict(response)
 
-
 # endregion

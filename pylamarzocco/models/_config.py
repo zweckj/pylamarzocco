@@ -19,6 +19,8 @@ from pylamarzocco.const import (
     DoseIndexType,
     DoseMode,
     FirmwareType,
+    GrinderDoseType,
+    GrinderMode,
     MachineMode,
     MachineState,
     PreExtractionMode,
@@ -530,3 +532,91 @@ class NoWater(BaseWidgetOutput):
 
     widget_type = WidgetType.CM_NO_WATER
     allarm: bool
+
+
+# region grinder widgets
+
+
+@dataclass(kw_only=True)
+class GrinderStatus(BaseWidgetOutput):
+    """Grinder machine status."""
+
+    widget_type = WidgetType.G_MACHINE_STATUS
+    status: GrinderMode
+    available_modes: list[GrinderMode] = field(
+        metadata=field_options(alias="availableModes")
+    )
+    mode: GrinderMode
+    ready_start_time: datetime | None = field(
+        metadata=field_options(
+            alias="readyStartTime",
+            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+        ),
+        default=None,
+    )
+
+
+@dataclass(kw_only=True)
+class GrinderDoseSettings(DataClassJSONMixin):
+    """Single grinder dose settings."""
+
+    dose_index: DoseIndex = field(metadata=field_options(alias="doseIndex"))
+    dose: float
+    dose_min: float = field(metadata=field_options(alias="doseMin"))
+    dose_max: float = field(metadata=field_options(alias="doseMax"))
+    dose_step: float = field(metadata=field_options(alias="doseStep"))
+    speed_auto_supported: bool = field(
+        metadata=field_options(alias="speedAutoSupported"), default=False
+    )
+    speed_auto: int | None = field(
+        metadata=field_options(alias="speedAuto"), default=None
+    )
+
+
+@dataclass(kw_only=True)
+class GrinderDosesByType(DataClassJSONMixin):
+    """Grinder doses grouped by dose type."""
+
+    time_type: list[GrinderDoseSettings] = field(
+        metadata=field_options(alias="TimeType"), default_factory=list
+    )
+    mass_type: list[GrinderDoseSettings] = field(
+        metadata=field_options(alias="MassType"), default_factory=list
+    )
+
+
+@dataclass(kw_only=True)
+class GrinderDoses(BaseWidgetOutput):
+    """Grinder doses configuration."""
+
+    widget_type = WidgetType.G_DOSES
+    scale_connected: bool = field(
+        metadata=field_options(alias="scaleConnected"), default=False
+    )
+    mode: GrinderDoseType
+    doses: GrinderDosesByType
+    speed_levels_supported: bool = field(
+        metadata=field_options(alias="speedLevelsSupported"), default=False
+    )
+    speed_levels: list[int] | None = field(
+        metadata=field_options(alias="speedLevels"), default=None
+    )
+
+
+@dataclass(kw_only=True)
+class GrinderSingleDoseMode(BaseWidgetOutput):
+    """Grinder single dose mode toggle."""
+
+    widget_type = WidgetType.G_SINGLE_DOSE_MODE
+    enabled: bool
+
+
+@dataclass(kw_only=True)
+class GrinderBaristaLight(BaseWidgetOutput):
+    """Grinder barista light toggle."""
+
+    widget_type = WidgetType.G_BARISTA_LIGHT
+    enabled: bool
+
+
+# endregion

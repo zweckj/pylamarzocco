@@ -186,6 +186,20 @@ class DoseIndex(StrEnum):
     DOSE_D = "DoseD"
 
 
+class GrinderMode(StrEnum):
+    """Grinder modes."""
+
+    STANDBY = "StandBy"
+    GRINDING_MODE = "GrindingMode"
+
+
+class GrinderDoseType(StrEnum):
+    """Grinder dose types."""
+
+    TIME = "TimeType"
+    MASS = "MassType"
+
+
 class SmartStandByType(StrEnum):
     """Smart Standby types."""
 
