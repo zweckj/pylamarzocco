@@ -1,7 +1,4 @@
-"""Init the devices module.
-
-Currently not in use
-"""
+"""Init the devices module."""
 
 from ._grinder import LaMarzoccoGrinder
 from ._machine import LaMarzoccoMachine
