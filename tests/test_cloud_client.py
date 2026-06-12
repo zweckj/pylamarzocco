@@ -544,7 +544,7 @@ async def test_set_wake_up_schedule(
 ) -> None:
     """Test setting the wake up schedule for a thing."""
 
-    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSetWakeUpSchedule"
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingWakeUpSchedule"
     mock_aioresponse.post(
         url=url,
         status=200,
