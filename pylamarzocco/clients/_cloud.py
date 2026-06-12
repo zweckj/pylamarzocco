@@ -674,6 +674,20 @@ class LaMarzoccoCloudClient:
             serial_number, "CoffeeMachineSettingWakeUpSchedule", schedule.to_dict()
         )
 
+    async def set_grinder_barista_light(
+        self,
+        serial_number: str,
+        enabled: bool,
+    ) -> bool:
+        """Enable or disable the barista light of a grinder.
+
+        Note: the grinder ignores setting commands while in StandBy.
+        """
+        data = {"index": 1, "enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "GrinderSettingBaristaLightEnabled", data
+        )
+
     async def change_brew_by_weight_dose_mode(
         self,
         serial_number: str,

@@ -1,0 +1,114 @@
+{
+    "serialNumber": "GR123456",
+    "type": "Grinder",
+    "name": "GR123456",
+    "location": null,
+    "modelCode": "PICOGRINDER",
+    "modelName": "PICOGRINDER",
+    "connected": true,
+    "connectionDate": 1742526019892,
+    "offlineMode": false,
+    "requireFirmwareUpdate": false,
+    "availableFirmwareUpdate": false,
+    "coffeeStation": null,
+    "imageUrl": "https://lion.lamarzocco.io/img/thing-model/list/picogrinder/picogrinder-1.png",
+    "bleAuthToken": null,
+    "widgets": [
+        {
+            "code": "GMachineStatus",
+            "index": 1,
+            "output": {
+                "status": "StandBy",
+                "readyStartTime": null,
+                "availableModes": [
+                    "GrindingMode",
+                    "StandBy"
+                ],
+                "mode": "StandBy"
+            },
+            "tutorialUrl": null
+        },
+        {
+            "code": "GDoses",
+            "index": 1,
+            "output": {
+                "scaleConnected": false,
+                "mode": "TimeType",
+                "doses": {
+                    "TimeType": [
+                        {
+                            "doseIndex": "DoseA",
+                            "dose": 1.5,
+                            "doseMin": 0,
+                            "doseMax": 20,
+                            "doseStep": 0.05,
+                            "speedAutoSupported": false,
+                            "speedAuto": null
+                        },
+                        {
+                            "doseIndex": "DoseB",
+                            "dose": 10.7,
+                            "doseMin": 0,
+                            "doseMax": 20,
+                            "doseStep": 0.05,
+                            "speedAutoSupported": false,
+                            "speedAuto": null
+                        }
+                    ],
+                    "MassType": [
+                        {
+                            "doseIndex": "DoseA",
+                            "dose": 9.5,
+                            "doseMin": 4,
+                            "doseMax": 36,
+                            "doseStep": 0.1,
+                            "speedAutoSupported": false,
+                            "speedAuto": null
+                        },
+                        {
+                            "doseIndex": "DoseB",
+                            "dose": 19.0,
+                            "doseMin": 4,
+                            "doseMax": 36,
+                            "doseStep": 0.1,
+                            "speedAutoSupported": false,
+                            "speedAuto": null
+                        }
+                    ]
+                },
+                "speedLevelsSupported": false,
+                "speedLevels": null
+            },
+            "tutorialUrl": "http://lamarzocco.com/it/en/app/support/grind-by-weight/#pico"
+        },
+        {
+            "code": "GSingleDoseMode",
+            "index": 1,
+            "output": {
+                "enabled": false
+            },
+            "tutorialUrl": "http://lamarzocco.com/it/en/app/support/pico-single-dose"
+        },
+        {
+            "code": "GBaristaLight",
+            "index": 1,
+            "output": {
+                "enabled": true
+            },
+            "tutorialUrl": null
+        },
+        {
+            "code": "ThingScale",
+            "index": 1,
+            "output": {
+                "name": "LMZ-AA8970",
+                "connected": false,
+                "batteryLevel": 0.0,
+                "calibrationRequired": false,
+                "forceConnectSupported": false
+            },
+            "tutorialUrl": "http://lamarzocco.com/it/en/app/support/training-scale-location/#pico"
+        }
+    ],
+    "runningCommands": []
+}

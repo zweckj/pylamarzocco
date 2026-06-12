@@ -154,6 +154,24 @@ async def test_get_thing_dashboard(
     assert result.to_dict() == snapshot
 
 
+async def test_get_grinder_dashboard(
+    mock_aioresponse: aioresponses,
+    serial: str,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test getting the dashboard for a grinder."""
+
+    mock_aioresponse.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
+        status=200,
+        payload=load_fixture("grinder", "dashboard_pico.json"),
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    result = await client.get_thing_dashboard(serial)
+    assert result.to_dict() == snapshot
+
+
 async def test_get_thing_settings(
     mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
 ) -> None:
@@ -262,6 +280,30 @@ async def test_set_power_with_ws_validation(
 
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {"mode": "StandBy"}
+    assert result is True
+
+
+@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
+async def test_set_grinder_barista_light(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the barista light for a grinder."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingBaristaLightEnabled"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_grinder_barista_light(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"index": 1, "enabled": True}
     assert result is True
 
 

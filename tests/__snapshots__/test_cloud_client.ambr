@@ -1,4 +1,184 @@
 # serializer version: 1
+# name: test_get_grinder_dashboard
+  dict({
+    'available_firmware_update': False,
+    'ble_auth_token': None,
+    'coffee_station': None,
+    'config': dict({
+      'GBaristaLight': dict({
+        'enabled': True,
+      }),
+      'GDoses': dict({
+        'doses': dict({
+          'mass_type': list([
+            dict({
+              'dose': 9.5,
+              'dose_index': 'DoseA',
+              'dose_max': 36.0,
+              'dose_min': 4.0,
+              'dose_step': 0.1,
+              'speed_auto': None,
+              'speed_auto_supported': False,
+            }),
+            dict({
+              'dose': 19.0,
+              'dose_index': 'DoseB',
+              'dose_max': 36.0,
+              'dose_min': 4.0,
+              'dose_step': 0.1,
+              'speed_auto': None,
+              'speed_auto_supported': False,
+            }),
+          ]),
+          'time_type': list([
+            dict({
+              'dose': 1.5,
+              'dose_index': 'DoseA',
+              'dose_max': 20.0,
+              'dose_min': 0.0,
+              'dose_step': 0.05,
+              'speed_auto': None,
+              'speed_auto_supported': False,
+            }),
+            dict({
+              'dose': 10.7,
+              'dose_index': 'DoseB',
+              'dose_max': 20.0,
+              'dose_min': 0.0,
+              'dose_step': 0.05,
+              'speed_auto': None,
+              'speed_auto_supported': False,
+            }),
+          ]),
+        }),
+        'mode': 'TimeType',
+        'scale_connected': False,
+        'speed_levels': None,
+        'speed_levels_supported': False,
+      }),
+      'GMachineStatus': dict({
+        'available_modes': list([
+          'GrindingMode',
+          'StandBy',
+        ]),
+        'mode': 'StandBy',
+        'ready_start_time': None,
+        'status': 'StandBy',
+      }),
+      'GSingleDoseMode': dict({
+        'enabled': False,
+      }),
+      'ThingScale': dict({
+        'battery_level': 0.0,
+        'calibration_required': False,
+        'connected': False,
+        'name': 'LMZ-AA8970',
+      }),
+    }),
+    'connected': True,
+    'connection_date': '2025-03-21T03:00:19.892000+00:00',
+    'image_url': 'https://lion.lamarzocco.io/img/thing-model/list/picogrinder/picogrinder-1.png',
+    'location': None,
+    'model_code': 'PICOGRINDER',
+    'model_name': 'Pico',
+    'name': 'GR123456',
+    'offline_mode': False,
+    'require_firmware_update': False,
+    'serial_number': 'GR123456',
+    'type': 'Grinder',
+    'widgets': list([
+      dict({
+        'code': 'GMachineStatus',
+        'index': 1,
+        'output': dict({
+          'available_modes': list([
+            'GrindingMode',
+            'StandBy',
+          ]),
+          'mode': 'StandBy',
+          'ready_start_time': None,
+          'status': 'StandBy',
+        }),
+      }),
+      dict({
+        'code': 'GDoses',
+        'index': 1,
+        'output': dict({
+          'doses': dict({
+            'mass_type': list([
+              dict({
+                'dose': 9.5,
+                'dose_index': 'DoseA',
+                'dose_max': 36.0,
+                'dose_min': 4.0,
+                'dose_step': 0.1,
+                'speed_auto': None,
+                'speed_auto_supported': False,
+              }),
+              dict({
+                'dose': 19.0,
+                'dose_index': 'DoseB',
+                'dose_max': 36.0,
+                'dose_min': 4.0,
+                'dose_step': 0.1,
+                'speed_auto': None,
+                'speed_auto_supported': False,
+              }),
+            ]),
+            'time_type': list([
+              dict({
+                'dose': 1.5,
+                'dose_index': 'DoseA',
+                'dose_max': 20.0,
+                'dose_min': 0.0,
+                'dose_step': 0.05,
+                'speed_auto': None,
+                'speed_auto_supported': False,
+              }),
+              dict({
+                'dose': 10.7,
+                'dose_index': 'DoseB',
+                'dose_max': 20.0,
+                'dose_min': 0.0,
+                'dose_step': 0.05,
+                'speed_auto': None,
+                'speed_auto_supported': False,
+              }),
+            ]),
+          }),
+          'mode': 'TimeType',
+          'scale_connected': False,
+          'speed_levels': None,
+          'speed_levels_supported': False,
+        }),
+      }),
+      dict({
+        'code': 'GSingleDoseMode',
+        'index': 1,
+        'output': dict({
+          'enabled': False,
+        }),
+      }),
+      dict({
+        'code': 'GBaristaLight',
+        'index': 1,
+        'output': dict({
+          'enabled': True,
+        }),
+      }),
+      dict({
+        'code': 'ThingScale',
+        'index': 1,
+        'output': dict({
+          'battery_level': 0.0,
+          'calibration_required': False,
+          'connected': False,
+          'name': 'LMZ-AA8970',
+        }),
+      }),
+    ]),
+  })
+# ---
 # name: test_get_statistics
   dict({
     'all_widget_codes': list([
