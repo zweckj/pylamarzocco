@@ -33,6 +33,20 @@ class PreExtractionMode(StrEnum):
     DISABLED = "Disabled"
 
 
+class GrinderMode(StrEnum):
+    """Grinder modes."""
+
+    GRINDING = "GrindingMode"
+    STANDBY = "StandBy"
+
+
+class GrinderDoseMode(StrEnum):
+    """Grinder dose modes."""
+
+    TIME = "TimeType"
+    MASS = "MassType"
+
+
 class WidgetType(StrEnum):
     """Widget types."""
 
