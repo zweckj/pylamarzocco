@@ -671,7 +671,7 @@ class LaMarzoccoCloudClient:
     ) -> bool:
         """Set smart wakeup schedule"""
         return await self.__execute_command(
-            serial_number, "CoffeeMachineSetWakeUpSchedule", schedule.to_dict()
+            serial_number, "CoffeeMachineSettingWakeUpSchedule", schedule.to_dict()
         )
 
     async def change_brew_by_weight_dose_mode(
