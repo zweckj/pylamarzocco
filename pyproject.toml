@@ -36,6 +36,7 @@ dev = [
     "pytest-asyncio == 0.24.0",
     "pytest-cov == 6.0.0",
     "aioresponses == 0.7.7",
+    "aiohttp < 3.14",  # aioresponses is incompatible with aiohttp >= 3.14 (pnuckowski/aioresponses#289)
 ]
 
 [tool.pytest.ini_options]
