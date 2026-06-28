@@ -70,6 +70,7 @@ class WidgetType(StrEnum):
     CM_STEAM_FLUSH = "CMSteamFlush"
     CM_NO_WATER = "CMNoWater"
     CM_MODULE_AND_TAPS_TEMPERATURE = "CMModuleAndTapsTemperature"
+    CM_WATER_SENSOR = "WATER_SENSOR"
     G_MACHINE_STATUS = "GMachineStatus"
     G_DOSES = "GDoses"
     G_SINGLE_DOSE_MODE = "GSingleDoseMode"
@@ -132,6 +133,7 @@ class ModelCode(StrEnum):
     GS3 = "GS3"
     GS3_MP = "GS3MP"
     GS3_AV = "GS3AV"
+    STRADA_X = "STRADAX"
     PICO_GRINDER = "PICOGRINDER"
     SWAN_GRINDER = "SWANGRINDER"
 
@@ -145,6 +147,7 @@ class ModelName(StrEnum):
     GS3 = "GS3"
     GS3_MP = "GS3 MP"
     GS3_AV = "GS3 AV"
+    STRADA_X = "Strada X"
     PICO_GRINDER = "Pico"
     SWAN_GRINDER = "Swan"
 
@@ -158,6 +161,7 @@ class ModelName(StrEnum):
             "LINEAMICRA": "Linea Micra",
             "LINEAMINI": "Linea Mini",
             "MICRA": "Linea Micra",
+            "STRADAX": "Strada X",
             "PICOGRINDER": "Pico",
             "SWANGRINDER": "Swan",
         }
@@ -171,6 +175,7 @@ class FirmwareType(StrEnum):
 
     MACHINE = "Machine"
     GATEWAY = "Gateway"
+    FILE = "File"
 
 
 class DoseIndexType(StrEnum):
@@ -187,6 +192,10 @@ class DoseMode(StrEnum):
     PULSES_TYPE = "PulsesType"
     DOSE_1 = "Dose1"
     DOSE_2 = "Dose2"
+    MANUAL_TYPE = "ManualType"
+    MASS_TYPE = "MassType"
+    BREW_RATIO_TYPE = "BrewRatioType"
+    PROFILE_TYPE = "ProfileType"
 
 
 class DoseIndex(StrEnum):

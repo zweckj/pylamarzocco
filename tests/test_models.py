@@ -5,9 +5,19 @@ import logging
 import pytest
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.const import WidgetType
+from pylamarzocco.const import DoseMode, FirmwareType, WidgetType
 from pylamarzocco.models import (
+    AutoOnOff,
+    BrewingPressureSettings,
+    EcoMode,
+    GroupDosesSettings,
+    HotWaterDose,
+    ProfileSettings,
+    RinseFlush,
+    ThingDashboardConfig,
     ThingDashboardWebsocketConfig,
+    ThingSchedulingSettings,
+    ThingSettings,
 )
 from pylamarzocco.models._statistics import ThingStatistics
 
@@ -20,6 +30,95 @@ async def test_device_config(snapshot: SnapshotAssertion) -> None:
     fixture = load_fixture("machine", "config_micra.json")
     device = ThingDashboardWebsocketConfig.from_dict(fixture)
     assert device.to_dict() == snapshot
+
+
+async def test_strada_settings_with_file_firmware() -> None:
+    """Strada X settings parse with the additional 'File' firmware type."""
+
+    fixture = load_fixture("machine", "settings_strada.json")
+    settings = ThingSettings.from_dict(fixture)
+    assert FirmwareType.FILE in settings.firmwares
+    file_fw = settings.firmwares[FirmwareType.FILE]
+    assert file_fw.build_version == "v17"
+    assert file_fw.change_log is None
+
+
+async def test_strada_schedule_eco_mode_and_auto_on_off() -> None:
+    """Strada X schedule parses null smartWakeUpSleep and the eco mode objects."""
+
+    fixture = load_fixture("machine", "schedule_strada.json")
+    schedule = ThingSchedulingSettings.from_dict(fixture)
+
+    assert schedule.smart_wake_up_sleep is None
+
+    assert isinstance(schedule.auto_on_off, AutoOnOff)
+    assert schedule.auto_on_off.on_time_minutes == 360
+    assert schedule.auto_on_off.off_time_minutes == 1080
+    assert isinstance(schedule.auto_on_off.eco_mode, EcoMode)
+
+    assert schedule.eco_mode_supported is True
+    assert isinstance(schedule.eco_mode, EcoMode)
+    assert schedule.eco_mode.offset == 10
+    assert schedule.eco_mode.timeout_minutes == 120
+
+
+async def test_schedule_auto_on_off_string() -> None:
+    """Schedule with a string autoOnOff (e.g. Linea Micra) still parses."""
+
+    fixture = load_fixture("machine", "schedule.json")
+    schedule = ThingSchedulingSettings.from_dict(fixture)
+    assert schedule.auto_on_off == "00:30"
+
+
+async def test_strada_dashboard_group_doses() -> None:
+    """Strada X dashboard parses MassType/BrewRatioType doses and pressure object."""
+
+    fixture = load_fixture("machine", "dashboard_strada.json")
+    dashboard = ThingDashboardConfig.from_dict(fixture)
+
+    group_doses = dashboard.config[WidgetType.CM_GROUP_DOSES]
+    assert isinstance(group_doses, GroupDosesSettings)
+    assert group_doses.mode is DoseMode.MASS_TYPE
+    assert DoseMode.BREW_RATIO_TYPE in group_doses.available_modes
+    assert len(group_doses.doses.mass_type) == 4
+    assert len(group_doses.doses.brew_ratio_type) == 4
+    assert len(group_doses.doses.pulses_type) == 4
+
+    assert isinstance(group_doses.brewing_pressure, BrewingPressureSettings)
+    assert group_doses.brewing_pressure.pressure == 9
+    assert group_doses.brewing_pressure.pressure_max == 12
+
+    hot_water = dashboard.config[WidgetType.CM_HOT_WATER_DOSE]
+    assert isinstance(hot_water, HotWaterDose)
+    assert len(hot_water.doses) == 2
+    assert hot_water.doses[0].dose == 8.33
+
+    rinse_flush = dashboard.config[WidgetType.CM_RINSE_FLUSH]
+    assert isinstance(rinse_flush, RinseFlush)
+    assert rinse_flush.time_seconds == 3.0
+
+
+async def test_strada_dashboard_profile_mode() -> None:
+    """Strada X dashboard parses the ProfileType mode with graph data."""
+
+    fixture = load_fixture("machine", "dashboard_strada_profile.json")
+    dashboard = ThingDashboardConfig.from_dict(fixture)
+
+    group_doses = dashboard.config[WidgetType.CM_GROUP_DOSES]
+    assert isinstance(group_doses, GroupDosesSettings)
+    assert group_doses.mode is DoseMode.PROFILE_TYPE
+    assert DoseMode.PROFILE_TYPE in group_doses.available_modes
+
+    assert isinstance(group_doses.profile, ProfileSettings)
+    assert group_doses.profile.selected_profile == 15
+    assert group_doses.profile.number_of_profiles == 15
+    assert group_doses.profile.mass == 47.5
+    assert group_doses.profile.time == 32.1
+    assert group_doses.profile.graph is not None
+    assert len(group_doses.profile.graph.x) == 300
+    assert len(group_doses.profile.graph.y) == 300
+
+    assert dashboard.to_dict()
 
 
 async def test_removed_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:

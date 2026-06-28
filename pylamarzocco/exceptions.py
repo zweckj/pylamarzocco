@@ -33,3 +33,7 @@ class CloudOnlyFunctionality(LaMarzoccoError):
 
 class UnsupportedModel(LaMarzoccoError):
     """Raised when a certain functionality is only available on certain models."""
+
+
+class OperationNotAvailable(LaMarzoccoError):
+    """Raised when an operation is not available in the machine's current state."""

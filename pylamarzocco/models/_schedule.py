@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from typing import Any
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -12,6 +13,13 @@ from mashumaro.mixins.json import DataClassJSONMixin
 from pylamarzocco.const import SmartStandByType, WeekDay
 
 from ._general import CommandResponse, Thing
+
+
+def _deserialize_auto_on_off(value: Any) -> str | AutoOnOff | None:
+    """Deserialize autoOnOff which can be a string, null or an object."""
+    if isinstance(value, dict):
+        return AutoOnOff.from_dict(value)
+    return value
 
 
 @dataclass(kw_only=True)
@@ -88,6 +96,51 @@ class SmartStandBy(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
+class EcoMode(DataClassJSONMixin):
+    """Eco mode settings."""
+
+    enabled: bool = False
+    offset: int = 0
+    offset_min: int = field(metadata=field_options(alias="offsetMin"), default=0)
+    offset_max: int = field(metadata=field_options(alias="offsetMax"), default=0)
+    offset_step: int = field(metadata=field_options(alias="offsetStep"), default=0)
+    timeout_minutes: int = field(
+        metadata=field_options(alias="timeoutMinutes"), default=0
+    )
+    timeout_minutes_min: int = field(
+        metadata=field_options(alias="timeoutMinutesMin"), default=0
+    )
+    timeout_minutes_max: int = field(
+        metadata=field_options(alias="timeoutMinutesMax"), default=0
+    )
+    timeout_minutes_step: int = field(
+        metadata=field_options(alias="timeoutMinutesStep"), default=0
+    )
+
+
+@dataclass(kw_only=True)
+class AutoOnOff(DataClassJSONMixin):
+    """Auto on/off settings."""
+
+    enabled: bool = False
+    on_time_minutes: int = field(
+        metadata=field_options(alias="onTimeMinutes"), default=0
+    )
+    off_time_minutes: int = field(
+        metadata=field_options(alias="offTimeMinutes"), default=0
+    )
+    close_day: str | None = field(
+        metadata=field_options(alias="closeDay"), default=None
+    )
+    eco_mode_supported: bool = field(
+        metadata=field_options(alias="ecoModeSupported"), default=False
+    )
+    eco_mode: EcoMode | None = field(
+        metadata=field_options(alias="ecoMode"), default=None
+    )
+
+
+@dataclass(kw_only=True)
 class ThingSchedulingSettings(Thing):
     """Scheduling settings."""
 
@@ -103,7 +156,7 @@ class ThingSchedulingSettings(Thing):
         metadata=field_options(alias="smartWakeUpSleepSupported"),
         default=True,
     )
-    smart_wake_up_sleep: SmartWakeUpSleepSettings = field(
+    smart_wake_up_sleep: SmartWakeUpSleepSettings | None = field(
         metadata=field_options(alias="smartWakeUpSleep"),
         default_factory=SmartWakeUpSleepSettings,
     )
@@ -115,11 +168,21 @@ class ThingSchedulingSettings(Thing):
         metadata=field_options(alias="autoStandBySupported"),
         default=False,
     )
-    auto_on_off: str | None = field(
-        metadata=field_options(alias="autoOnOff"),
+    auto_on_off: str | AutoOnOff | None = field(
+        metadata=field_options(
+            alias="autoOnOff", deserialize=_deserialize_auto_on_off
+        ),
         default=None,
     )
     auto_on_off_supported: bool = field(
         metadata=field_options(alias="autoOnOffSupported"),
         default=False,
+    )
+    eco_mode_supported: bool = field(
+        metadata=field_options(alias="ecoModeSupported"),
+        default=False,
+    )
+    eco_mode: EcoMode | None = field(
+        metadata=field_options(alias="ecoMode"),
+        default=None,
     )

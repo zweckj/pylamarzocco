@@ -16,7 +16,9 @@ from pylamarzocco.clients import LaMarzoccoCloudClient
 from pylamarzocco.const import (
     CUSTOMER_APP_URL,
     CommandStatus,
+    DoseIndex,
     DoseMode,
+    MachineMode,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -134,7 +136,7 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
     assert result == "new-token"
 
 
-@pytest.mark.parametrize("model", ["micra", "gs3av", "mini", "minir"])
+@pytest.mark.parametrize("model", ["micra", "gs3av", "mini", "minir", "stradax"])
 async def test_get_thing_dashboard(
     mock_aioresponse: aioresponses,
     model: str,
@@ -280,6 +282,379 @@ async def test_set_power_with_ws_validation(
 
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {"mode": "StandBy"}
+    assert result is True
+
+
+async def test_set_mode(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the operating mode for a thing."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_mode(serial, MachineMode.ECO_MODE)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"mode": "EcoMode"}
+    assert result is True
+
+
+async def test_set_auto_flush(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test enabling auto flush for a thing."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingAutoFlushEnabled"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_auto_flush(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"enabled": True}
+    assert result is True
+
+
+async def test_set_steam_flush(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test enabling steam flush for a thing."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamFlushEnabled"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_steam_flush(serial, False)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"enabled": False}
+    assert result is True
+
+
+async def test_set_rinse_flush(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test enabling rinse flush for a thing."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingRinseFlushEnabled"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_rinse_flush(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"enabled": True}
+    assert result is True
+
+
+async def test_set_hot_water_dose_enabled(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test enabling the hot water dose for a thing."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingHotWaterDoseEnabled"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_hot_water_dose_enabled(serial, False)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"enabled": False}
+    assert result is True
+
+
+async def test_set_cup_warmer(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test enabling the cup warmer for a thing."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingCupWarmerEnabled"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_cup_warmer(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"enabled": True}
+    assert result is True
+
+
+async def test_set_group_mode(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the mode of a single group."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineGroupChangeMode"
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_group_mode(serial, MachineMode.BREWING_MODE)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"groupIndex": 1, "mode": "BrewingMode"}
+    assert result is True
+
+
+async def test_set_coffee_boiler(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test enabling the coffee boiler."""
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/"
+        "CoffeeMachineSettingCoffeeBoilerEnabled"
+    )
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_coffee_boiler(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"boilerIndex": 1, "enabled": True}
+    assert result is True
+
+
+async def test_set_rinse_flush_time(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the rinse flush time."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingRinseFlushTime"
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_rinse_flush_time(serial, 4.0)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"timeSeconds": 4.0}
+    assert result is True
+
+
+async def test_set_hot_water_dose(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting a hot water dose value."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingHotWaterDose"
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_hot_water_dose(serial, 8.0, DoseIndex.DOSE_A)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"doseIndex": "DoseA", "dose": 8.0}
+    assert result is True
+
+
+async def test_set_group_dose_mode(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the dose mode of a group."""
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineGroupDoseChangeMode"
+    )
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_group_dose_mode(serial, DoseMode.PULSES_TYPE)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"groupIndex": 1, "mode": "PulsesType"}
+    assert result is True
+
+
+async def test_set_group_dose(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting a group dose value."""
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineGroupDoseSettingDose"
+    )
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_group_dose(
+        serial, DoseMode.PULSES_TYPE, DoseIndex.DOSE_A, 36.0
+    )
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "groupIndex": 1,
+        "mode": "PulsesType",
+        "doseIndex": "DoseA",
+        "dose": 36.0,
+    }
+    assert result is True
+
+
+async def test_set_brewing_pressure(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the brewing pressure of a group."""
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/"
+        "CoffeeMachineGroupDoseSettingGroupBrewingPressure"
+    )
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_brewing_pressure(serial, 9.0)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"groupIndex": 1, "pressure": 9.0}
+    assert result is True
+
+
+async def test_set_continuous_dose_enabled(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test enabling the continuous dose of a group."""
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/"
+        "CoffeeMachineGroupDoseSettingContinuousDoseEnabled"
+    )
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_continuous_dose_enabled(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"groupIndex": 1, "rinseEnabled": True}
+    assert result is True
+
+
+async def test_set_continuous_dose(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the continuous dose duration of a group."""
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/"
+        "CoffeeMachineGroupDoseSettingContinuousDose"
+    )
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_continuous_dose(serial, 3.0)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"groupIndex": 1, "rinseSeconds": 3.0}
+    assert result is True
+
+
+async def test_set_mirror_group1(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test mirroring a group with group 1."""
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/"
+        "CoffeeMachineGroupDoseSettingMirrorGroup1"
+    )
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_mirror_group1(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"groupIndex": 2, "enabled": True}
+    assert result is True
+
+
+async def test_set_plumb_in(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test enabling plumb-in mode."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingPlumbIn"
+
+    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_plumb_in(serial, True)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"enabled": True}
     assert result is True
 
 

@@ -27,7 +27,9 @@ from pylamarzocco.const import (
     BASE_URL,
     CUSTOMER_APP_URL,
     CommandStatus,
+    DoseIndex,
     DoseMode,
+    MachineMode,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -533,6 +535,17 @@ class LaMarzoccoCloudClient:
             serial_number, "CoffeeMachineChangeMode", data
         )
 
+    async def set_mode(
+        self,
+        serial_number: str,
+        mode: MachineMode,
+    ) -> bool:
+        """Set the operating mode of the machine."""
+        data = {"mode": str(mode)}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineChangeMode", data
+        )
+
     async def set_steam(
         self,
         serial_number: str,
@@ -587,6 +600,168 @@ class LaMarzoccoCloudClient:
         }
         return await self.__execute_command(
             serial_number, "CoffeeMachineSettingSteamBoilerTargetTemperature", data
+        )
+
+    async def set_auto_flush(
+        self, serial_number: str, enabled: bool
+    ) -> bool:
+        """Enable or disable automatic group flushing."""
+        data = {"enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingAutoFlushEnabled", data
+        )
+
+    async def set_steam_flush(
+        self, serial_number: str, enabled: bool
+    ) -> bool:
+        """Enable or disable automatic steam wand flushing."""
+        data = {"enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingSteamFlushEnabled", data
+        )
+
+    async def set_rinse_flush(
+        self, serial_number: str, enabled: bool
+    ) -> bool:
+        """Enable or disable automatic rinse flushing."""
+        data = {"enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingRinseFlushEnabled", data
+        )
+
+    async def set_hot_water_dose_enabled(
+        self, serial_number: str, enabled: bool
+    ) -> bool:
+        """Enable or disable the hot water dose."""
+        data = {"enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingHotWaterDoseEnabled", data
+        )
+
+    async def set_cup_warmer(
+        self, serial_number: str, enabled: bool
+    ) -> bool:
+        """Enable or disable the cup warmer."""
+        data = {"enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingCupWarmerEnabled", data
+        )
+
+    async def set_group_mode(
+        self, serial_number: str, mode: MachineMode, group_index: int = 1
+    ) -> bool:
+        """Set the operating mode of a single group."""
+        data = {"groupIndex": group_index, "mode": mode.value}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineGroupChangeMode", data
+        )
+
+    async def set_coffee_boiler(
+        self, serial_number: str, enabled: bool, boiler_index: int = 1
+    ) -> bool:
+        """Enable or disable the coffee boiler."""
+        data = {"boilerIndex": boiler_index, "enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingCoffeeBoilerEnabled", data
+        )
+
+    async def set_rinse_flush_time(
+        self, serial_number: str, seconds: float
+    ) -> bool:
+        """Set the duration of the automatic rinse flush."""
+        data = {"timeSeconds": round(seconds, 1)}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingRinseFlushTime", data
+        )
+
+    async def set_hot_water_dose(
+        self, serial_number: str, dose: float, dose_index: DoseIndex
+    ) -> bool:
+        """Set a hot water dose value."""
+        data = {"doseIndex": dose_index.value, "dose": round(dose, 1)}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingHotWaterDose", data
+        )
+
+    async def set_group_dose_mode(
+        self, serial_number: str, mode: DoseMode, group_index: int = 1
+    ) -> bool:
+        """Set the dose mode of a group."""
+        data = {"groupIndex": group_index, "mode": mode.value}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineGroupDoseChangeMode", data
+        )
+
+    async def set_group_dose(
+        self,
+        serial_number: str,
+        mode: DoseMode,
+        dose_index: DoseIndex,
+        dose: float,
+        group_index: int = 1,
+    ) -> bool:
+        """Set a group dose value for a given mode and dose index."""
+        data = {
+            "groupIndex": group_index,
+            "mode": mode.value,
+            "doseIndex": dose_index.value,
+            "dose": round(dose, 1),
+        }
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineGroupDoseSettingDose", data
+        )
+
+    async def set_brewing_pressure(
+        self, serial_number: str, pressure: float, group_index: int = 1
+    ) -> bool:
+        """Set the brewing pressure of a group."""
+        data = {"groupIndex": group_index, "pressure": round(pressure, 1)}
+        return await self.__execute_command(
+            serial_number,
+            "CoffeeMachineGroupDoseSettingGroupBrewingPressure",
+            data,
+        )
+
+    async def set_continuous_dose_enabled(
+        self, serial_number: str, enabled: bool, group_index: int = 1
+    ) -> bool:
+        """Enable or disable the continuous (rinse) dose of a group."""
+        data = {"groupIndex": group_index, "rinseEnabled": enabled}
+        return await self.__execute_command(
+            serial_number,
+            "CoffeeMachineGroupDoseSettingContinuousDoseEnabled",
+            data,
+        )
+
+    async def set_continuous_dose(
+        self, serial_number: str, seconds: float, group_index: int = 1
+    ) -> bool:
+        """Set the continuous (rinse) dose duration of a group."""
+        data = {"groupIndex": group_index, "rinseSeconds": round(seconds, 1)}
+        return await self.__execute_command(
+            serial_number,
+            "CoffeeMachineGroupDoseSettingContinuousDose",
+            data,
+        )
+
+    async def set_mirror_group1(
+        self, serial_number: str, enabled: bool, group_index: int = 2
+    ) -> bool:
+        """Mirror a group's doses with group 1."""
+        data = {"groupIndex": group_index, "enabled": enabled}
+        return await self.__execute_command(
+            serial_number,
+            "CoffeeMachineGroupDoseSettingMirrorGroup1",
+            data,
+        )
+
+    async def set_plumb_in(
+        self, serial_number: str, enabled: bool
+    ) -> bool:
+        """Enable or disable plumb-in mode."""
+        data = {"enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingPlumbIn", data
         )
 
     async def start_backflush_cleaning(

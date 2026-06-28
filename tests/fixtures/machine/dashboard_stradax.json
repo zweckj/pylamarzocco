@@ -1,0 +1,146 @@
+{
+  "serialNumber": "SR123456",
+  "type": "CoffeeMachine",
+  "name": "Strada X",
+  "location": "HOME_OR_DWELLING_SPACE",
+  "modelCode": "STRADAX",
+  "modelName": "STRADA X",
+  "gatewayHw": "LinuxLM",
+  "connected": true,
+  "connectionDate": 1781607837115,
+  "offlineMode": false,
+  "requireFirmwareUpdate": false,
+  "availableFirmwareUpdate": false,
+  "imageUrl": "https://lion.lamarzocco.io/img/thing-model/list/stradax/stradax-1.png",
+  "imageUrlList": "https://lion.lamarzocco.io/img/thing-model/list/stradax/stradax-1.png",
+  "imageUrlDetail": "https://lion.lamarzocco.io/img/thing-model/detail/stradax/stradax-1.png",
+  "bleAuthToken": "0000000000000000000000000000000000000000000000000000000000000000",
+  "shotCounterSupported": false,
+  "widgets": [
+    {
+      "code": "CMMachineGroupStatus",
+      "index": 1,
+      "output": {
+        "status": "StandBy",
+        "availableModes": [
+          "BrewingMode",
+          "StandBy",
+          "EcoMode"
+        ],
+        "mode": "StandBy",
+        "nextStatus": null,
+        "brewingStartTime": null
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "CMCoffeeBoiler",
+      "index": 1,
+      "output": {
+        "status": "StandBy",
+        "enabled": true,
+        "enabledSupported": true,
+        "targetTemperature": 93.0,
+        "targetTemperatureMin": 80,
+        "targetTemperatureMax": 110,
+        "targetTemperatureStep": 0.1,
+        "readyStartTime": null
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "CMSteamBoilerTemperature",
+      "index": 1,
+      "output": {
+        "status": "StandBy",
+        "enabled": true,
+        "enabledSupported": true,
+        "targetTemperature": 125.0,
+        "targetTemperatureSupported": true,
+        "targetTemperatureMin": 95,
+        "targetTemperatureMax": 129,
+        "targetTemperatureStep": 0.1,
+        "readyStartTime": null
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "CMGroupDoses",
+      "index": 1,
+      "output": {
+        "mirrorWithGroup1Supported": false,
+        "mirrorWithGroup1": null,
+        "mirrorWithGroup1NotEffective": false,
+        "availableModes": [
+          "ManualType"
+        ],
+        "mode": "ManualType",
+        "profile": null,
+        "doses": {
+          "ManualType": []
+        },
+        "continuousDoseSupported": false,
+        "continuousDose": null,
+        "brewingPressureSupported": false,
+        "brewingPressure": null
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "CMHotWaterDose",
+      "index": 1,
+      "output": {
+        "enabledSupported": true,
+        "enabled": true,
+        "doses": [
+          {
+            "doseIndex": "DoseA",
+            "dose": 7.83,
+            "doseMin": 1,
+            "doseMax": 90,
+            "doseStep": 0.5
+          },
+          {
+            "doseIndex": "DoseB",
+            "dose": 13.78,
+            "doseMin": 1,
+            "doseMax": 90,
+            "doseStep": 0.5
+          }
+        ]
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "CMAutoFlush",
+      "index": 1,
+      "output": {
+        "enabled": true
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "CMRinseFlush",
+      "index": 1,
+      "output": {
+        "enabled": true,
+        "enabledSupported": false,
+        "timeSeconds": 3.0,
+        "timeSecondsMin": 1,
+        "timeSecondsMax": 4,
+        "timeSecondsStep": 0.1
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "CMSteamFlush",
+      "index": 1,
+      "output": {
+        "enabled": true
+      },
+      "tutorialUrl": null
+    }
+  ],
+  "runningCommands": [],
+  "latestEndedCommands": []
+}
