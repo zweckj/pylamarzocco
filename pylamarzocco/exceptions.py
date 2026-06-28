@@ -33,3 +33,11 @@ class CloudOnlyFunctionality(LaMarzoccoError):
 
 class UnsupportedModel(LaMarzoccoError):
     """Raised when a certain functionality is only available on certain models."""
+
+
+class OperationNotAvailable(LaMarzoccoError):
+    """Raised when an operation is not available in the machine's current state.
+
+    Some settings are only writable while the machine is in a matching dose
+    mode (e.g. brewing pressure is only available in the weight-based modes).
+    """

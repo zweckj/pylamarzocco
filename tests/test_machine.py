@@ -11,18 +11,23 @@ from pylamarzocco import (
 )
 from pylamarzocco.const import (
     BoilerType,
+    DoseIndex,
     DoseMode,
+    MachineMode,
     ModelCode,
     SmartStandByType,
     SteamTargetLevel,
     WidgetType,
 )
-from pylamarzocco.exceptions import BluetoothConnectionFailed
+from pylamarzocco.exceptions import BluetoothConnectionFailed, OperationNotAvailable
 from pylamarzocco.models import (
     BaseDoseSettings,
     BluetoothCommandStatus,
     BrewByWeightDoses,
     BrewByWeightDoseSettings,
+    DosePulsesType,
+    DoseSettings,
+    GroupDosesSettings,
 )
 
 
@@ -211,6 +216,175 @@ async def test_set_smart_standby_cloud_fallback(
     )
 
 
+async def test_set_mode(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_mode method."""
+    assert await mock_machine.set_mode(MachineMode.ECO_MODE)
+    mock_cloud_client.set_mode.assert_called_once_with(
+        "MR123456", MachineMode.ECO_MODE
+    )
+
+
+async def test_set_auto_flush(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_auto_flush method."""
+    assert await mock_machine.set_auto_flush(False)
+    mock_cloud_client.set_auto_flush.assert_called_once_with("MR123456", False)
+
+
+async def test_set_steam_flush(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_steam_flush method."""
+    assert await mock_machine.set_steam_flush(False)
+    mock_cloud_client.set_steam_flush.assert_called_once_with("MR123456", False)
+
+
+async def test_set_rinse_flush(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_rinse_flush method."""
+    assert await mock_machine.set_rinse_flush(True)
+    mock_cloud_client.set_rinse_flush.assert_called_once_with("MR123456", True)
+
+
+async def test_set_hot_water_dose_enabled(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_hot_water_dose_enabled method."""
+    assert await mock_machine.set_hot_water_dose_enabled(False)
+    mock_cloud_client.set_hot_water_dose_enabled.assert_called_once_with(
+        "MR123456", False
+    )
+
+
+async def test_set_cup_warmer(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_cup_warmer method."""
+    assert await mock_machine.set_cup_warmer(True)
+    mock_cloud_client.set_cup_warmer.assert_called_once_with("MR123456", True)
+
+
+async def test_set_group_mode(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_group_mode method."""
+    assert await mock_machine.set_group_mode(MachineMode.BREWING_MODE)
+    mock_cloud_client.set_group_mode.assert_called_once_with(
+        "MR123456", MachineMode.BREWING_MODE, 1
+    )
+
+
+async def test_set_coffee_boiler(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_coffee_boiler method."""
+    assert await mock_machine.set_coffee_boiler(True)
+    mock_cloud_client.set_coffee_boiler.assert_called_once_with("MR123456", True, 1)
+
+
+async def test_set_rinse_flush_time(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_rinse_flush_time method."""
+    assert await mock_machine.set_rinse_flush_time(4.0)
+    mock_cloud_client.set_rinse_flush_time.assert_called_once_with("MR123456", 4.0)
+
+
+async def test_set_hot_water_dose(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_hot_water_dose method."""
+    assert await mock_machine.set_hot_water_dose(8.0, DoseIndex.DOSE_A)
+    mock_cloud_client.set_hot_water_dose.assert_called_once_with(
+        "MR123456", 8.0, DoseIndex.DOSE_A
+    )
+
+
+async def test_set_group_dose_mode(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_group_dose_mode method."""
+    assert await mock_machine.set_group_dose_mode(DoseMode.PULSES_TYPE)
+    mock_cloud_client.set_group_dose_mode.assert_called_once_with(
+        "MR123456", DoseMode.PULSES_TYPE, 1
+    )
+
+
+async def test_set_group_dose(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_group_dose method."""
+    assert await mock_machine.set_group_dose(
+        DoseMode.PULSES_TYPE, DoseIndex.DOSE_A, 36.0
+    )
+    mock_cloud_client.set_group_dose.assert_called_once_with(
+        "MR123456", DoseMode.PULSES_TYPE, DoseIndex.DOSE_A, 36.0, 1
+    )
+
+
+async def test_set_brewing_pressure(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_brewing_pressure method."""
+    assert await mock_machine.set_brewing_pressure(9.0)
+    mock_cloud_client.set_brewing_pressure.assert_called_once_with("MR123456", 9.0, 1)
+
+
+async def test_set_continuous_dose_enabled(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_continuous_dose_enabled method."""
+    assert await mock_machine.set_continuous_dose_enabled(True)
+    mock_cloud_client.set_continuous_dose_enabled.assert_called_once_with(
+        "MR123456", True, 1
+    )
+
+
+async def test_set_continuous_dose(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_continuous_dose method."""
+    assert await mock_machine.set_continuous_dose(3.0)
+    mock_cloud_client.set_continuous_dose.assert_called_once_with("MR123456", 3.0, 1)
+
+
+async def test_set_mirror_group1(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_mirror_group1 method."""
+    assert await mock_machine.set_mirror_group1(True)
+    mock_cloud_client.set_mirror_group1.assert_called_once_with("MR123456", True, 2)
+
+
+async def test_set_plumb_in(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_plumb_in method."""
+    assert await mock_machine.set_plumb_in(True)
+    mock_cloud_client.set_plumb_in.assert_called_once_with("MR123456", True)
+
+
 async def test_failing_command(
     mock_machine: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
@@ -264,4 +438,164 @@ async def test_set_brew_by_weight_dose(
     assert await mock_machine.set_brew_by_weight_dose(DoseMode.DOSE_1, 36.5)
     mock_cloud_client.set_brew_by_weight_dose.assert_called_once_with(
         "MR123456", 36.5, 34.0
+    )
+
+
+def _set_group_doses(
+    machine: LaMarzoccoMachine, group_doses: GroupDosesSettings
+) -> None:
+    """Attach a group-doses widget to the machine dashboard."""
+    machine.dashboard.config[WidgetType.CM_GROUP_DOSES] = group_doses
+
+
+async def test_set_group_dose_mode_unavailable_raises(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """A mode outside availableModes is rejected without calling the cloud."""
+    _set_group_doses(
+        mock_machine,
+        GroupDosesSettings(
+            available_modes=[DoseMode.MANUAL_TYPE],
+            mode=DoseMode.MANUAL_TYPE,
+            doses=DosePulsesType(),
+        ),
+    )
+
+    with pytest.raises(OperationNotAvailable):
+        await mock_machine.set_group_dose_mode(DoseMode.PROFILE_TYPE)
+    mock_cloud_client.set_group_dose_mode.assert_not_called()
+
+
+async def test_set_group_dose_mode_available_passes(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """A mode within availableModes is forwarded to the cloud."""
+    _set_group_doses(
+        mock_machine,
+        GroupDosesSettings(
+            available_modes=[DoseMode.MASS_TYPE, DoseMode.PULSES_TYPE],
+            mode=DoseMode.MASS_TYPE,
+            doses=DosePulsesType(),
+        ),
+    )
+
+    assert await mock_machine.set_group_dose_mode(DoseMode.PULSES_TYPE)
+    mock_cloud_client.set_group_dose_mode.assert_called_once_with(
+        "MR123456", DoseMode.PULSES_TYPE, 1
+    )
+
+
+async def test_set_brewing_pressure_unsupported_raises(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Brewing pressure is rejected when unsupported in the current mode."""
+    _set_group_doses(
+        mock_machine,
+        GroupDosesSettings(
+            mode=DoseMode.MANUAL_TYPE,
+            doses=DosePulsesType(),
+            brewing_pressure_supported=False,
+        ),
+    )
+
+    with pytest.raises(OperationNotAvailable):
+        await mock_machine.set_brewing_pressure(9.0)
+    mock_cloud_client.set_brewing_pressure.assert_not_called()
+
+
+async def test_set_brewing_pressure_supported_passes(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Brewing pressure is forwarded when supported in the current mode."""
+    _set_group_doses(
+        mock_machine,
+        GroupDosesSettings(
+            mode=DoseMode.MASS_TYPE,
+            doses=DosePulsesType(),
+            brewing_pressure_supported=True,
+        ),
+    )
+
+    assert await mock_machine.set_brewing_pressure(9.0)
+    mock_cloud_client.set_brewing_pressure.assert_called_once_with("MR123456", 9.0, 1)
+
+
+async def test_set_group_dose_inactive_mode_raises(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Setting a dose for a mode with no populated doses is rejected."""
+    _set_group_doses(
+        mock_machine,
+        GroupDosesSettings(
+            mode=DoseMode.MANUAL_TYPE,
+            doses=DosePulsesType(),
+        ),
+    )
+
+    with pytest.raises(OperationNotAvailable):
+        await mock_machine.set_group_dose(DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 16.0)
+    mock_cloud_client.set_group_dose.assert_not_called()
+
+
+async def test_set_group_dose_unknown_index_raises(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Setting a dose for an index not present in the active mode is rejected."""
+    _set_group_doses(
+        mock_machine,
+        GroupDosesSettings(
+            mode=DoseMode.MASS_TYPE,
+            doses=DosePulsesType(
+                mass_type=[
+                    DoseSettings(
+                        dose_index=DoseIndex.DOSE_A,
+                        dose=16.0,
+                        dose_min=0,
+                        dose_max=800,
+                        dose_step=0.1,
+                    )
+                ]
+            ),
+        ),
+    )
+
+    with pytest.raises(OperationNotAvailable):
+        await mock_machine.set_group_dose(DoseMode.MASS_TYPE, DoseIndex.DOSE_B, 16.0)
+    mock_cloud_client.set_group_dose.assert_not_called()
+
+
+async def test_set_group_dose_active_passes(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Setting a dose for an active mode and known index is forwarded."""
+    _set_group_doses(
+        mock_machine,
+        GroupDosesSettings(
+            mode=DoseMode.MASS_TYPE,
+            doses=DosePulsesType(
+                mass_type=[
+                    DoseSettings(
+                        dose_index=DoseIndex.DOSE_A,
+                        dose=16.0,
+                        dose_min=0,
+                        dose_max=800,
+                        dose_step=0.1,
+                    )
+                ]
+            ),
+        ),
+    )
+
+    assert await mock_machine.set_group_dose(
+        DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0
+    )
+    mock_cloud_client.set_group_dose.assert_called_once_with(
+        "MR123456", DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0, 1
     )

@@ -11,6 +11,7 @@ from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
     BoilerStatus,
     BoilerType,
+    DoseIndex,
     DoseMode,
     MachineMode,
     MachineState,
@@ -20,19 +21,25 @@ from pylamarzocco.const import (
     SteamTargetLevel,
     WidgetType,
 )
-from pylamarzocco.exceptions import BluetoothConnectionFailed
+from pylamarzocco.exceptions import BluetoothConnectionFailed, OperationNotAvailable
 from pylamarzocco.models import (
+    AutoFlush,
     BrewByWeightDoses,
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
     CoffeeBoiler,
+    GroupDosesSettings,
+    HotWaterDose,
     LastCoffeeList,
+    MachineGroupStatus,
     MachineStatus,
     NoWater,
     PrebrewSettingTimes,
+    RinseFlush,
     SecondsInOut,
     SteamBoilerLevel,
     SteamBoilerTemperature,
+    SteamFlush,
     ThingSchedulingSettings,
     WakeUpScheduleSettings,
 )
@@ -46,6 +53,17 @@ STEAM_LEVEL_MAPPING = {
     SteamTargetLevel.LEVEL_1: 126,
     SteamTargetLevel.LEVEL_2: 128,
     SteamTargetLevel.LEVEL_3: 131,
+}
+
+# Maps a dose mode to the matching list attribute on the doses container.
+# Only these modes carry per-dose-index values; the cloud only populates the
+# lists belonging to the currently active mode cluster.
+DOSE_MODE_DOSES_ATTR = {
+    DoseMode.PULSES_TYPE: "pulses_type",
+    DoseMode.MANUAL_TYPE: "manual_type",
+    DoseMode.MASS_TYPE: "mass_type",
+    DoseMode.BREW_RATIO_TYPE: "brew_ratio_type",
+    DoseMode.PROFILE_TYPE: "profile_type",
 }
 
 
@@ -232,15 +250,392 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
-            machine_status = cast(
-                MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
-            )
-            machine_status.mode = (
-                MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
-            )
+        if result:
+            mode = MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
+            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+                machine_status = cast(
+                    MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+                )
+                machine_status.mode = mode
+            if WidgetType.CM_MACHINE_GROUP_STATUS in self.dashboard.config:
+                group_status = cast(
+                    MachineGroupStatus,
+                    self.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS],
+                )
+                group_status.mode = mode
 
         return result
+
+    @cloud_only
+    async def set_mode(self, mode: MachineMode) -> bool:
+        """Set the operating mode of the machine.
+
+        Supports BrewingMode, StandBy and (on supported models like the
+        Strada X) EcoMode.
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_mode(self.serial_number, mode)
+
+        # Update dashboard if command succeeded
+        if result:
+            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+                machine_status = cast(
+                    MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+                )
+                machine_status.mode = mode
+            if WidgetType.CM_MACHINE_GROUP_STATUS in self.dashboard.config:
+                group_status = cast(
+                    MachineGroupStatus,
+                    self.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS],
+                )
+                group_status.mode = mode
+
+        return result
+
+    @cloud_only
+    async def set_auto_flush(self, enabled: bool) -> bool:
+        """Enable or disable automatic group flushing.
+
+        Args:
+            enabled (bool): True to enable, False to disable.
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_auto_flush(self.serial_number, enabled)
+
+        if result and WidgetType.CM_AUTO_FLUSH in self.dashboard.config:
+            auto_flush = cast(
+                AutoFlush, self.dashboard.config[WidgetType.CM_AUTO_FLUSH]
+            )
+            auto_flush.enabled = enabled
+
+        return result
+
+    @cloud_only
+    async def set_steam_flush(self, enabled: bool) -> bool:
+        """Enable or disable automatic steam wand flushing.
+
+        Args:
+            enabled (bool): True to enable, False to disable.
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_steam_flush(self.serial_number, enabled)
+
+        if result and WidgetType.CM_STEAM_FLUSH in self.dashboard.config:
+            steam_flush = cast(
+                SteamFlush, self.dashboard.config[WidgetType.CM_STEAM_FLUSH]
+            )
+            steam_flush.enabled = enabled
+
+        return result
+
+    @cloud_only
+    async def set_rinse_flush(self, enabled: bool) -> bool:
+        """Enable or disable automatic rinse flushing (Strada models).
+
+        Args:
+            enabled (bool): True to enable, False to disable.
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_rinse_flush(self.serial_number, enabled)
+
+        if result and WidgetType.CM_RINSE_FLUSH in self.dashboard.config:
+            rinse_flush = cast(
+                RinseFlush, self.dashboard.config[WidgetType.CM_RINSE_FLUSH]
+            )
+            rinse_flush.enabled = enabled
+
+        return result
+
+    @cloud_only
+    async def set_hot_water_dose_enabled(self, enabled: bool) -> bool:
+        """Enable or disable the hot water dose (Strada models).
+
+        Args:
+            enabled (bool): True to enable, False to disable.
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_hot_water_dose_enabled(
+            self.serial_number, enabled
+        )
+
+        if result and WidgetType.CM_HOT_WATER_DOSE in self.dashboard.config:
+            hot_water_dose = cast(
+                HotWaterDose, self.dashboard.config[WidgetType.CM_HOT_WATER_DOSE]
+            )
+            hot_water_dose.enabled = enabled
+
+        return result
+
+    @cloud_only
+    async def set_cup_warmer(self, enabled: bool) -> bool:
+        """Enable or disable the cup warmer (Strada models).
+
+        Args:
+            enabled (bool): True to enable, False to disable.
+        """
+        assert self._cloud_client
+        return await self._cloud_client.set_cup_warmer(self.serial_number, enabled)
+
+    @cloud_only
+    async def set_group_mode(self, mode: MachineMode, group_index: int = 1) -> bool:
+        """Set the operating mode of a single group (multi-group models).
+
+        Args:
+            mode (MachineMode): The mode to set.
+            group_index (int): The group to address (default 1).
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_group_mode(
+            self.serial_number, mode, group_index
+        )
+
+        if result and WidgetType.CM_MACHINE_GROUP_STATUS in self.dashboard.config:
+            group_status = cast(
+                MachineGroupStatus,
+                self.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS],
+            )
+            group_status.mode = mode
+
+        return result
+
+    @cloud_only
+    async def set_coffee_boiler(self, enabled: bool, boiler_index: int = 1) -> bool:
+        """Enable or disable the coffee boiler.
+
+        Args:
+            enabled (bool): True to enable, False to disable.
+            boiler_index (int): The boiler to address (default 1).
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_coffee_boiler(
+            self.serial_number, enabled, boiler_index
+        )
+
+        if result and WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
+            coffee_boiler = cast(
+                CoffeeBoiler, self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
+            )
+            coffee_boiler.enabled = enabled
+
+        return result
+
+    @cloud_only
+    async def set_rinse_flush_time(self, seconds: float) -> bool:
+        """Set the duration of the automatic rinse flush (Strada models).
+
+        Args:
+            seconds (float): The flush duration in seconds.
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_rinse_flush_time(
+            self.serial_number, seconds
+        )
+
+        if result and WidgetType.CM_RINSE_FLUSH in self.dashboard.config:
+            rinse_flush = cast(
+                RinseFlush, self.dashboard.config[WidgetType.CM_RINSE_FLUSH]
+            )
+            rinse_flush.time_seconds = seconds
+
+        return result
+
+    @cloud_only
+    async def set_hot_water_dose(self, dose: float, dose_index: DoseIndex) -> bool:
+        """Set a hot water dose value (Strada models).
+
+        Args:
+            dose (float): The dose value.
+            dose_index (DoseIndex): Which dose to set.
+        """
+        assert self._cloud_client
+        result = await self._cloud_client.set_hot_water_dose(
+            self.serial_number, dose, dose_index
+        )
+
+        if result and WidgetType.CM_HOT_WATER_DOSE in self.dashboard.config:
+            hot_water_dose = cast(
+                HotWaterDose, self.dashboard.config[WidgetType.CM_HOT_WATER_DOSE]
+            )
+            for dose_setting in hot_water_dose.doses:
+                if dose_setting.dose_index == dose_index:
+                    dose_setting.dose = dose
+
+        return result
+
+    def _group_doses_config(self) -> GroupDosesSettings | None:
+        """Return the cached group-doses widget, if the dashboard has one."""
+        widget = self.dashboard.config.get(WidgetType.CM_GROUP_DOSES)
+        if widget is None:
+            return None
+        return cast(GroupDosesSettings, widget)
+
+    @cloud_only
+    async def set_group_dose_mode(self, mode: DoseMode, group_index: int = 1) -> bool:
+        """Set the dose mode of a group (Strada models).
+
+        The dose modes are exposed in clusters that can only be switched at the
+        machine; the cloud silently ignores a switch to a mode outside the
+        current ``availableModes``. When the dashboard is known, this raises
+        ``OperationNotAvailable`` instead of sending an ineffective command.
+
+        Args:
+            mode (DoseMode): The dose mode to set.
+            group_index (int): The group to address (default 1).
+        """
+        group_doses = self._group_doses_config()
+        if (
+            group_doses is not None
+            and group_doses.available_modes
+            and mode not in group_doses.available_modes
+        ):
+            available = [m.value for m in group_doses.available_modes]
+            raise OperationNotAvailable(
+                f"Dose mode {mode.value} is not available; "
+                f"available modes: {available}"
+            )
+
+        assert self._cloud_client
+        result = await self._cloud_client.set_group_dose_mode(
+            self.serial_number, mode, group_index
+        )
+
+        if result and WidgetType.CM_GROUP_DOSES in self.dashboard.config:
+            group_doses = cast(
+                GroupDosesSettings, self.dashboard.config[WidgetType.CM_GROUP_DOSES]
+            )
+            group_doses.mode = mode
+
+        return result
+
+    @cloud_only
+    async def set_group_dose(
+        self,
+        mode: DoseMode,
+        dose_index: DoseIndex,
+        dose: float,
+        group_index: int = 1,
+    ) -> bool:
+        """Set a group dose value for a given mode and dose index (Strada models).
+
+        Doses can only be set for a mode that is part of the currently active
+        cluster (the cloud only populates those dose lists). When the dashboard
+        is known, this raises ``OperationNotAvailable`` for an inactive mode or
+        an unknown dose index.
+
+        Args:
+            mode (DoseMode): The dose mode the dose belongs to.
+            dose_index (DoseIndex): Which dose to set.
+            dose (float): The dose value.
+            group_index (int): The group to address (default 1).
+        """
+        group_doses = self._group_doses_config()
+        if group_doses is not None:
+            attr = DOSE_MODE_DOSES_ATTR.get(mode)
+            dose_list = getattr(group_doses.doses, attr, []) if attr else []
+            if not dose_list:
+                raise OperationNotAvailable(
+                    f"Dose mode {mode.value} has no configurable doses in the "
+                    f"current state (active mode {group_doses.mode.value})"
+                )
+            indices = [d.dose_index for d in dose_list]
+            if dose_index not in indices:
+                raise OperationNotAvailable(
+                    f"Dose index {dose_index.value} is not available for mode "
+                    f"{mode.value}; available: {[i.value for i in indices]}"
+                )
+
+        assert self._cloud_client
+        return await self._cloud_client.set_group_dose(
+            self.serial_number, mode, dose_index, dose, group_index
+        )
+
+    @cloud_only
+    async def set_brewing_pressure(
+        self, pressure: float, group_index: int = 1
+    ) -> bool:
+        """Set the brewing pressure of a group (Strada models).
+
+        Brewing pressure is only writable in the weight-based dose modes. When
+        the dashboard is known and reports it as unsupported in the current
+        mode, this raises ``OperationNotAvailable``.
+
+        Args:
+            pressure (float): The target brewing pressure.
+            group_index (int): The group to address (default 1).
+        """
+        group_doses = self._group_doses_config()
+        if group_doses is not None and not group_doses.brewing_pressure_supported:
+            raise OperationNotAvailable(
+                "Brewing pressure is not supported in the current dose mode "
+                f"({group_doses.mode.value})"
+            )
+
+        assert self._cloud_client
+        result = await self._cloud_client.set_brewing_pressure(
+            self.serial_number, pressure, group_index
+        )
+
+        if result and WidgetType.CM_GROUP_DOSES in self.dashboard.config:
+            group_doses = cast(
+                GroupDosesSettings, self.dashboard.config[WidgetType.CM_GROUP_DOSES]
+            )
+            if group_doses.brewing_pressure is not None:
+                group_doses.brewing_pressure.pressure = pressure
+
+        return result
+
+    @cloud_only
+    async def set_continuous_dose_enabled(
+        self, enabled: bool, group_index: int = 1
+    ) -> bool:
+        """Enable or disable the continuous (rinse) dose of a group (Strada models).
+
+        Args:
+            enabled (bool): True to enable, False to disable.
+            group_index (int): The group to address (default 1).
+        """
+        assert self._cloud_client
+        return await self._cloud_client.set_continuous_dose_enabled(
+            self.serial_number, enabled, group_index
+        )
+
+    @cloud_only
+    async def set_continuous_dose(
+        self, seconds: float, group_index: int = 1
+    ) -> bool:
+        """Set the continuous (rinse) dose duration of a group (Strada models).
+
+        Args:
+            seconds (float): The continuous dose duration in seconds.
+            group_index (int): The group to address (default 1).
+        """
+        assert self._cloud_client
+        return await self._cloud_client.set_continuous_dose(
+            self.serial_number, seconds, group_index
+        )
+
+    @cloud_only
+    async def set_mirror_group1(self, enabled: bool, group_index: int = 2) -> bool:
+        """Mirror a group's doses with group 1 (Strada models).
+
+        Args:
+            enabled (bool): True to mirror group 1, False to stop mirroring.
+            group_index (int): The group to address (default 2).
+        """
+        assert self._cloud_client
+        return await self._cloud_client.set_mirror_group1(
+            self.serial_number, enabled, group_index
+        )
+
+    @cloud_only
+    async def set_plumb_in(self, enabled: bool) -> bool:
+        """Enable or disable plumb-in mode.
+
+        Args:
+            enabled (bool): True to enable, False to disable.
+        """
+        assert self._cloud_client
+        return await self._cloud_client.set_plumb_in(self.serial_number, enabled)
 
     async def set_steam(self, enabled: bool) -> bool:
         """Set the steam of the machine.
@@ -316,7 +711,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
         return result
 
-    @models_supported((ModelCode.GS3, ModelCode.GS3_AV, ModelCode.GS3_MP))
+    @models_supported((ModelCode.GS3, ModelCode.GS3_AV, ModelCode.GS3_MP, ModelCode.STRADA_X))
     async def set_steam_target_temperature(self, temperature: float) -> bool:
         """Set the steam target temperature."""
 
