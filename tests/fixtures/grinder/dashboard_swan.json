@@ -1,0 +1,120 @@
+{
+  "serialNumber": "SG123456",
+  "type": "Grinder",
+  "name": "Swan",
+  "location": "HOME_OR_DWELLING_SPACE",
+  "modelCode": "SWANGRINDER",
+  "modelName": "SWAN GRINDER",
+  "gatewayHw": "Esp32",
+  "connected": true,
+  "connectionDate": 1781607877079,
+  "offlineMode": false,
+  "requireFirmwareUpdate": false,
+  "availableFirmwareUpdate": false,
+  "imageUrl": "https://lion.lamarzocco.io/img/thing-model/detail/swangrinder/swangrinder.png",
+  "imageUrlList": "https://lion.lamarzocco.io/img/thing-model/list/swangrinder/swangrinder.png",
+  "imageUrlDetail": "https://lion.lamarzocco.io/img/thing-model/detail/swangrinder/swangrinder.png",
+  "bleAuthToken": "0000000000000000000000000000000000000000000000000000000000000000",
+  "shotCounterSupported": false,
+  "widgets": [
+    {
+      "code": "GMachineStatus",
+      "index": 1,
+      "output": {
+        "status": "PoweredOn",
+        "readyStartTime": null,
+        "availableModes": [
+          "GrindingMode",
+          "StandBy"
+        ],
+        "mode": "GrindingMode"
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "GDoses",
+      "index": 1,
+      "output": {
+        "scaleConnected": false,
+        "mode": "RevType",
+        "doses": {
+          "RevType": [
+            {
+              "doseIndex": "DoseA",
+              "dose": 9.5,
+              "doseMin": 0,
+              "doseMax": 50,
+              "doseStep": 0.1,
+              "speedAutoSupported": false,
+              "speedAuto": null
+            },
+            {
+              "doseIndex": "DoseB",
+              "dose": 9.7,
+              "doseMin": 0,
+              "doseMax": 50,
+              "doseStep": 0.1,
+              "speedAutoSupported": false,
+              "speedAuto": null
+            }
+          ]
+        },
+        "speedLevelsSupported": true,
+        "speedLevels": [
+          {
+            "doseIndex": "DoseA",
+            "level": "Medium"
+          },
+          {
+            "doseIndex": "DoseB",
+            "level": "High"
+          }
+        ]
+      },
+      "tutorialUrl": "http://lamarzocco.com/it/en/app/support/grind-by-weight/#swan"
+    },
+    {
+      "code": "GSpeed",
+      "index": 1,
+      "output": {
+        "doses": {
+          "DoseA": {
+            "level": "Medium",
+            "autoEnabled": false,
+            "groupIndex": null
+          },
+          "DoseB": {
+            "level": "High",
+            "autoEnabled": false,
+            "groupIndex": null
+          }
+        },
+        "groupsNumber": 1,
+        "speedAutoSupported": false,
+        "speedAuto": null
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "GMoreDose",
+      "index": 1,
+      "output": {
+        "revolutions": 1.0,
+        "revolutionsMin": 0.1,
+        "revolutionsMax": 30,
+        "revolutionsStep": 0.1
+      },
+      "tutorialUrl": null
+    },
+    {
+      "code": "GGrindWith",
+      "index": 1,
+      "output": {
+        "mode": "ByButton"
+      },
+      "tutorialUrl": null
+    }
+  ],
+  "runningCommands": [],
+  "latestEndedCommands": []
+}
