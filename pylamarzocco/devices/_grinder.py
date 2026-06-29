@@ -70,13 +70,19 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
         self,
         dose_index: DoseIndex,
         dose: float,
-        mode: GrinderDoseMode = GrinderDoseMode.REV,
+        mode: GrinderDoseMode | None = None,
         speed_level: GrinderSpeedLevelType | None = None,
     ) -> bool:
-        """Set the dose, and optionally the speed level, of a grinder dose."""
+        """Set the dose, and optionally the speed level, of a grinder dose.
+
+        If no mode is given, the grinder's current dose mode is used.
+        """
         assert self._cloud_client
         if WidgetType.G_DOSES not in self.dashboard.config:
             return False
+        doses = cast(GrinderDoses, self.dashboard.config[WidgetType.G_DOSES])
+        if mode is None:
+            mode = doses.mode
         result = await self._cloud_client.set_grinder_dose(
             self.serial_number, dose_index, dose, mode, speed_level
         )
@@ -85,7 +91,6 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
             return result
 
         # Update dashboard dose value if command succeeded
-        doses = cast(GrinderDoses, self.dashboard.config[WidgetType.G_DOSES])
         dose_list = getattr(doses.doses, mode.name.lower() + "_type", None)
         if dose_list is not None:
             for dose_setting in dose_list:

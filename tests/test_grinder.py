@@ -144,6 +144,40 @@ async def test_set_dose(
     assert speed.doses["DoseA"].level is GrinderSpeedLevelType.HIGH
 
 
+async def test_set_dose_defaults_to_current_mode(
+    mock_grinder: LaMarzoccoGrinder,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test set_dose uses the grinder's current dose mode when none is given."""
+    mock_grinder.dashboard.config[WidgetType.G_DOSES] = GrinderDoses(
+        mode=GrinderDoseMode.TIME,
+        doses=GrinderDosesSettings(
+            time_type=[
+                GrinderDoseSettings(
+                    dose_index=DoseIndex.DOSE_A,
+                    dose=1.5,
+                    dose_min=0,
+                    dose_max=20,
+                    dose_step=0.05,
+                ),
+            ],
+        ),
+    )
+
+    assert await mock_grinder.set_dose(DoseIndex.DOSE_A, 2.0)
+    mock_cloud_client.set_grinder_dose.assert_called_once_with(
+        "GR123456",
+        DoseIndex.DOSE_A,
+        2.0,
+        GrinderDoseMode.TIME,
+        None,
+    )
+
+    doses = mock_grinder.dashboard.config[WidgetType.G_DOSES]
+    assert isinstance(doses, GrinderDoses)
+    assert doses.doses.time_type[0].dose == 2.0
+
+
 async def test_set_more_dose(
     mock_grinder: LaMarzoccoGrinder,
     mock_cloud_client: MagicMock,

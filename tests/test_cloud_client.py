@@ -387,7 +387,9 @@ async def test_set_grinder_dose_without_speed(
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
-    result = await client.set_grinder_dose(serial, DoseIndex.DOSE_B, 9.7)
+    result = await client.set_grinder_dose(
+        serial, DoseIndex.DOSE_B, 9.7, GrinderDoseMode.REV
+    )
 
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {

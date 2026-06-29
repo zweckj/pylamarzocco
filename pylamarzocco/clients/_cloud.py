@@ -705,7 +705,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         dose_index: DoseIndex,
         dose: float,
-        mode: GrinderDoseMode = GrinderDoseMode.REV,
+        mode: GrinderDoseMode,
         speed_level: GrinderSpeedLevelType | None = None,
     ) -> bool:
         """Set the dose, and optionally the speed level, of a grinder dose."""
