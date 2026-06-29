@@ -593,23 +593,21 @@ async def test_set_group_dose_active_passes(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Setting a dose for an active mode and known index is forwarded."""
-    _set_group_doses(
-        mock_machine,
-        GroupDosesSettings(
-            mode=DoseMode.MASS_TYPE,
-            doses=DosePulsesType(
-                mass_type=[
-                    DoseSettings(
-                        dose_index=DoseIndex.DOSE_A,
-                        dose=16.0,
-                        dose_min=0,
-                        dose_max=800,
-                        dose_step=0.1,
-                    )
-                ]
-            ),
+    group_doses = GroupDosesSettings(
+        mode=DoseMode.MASS_TYPE,
+        doses=DosePulsesType(
+            mass_type=[
+                DoseSettings(
+                    dose_index=DoseIndex.DOSE_A,
+                    dose=16.0,
+                    dose_min=0,
+                    dose_max=800,
+                    dose_step=0.1,
+                )
+            ]
         ),
     )
+    _set_group_doses(mock_machine, group_doses)
 
     assert await mock_machine.set_group_dose(
         DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0
@@ -617,3 +615,4 @@ async def test_set_group_dose_active_passes(
     mock_cloud_client.set_group_dose.assert_called_once_with(
         "MR123456", DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0, 1
     )
+    assert group_doses.doses.mass_type[0].dose == 18.0

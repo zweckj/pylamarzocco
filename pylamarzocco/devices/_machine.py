@@ -484,9 +484,18 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 )
 
         assert self._cloud_client
-        return await self._cloud_client.set_group_dose(
+        result = await self._cloud_client.set_group_dose(
             self.serial_number, mode, dose_index, dose, group_index
         )
+
+        if result and group_doses is not None:
+            attr = DOSE_MODE_DOSES_ATTR.get(mode)
+            dose_list = getattr(group_doses.doses, attr, []) if attr else []
+            for dose_setting in dose_list:
+                if dose_setting.dose_index == dose_index:
+                    dose_setting.dose = dose
+
+        return result
 
     @cloud_only
     @models_supported((ModelCode.STRADA_X,))
