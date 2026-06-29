@@ -742,7 +742,12 @@ class LaMarzoccoCloudClient:
     async def set_mirror_group1(
         self, serial_number: str, enabled: bool, group_index: int = 2
     ) -> bool:
-        """Mirror a group's doses with group 1."""
+        """Make a group mirror group 1's doses.
+
+        Args:
+            group_index: The group that should mirror group 1. Defaults to 2,
+                since group 1 cannot mirror itself.
+        """
         data = {"groupIndex": group_index, "enabled": enabled}
         return await self.__execute_command(
             serial_number,
