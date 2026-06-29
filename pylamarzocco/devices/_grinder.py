@@ -53,7 +53,6 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
             self.serial_number, mode
         )
 
-        # Update dashboard if command succeeded
         if result and WidgetType.G_GRIND_WITH in self.dashboard.config:
             grind_with = cast(
                 GrinderGrindWith,
@@ -71,13 +70,9 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
         mode: GrinderDoseMode | None = None,
         speed_level: GrinderSpeedLevelType | None = None,
     ) -> bool:
-        """Set the dose, and optionally the speed level, of a grinder dose.
-
-        If no mode is given, the grinder's current dose mode is used.
-        """
+        """Set the dose, and optionally the speed level, of a grinder dose."""
         assert self._cloud_client
         if mode is None:
-            # Default to the grinder's current dose mode when available.
             if WidgetType.G_DOSES in self.dashboard.config:
                 doses = cast(GrinderDoses, self.dashboard.config[WidgetType.G_DOSES])
                 mode = doses.mode
@@ -90,7 +85,6 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
         if not result:
             return result
 
-        # Update dashboard dose value if command succeeded
         if WidgetType.G_DOSES in self.dashboard.config:
             doses = cast(GrinderDoses, self.dashboard.config[WidgetType.G_DOSES])
             dose_list = getattr(doses.doses, mode.name.lower() + "_type", None)
@@ -103,7 +97,6 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
                     if speed_setting.dose_index == dose_index:
                         speed_setting.level = speed_level
 
-        # Update the GSpeed widget speed level as well
         if (
             speed_level is not None
             and WidgetType.G_SPEED in self.dashboard.config
@@ -123,7 +116,6 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
             self.serial_number, revolutions
         )
 
-        # Update dashboard if command succeeded
         if result and WidgetType.G_MORE_DOSE in self.dashboard.config:
             more_dose = cast(
                 GrinderMoreDose,
