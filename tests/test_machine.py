@@ -275,7 +275,7 @@ async def test_set_cup_warmer(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_cup_warmer method."""
-    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    mock_machine.dashboard.model_code = ModelCode.LINEA_MICRA
     assert await mock_machine.set_cup_warmer(True)
     mock_cloud_client.set_cup_warmer.assert_called_once_with("MR123456", True)
 
@@ -397,7 +397,7 @@ async def test_set_plumb_in(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_plumb_in method."""
-    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    mock_machine.dashboard.model_code = ModelCode.LINEA_MICRA
     assert await mock_machine.set_plumb_in(True)
     mock_cloud_client.set_plumb_in.assert_called_once_with("MR123456", True)
 
