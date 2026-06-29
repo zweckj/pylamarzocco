@@ -55,7 +55,6 @@ STEAM_LEVEL_MAPPING = {
     SteamTargetLevel.LEVEL_3: 131,
 }
 
-# Maps a dose mode to the matching list attribute on the doses container.
 DOSE_MODE_DOSES_ATTR = {
     DoseMode.PULSES_TYPE: "pulses_type",
     DoseMode.MANUAL_TYPE: "manual_type",
@@ -63,43 +62,6 @@ DOSE_MODE_DOSES_ATTR = {
     DoseMode.BREW_RATIO_TYPE: "brew_ratio_type",
     DoseMode.PROFILE_TYPE: "profile_type",
 }
-
-# Coffee-machine models grouped by the dashboard widget each command operates on,
-# derived from the dashboard fixtures. A model is listed when it exposes the
-# matching widget; these tuples gate the model-specific commands below.
-_ALL_MACHINE_MODELS = (
-    ModelCode.LINEA_MINI,
-    ModelCode.LINEA_MICRA,
-    ModelCode.LINEA_MINI_R,
-    ModelCode.GS3,
-    ModelCode.GS3_AV,
-    ModelCode.GS3_MP,
-    ModelCode.STRADA_X,
-)
-# Group, dose, hot-water and flush widgets (all machines except the Linea Mini R).
-_GROUP_DOSE_MODELS = (
-    ModelCode.LINEA_MINI,
-    ModelCode.LINEA_MICRA,
-    ModelCode.GS3,
-    ModelCode.GS3_AV,
-    ModelCode.GS3_MP,
-    ModelCode.STRADA_X,
-)
-# Models exposing the cup-warmer widget.
-_CUP_WARMER_MODELS = (
-    ModelCode.LINEA_MINI,
-    ModelCode.LINEA_MICRA,
-    ModelCode.GS3,
-    ModelCode.GS3_AV,
-    ModelCode.GS3_MP,
-)
-# Models that report plumb-in support.
-_PLUMB_IN_MODELS = (
-    ModelCode.LINEA_MICRA,
-    ModelCode.GS3,
-    ModelCode.GS3_AV,
-    ModelCode.GS3_MP,
-)
 
 
 class LaMarzoccoMachine(LaMarzoccoThing):
@@ -306,20 +268,19 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_ALL_MACHINE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_mode(self, mode: MachineMode) -> bool:
         """Set the operating mode of the machine."""
         assert self._cloud_client
         result = await self._cloud_client.set_mode(self.serial_number, mode)
 
-        # Update dashboard if command succeeded
         if result:
             self._update_machine_mode_widgets(mode)
 
         return result
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_auto_flush(self, enabled: bool) -> bool:
         """Enable or disable automatic group flushing."""
         assert self._cloud_client
@@ -334,7 +295,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_steam_flush(self, enabled: bool) -> bool:
         """Enable or disable automatic steam flushing."""
         assert self._cloud_client
@@ -349,7 +310,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_ALL_MACHINE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_rinse_flush(self, enabled: bool) -> bool:
         """Enable or disable automatic rinse flushing."""
         assert self._cloud_client
@@ -364,7 +325,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_hot_water_dose_enabled(self, enabled: bool) -> bool:
         """Enable or disable the hot water dose."""
         assert self._cloud_client
@@ -381,14 +342,13 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_CUP_WARMER_MODELS)
     async def set_cup_warmer(self, enabled: bool) -> bool:
         """Enable or disable the cup warmer."""
         assert self._cloud_client
         return await self._cloud_client.set_cup_warmer(self.serial_number, enabled)
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_group_mode(self, mode: MachineMode, group_index: int = 1) -> bool:
         """Set the operating mode of a single group."""
         assert self._cloud_client
@@ -406,7 +366,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_ALL_MACHINE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_coffee_boiler(self, enabled: bool, boiler_index: int = 1) -> bool:
         """Enable or disable the coffee boiler."""
         assert self._cloud_client
@@ -423,7 +383,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_ALL_MACHINE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_rinse_flush_time(self, seconds: float) -> bool:
         """Set the duration of the automatic rinse flush."""
         assert self._cloud_client
@@ -440,7 +400,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_hot_water_dose(self, dose: float, dose_index: DoseIndex) -> bool:
         """Set a hot water dose value."""
         assert self._cloud_client
@@ -466,7 +426,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return cast(GroupDosesSettings, widget)
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_group_dose_mode(self, mode: DoseMode, group_index: int = 1) -> bool:
         """Set the dose mode of a group."""
         group_doses = self._group_doses_config()
@@ -495,7 +455,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_group_dose(
         self,
         mode: DoseMode,
@@ -535,7 +495,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_brewing_pressure(
         self, pressure: float, group_index: int = 1
     ) -> bool:
@@ -562,7 +522,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_continuous_dose_enabled(
         self, enabled: bool, group_index: int = 1
     ) -> bool:
@@ -573,7 +533,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_continuous_dose(
         self, seconds: float, group_index: int = 1
     ) -> bool:
@@ -584,7 +544,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
     @cloud_only
-    @models_supported(_GROUP_DOSE_MODELS)
+    @models_supported((ModelCode.STRADA_X,))
     async def set_mirror_group1(self, enabled: bool, group_index: int = 2) -> bool:
         """Make a group mirror group 1's doses.
 
@@ -598,7 +558,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
     @cloud_only
-    @models_supported(_PLUMB_IN_MODELS)
     async def set_plumb_in(self, enabled: bool) -> bool:
         """Enable or disable plumb-in mode."""
         assert self._cloud_client
