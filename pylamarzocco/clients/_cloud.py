@@ -683,10 +683,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         enabled: bool,
     ) -> bool:
-        """Enable or disable the barista light of a grinder.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
+        """Enable or disable the barista light of a grinder."""
         data = {"index": 1, "enabled": enabled}
         return await self.__execute_command(
             serial_number, "GrinderSettingBaristaLightEnabled", data
@@ -697,10 +694,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         mode: GrinderGrindWithMode,
     ) -> bool:
-        """Set the grind-with mode of a grinder.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
+        """Set the grind-with mode of a grinder."""
         data = {"index": 1, "mode": str(mode)}
         return await self.__execute_command(
             serial_number, "GrinderSettingGrindWithMode", data
@@ -714,10 +708,7 @@ class LaMarzoccoCloudClient:
         mode: GrinderDoseMode = GrinderDoseMode.REV,
         speed_level: GrinderSpeedLevelType | None = None,
     ) -> bool:
-        """Set the dose, and optionally the speed level, of a grinder dose.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
+        """Set the dose, and optionally the speed level, of a grinder dose."""
         data: dict[str, Any] = {
             "index": 1,
             "mode": str(mode),
@@ -735,10 +726,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         revolutions: float,
     ) -> bool:
-        """Set the additional ("more dose") revolutions of a grinder.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
+        """Set the additional ("more dose") revolutions of a grinder."""
         data = {"index": 1, "revolutions": revolutions}
         return await self.__execute_command(
             serial_number, "GrinderSettingMoreDose", data

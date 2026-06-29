@@ -27,10 +27,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
 
     @cloud_only
     async def set_barista_light(self, enabled: bool) -> bool:
-        """Enable or disable the barista light.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
+        """Enable or disable the barista light."""
         assert self._cloud_client
         result = await self._cloud_client.set_grinder_barista_light(
             self.serial_number, enabled
@@ -48,10 +45,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
 
     @cloud_only
     async def set_grind_with(self, mode: GrinderGrindWithMode) -> bool:
-        """Set the grind-with mode.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
+        """Set the grind-with mode."""
         assert self._cloud_client
         result = await self._cloud_client.set_grinder_grind_with(
             self.serial_number, mode
@@ -75,10 +69,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
         mode: GrinderDoseMode = GrinderDoseMode.REV,
         speed_level: GrinderSpeedLevelType | None = None,
     ) -> bool:
-        """Set the dose, and optionally the speed level, of a grinder dose.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
+        """Set the dose, and optionally the speed level, of a grinder dose."""
         assert self._cloud_client
         result = await self._cloud_client.set_grinder_dose(
             self.serial_number, dose_index, dose, mode, speed_level
@@ -113,10 +104,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
 
     @cloud_only
     async def set_more_dose(self, revolutions: float) -> bool:
-        """Set the additional ("more dose") revolutions of the grinder.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
+        """Set the additional ("more dose") revolutions of the grinder."""
         assert self._cloud_client
         result = await self._cloud_client.set_grinder_more_dose(
             self.serial_number, revolutions
