@@ -10,8 +10,10 @@ from pylamarzocco.const import (
     GrinderDoseMode,
     GrinderGrindWithMode,
     GrinderSpeedLevelType,
+    ModelCode,
     WidgetType,
 )
+from pylamarzocco.exceptions import UnsupportedModel
 from pylamarzocco.models import (
     GrinderBaristaLight,
     GrinderDoses,
@@ -68,6 +70,7 @@ async def test_set_grind_with(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_grind_with method."""
+    mock_grinder.dashboard.model_code = ModelCode.SWAN_GRINDER
     mock_grinder.dashboard.config[WidgetType.G_GRIND_WITH] = GrinderGrindWith(
         mode=GrinderGrindWithMode.PORTAFILTER
     )
@@ -80,6 +83,18 @@ async def test_set_grind_with(
     grind_with = mock_grinder.dashboard.config[WidgetType.G_GRIND_WITH]
     assert isinstance(grind_with, GrinderGrindWith)
     assert grind_with.mode is GrinderGrindWithMode.BY_BUTTON
+
+
+async def test_set_grind_with_unsupported_model(
+    mock_grinder: LaMarzoccoGrinder,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test set_grind_with raises on a grinder model that does not support it."""
+    mock_grinder.dashboard.model_code = ModelCode.PICO_GRINDER
+
+    with pytest.raises(UnsupportedModel):
+        await mock_grinder.set_grind_with(GrinderGrindWithMode.BY_BUTTON)
+    mock_cloud_client.set_grinder_grind_with.assert_not_called()
 
 
 async def test_set_dose(
@@ -183,6 +198,7 @@ async def test_set_more_dose(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_more_dose method."""
+    mock_grinder.dashboard.model_code = ModelCode.SWAN_GRINDER
     mock_grinder.dashboard.config[WidgetType.G_MORE_DOSE] = GrinderMoreDose(
         revolutions=1.0,
         revolutions_min=0,
