@@ -29,12 +29,14 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
     async def set_barista_light(self, enabled: bool) -> bool:
         """Enable or disable the barista light."""
         assert self._cloud_client
+        if WidgetType.G_BARISTA_LIGHT not in self.dashboard.config:
+            return False
         result = await self._cloud_client.set_grinder_barista_light(
             self.serial_number, enabled
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.G_BARISTA_LIGHT in self.dashboard.config:
+        if result:
             barista_light = cast(
                 GrinderBaristaLight,
                 self.dashboard.config[WidgetType.G_BARISTA_LIGHT],
@@ -47,12 +49,14 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
     async def set_grind_with(self, mode: GrinderGrindWithMode) -> bool:
         """Set the grind-with mode."""
         assert self._cloud_client
+        if WidgetType.G_GRIND_WITH not in self.dashboard.config:
+            return False
         result = await self._cloud_client.set_grinder_grind_with(
             self.serial_number, mode
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.G_GRIND_WITH in self.dashboard.config:
+        if result:
             grind_with = cast(
                 GrinderGrindWith,
                 self.dashboard.config[WidgetType.G_GRIND_WITH],
@@ -71,6 +75,8 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
     ) -> bool:
         """Set the dose, and optionally the speed level, of a grinder dose."""
         assert self._cloud_client
+        if WidgetType.G_DOSES not in self.dashboard.config:
+            return False
         result = await self._cloud_client.set_grinder_dose(
             self.serial_number, dose_index, dose, mode, speed_level
         )
@@ -79,17 +85,16 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
             return result
 
         # Update dashboard dose value if command succeeded
-        if WidgetType.G_DOSES in self.dashboard.config:
-            doses = cast(GrinderDoses, self.dashboard.config[WidgetType.G_DOSES])
-            dose_list = getattr(doses.doses, mode.name.lower() + "_type", None)
-            if dose_list is not None:
-                for dose_setting in dose_list:
-                    if dose_setting.dose_index == dose_index:
-                        dose_setting.dose = dose
-            if speed_level is not None and doses.speed_levels is not None:
-                for speed_setting in doses.speed_levels:
-                    if speed_setting.dose_index == dose_index:
-                        speed_setting.level = speed_level
+        doses = cast(GrinderDoses, self.dashboard.config[WidgetType.G_DOSES])
+        dose_list = getattr(doses.doses, mode.name.lower() + "_type", None)
+        if dose_list is not None:
+            for dose_setting in dose_list:
+                if dose_setting.dose_index == dose_index:
+                    dose_setting.dose = dose
+        if speed_level is not None and doses.speed_levels is not None:
+            for speed_setting in doses.speed_levels:
+                if speed_setting.dose_index == dose_index:
+                    speed_setting.level = speed_level
 
         # Update the GSpeed widget speed level as well
         if (
@@ -106,12 +111,14 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
     async def set_more_dose(self, revolutions: float) -> bool:
         """Set the additional ("more dose") revolutions of the grinder."""
         assert self._cloud_client
+        if WidgetType.G_MORE_DOSE not in self.dashboard.config:
+            return False
         result = await self._cloud_client.set_grinder_more_dose(
             self.serial_number, revolutions
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.G_MORE_DOSE in self.dashboard.config:
+        if result:
             more_dose = cast(
                 GrinderMoreDose,
                 self.dashboard.config[WidgetType.G_MORE_DOSE],
