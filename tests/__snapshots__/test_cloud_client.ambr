@@ -1869,7 +1869,7 @@
         'time_seconds': 4.0,
         'time_seconds_max': 8,
         'time_seconds_min': 2,
-        'time_seconds_step': 1,
+        'time_seconds_step': 1.0,
       }),
       'CMSteamBoilerLevel': dict({
         'enabled': True,
@@ -2021,7 +2021,7 @@
           'time_seconds': 4.0,
           'time_seconds_max': 8,
           'time_seconds_min': 2,
-          'time_seconds_step': 1,
+          'time_seconds_step': 1.0,
         }),
       }),
       dict({
@@ -2117,7 +2117,7 @@
         'time_seconds': 3.0,
         'time_seconds_max': 4,
         'time_seconds_min': 1,
-        'time_seconds_step': 0,
+        'time_seconds_step': 0.1,
       }),
       'CMSteamBoilerTemperature': dict({
         'enabled': True,
@@ -2260,7 +2260,7 @@
           'time_seconds': 3.0,
           'time_seconds_max': 4,
           'time_seconds_min': 1,
-          'time_seconds_step': 0,
+          'time_seconds_step': 0.1,
         }),
       }),
       dict({
