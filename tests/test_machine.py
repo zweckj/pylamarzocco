@@ -221,6 +221,7 @@ async def test_set_mode(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_mode method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_mode(MachineMode.ECO_MODE)
     mock_cloud_client.set_mode.assert_called_once_with(
         "MR123456", MachineMode.ECO_MODE
@@ -232,6 +233,7 @@ async def test_set_auto_flush(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_auto_flush method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_auto_flush(False)
     mock_cloud_client.set_auto_flush.assert_called_once_with("MR123456", False)
 
@@ -241,6 +243,7 @@ async def test_set_steam_flush(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_steam_flush method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_steam_flush(False)
     mock_cloud_client.set_steam_flush.assert_called_once_with("MR123456", False)
 
@@ -250,6 +253,7 @@ async def test_set_rinse_flush(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_rinse_flush method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_rinse_flush(True)
     mock_cloud_client.set_rinse_flush.assert_called_once_with("MR123456", True)
 
@@ -259,6 +263,7 @@ async def test_set_hot_water_dose_enabled(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_hot_water_dose_enabled method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_hot_water_dose_enabled(False)
     mock_cloud_client.set_hot_water_dose_enabled.assert_called_once_with(
         "MR123456", False
@@ -270,6 +275,7 @@ async def test_set_cup_warmer(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_cup_warmer method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_cup_warmer(True)
     mock_cloud_client.set_cup_warmer.assert_called_once_with("MR123456", True)
 
@@ -279,6 +285,7 @@ async def test_set_group_mode(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_group_mode method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_group_mode(MachineMode.BREWING_MODE)
     mock_cloud_client.set_group_mode.assert_called_once_with(
         "MR123456", MachineMode.BREWING_MODE, 1
@@ -290,6 +297,7 @@ async def test_set_coffee_boiler(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_coffee_boiler method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_coffee_boiler(True)
     mock_cloud_client.set_coffee_boiler.assert_called_once_with("MR123456", True, 1)
 
@@ -299,6 +307,7 @@ async def test_set_rinse_flush_time(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_rinse_flush_time method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_rinse_flush_time(4.0)
     mock_cloud_client.set_rinse_flush_time.assert_called_once_with("MR123456", 4.0)
 
@@ -308,6 +317,7 @@ async def test_set_hot_water_dose(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_hot_water_dose method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_hot_water_dose(8.0, DoseIndex.DOSE_A)
     mock_cloud_client.set_hot_water_dose.assert_called_once_with(
         "MR123456", 8.0, DoseIndex.DOSE_A
@@ -319,6 +329,7 @@ async def test_set_group_dose_mode(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_group_dose_mode method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_group_dose_mode(DoseMode.PULSES_TYPE)
     mock_cloud_client.set_group_dose_mode.assert_called_once_with(
         "MR123456", DoseMode.PULSES_TYPE, 1
@@ -330,6 +341,7 @@ async def test_set_group_dose(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_group_dose method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_group_dose(
         DoseMode.PULSES_TYPE, DoseIndex.DOSE_A, 36.0
     )
@@ -343,6 +355,7 @@ async def test_set_brewing_pressure(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_brewing_pressure method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_brewing_pressure(9.0)
     mock_cloud_client.set_brewing_pressure.assert_called_once_with("MR123456", 9.0, 1)
 
@@ -352,6 +365,7 @@ async def test_set_continuous_dose_enabled(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_continuous_dose_enabled method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_continuous_dose_enabled(True)
     mock_cloud_client.set_continuous_dose_enabled.assert_called_once_with(
         "MR123456", True, 1
@@ -363,6 +377,7 @@ async def test_set_continuous_dose(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_continuous_dose method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_continuous_dose(3.0)
     mock_cloud_client.set_continuous_dose.assert_called_once_with("MR123456", 3.0, 1)
 
@@ -372,6 +387,7 @@ async def test_set_mirror_group1(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_mirror_group1 method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_mirror_group1(True)
     mock_cloud_client.set_mirror_group1.assert_called_once_with("MR123456", True, 2)
 
@@ -381,6 +397,7 @@ async def test_set_plumb_in(
     mock_cloud_client: MagicMock,
 ) -> None:
     """Test the set_plumb_in method."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_plumb_in(True)
     mock_cloud_client.set_plumb_in.assert_called_once_with("MR123456", True)
 
@@ -445,6 +462,7 @@ def _set_group_doses(
     machine: LaMarzoccoMachine, group_doses: GroupDosesSettings
 ) -> None:
     """Attach a group-doses widget to the machine dashboard."""
+    machine.dashboard.model_code = ModelCode.STRADA_X
     machine.dashboard.config[WidgetType.CM_GROUP_DOSES] = group_doses
 
 
