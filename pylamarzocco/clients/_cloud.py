@@ -521,20 +521,6 @@ class LaMarzoccoCloudClient:
         )
         return False
 
-    async def set_power(
-        self,
-        serial_number: str,
-        enabled: bool,
-    ) -> bool:
-        """Turn power of machine on or off"""
-
-        mode = "BrewingMode" if enabled else "StandBy"
-
-        data = {"mode": mode}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineChangeMode", data
-        )
-
     async def set_mode(
         self,
         serial_number: str,
@@ -545,6 +531,15 @@ class LaMarzoccoCloudClient:
         return await self.__execute_command(
             serial_number, "CoffeeMachineChangeMode", data
         )
+
+    async def set_power(
+        self,
+        serial_number: str,
+        enabled: bool,
+    ) -> bool:
+        """Turn power of machine on or off"""
+        mode = MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
+        return await self.set_mode(serial_number, mode)
 
     async def set_steam(
         self,

@@ -237,6 +237,20 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         no_water.allarm = not tank_status
         self.dashboard.config[WidgetType.CM_NO_WATER] = no_water
 
+    def _update_machine_mode_widgets(self, mode: MachineMode) -> None:
+        """Update the machine and group status widgets with the given mode."""
+        if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+            machine_status = cast(
+                MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+            )
+            machine_status.mode = mode
+        if WidgetType.CM_MACHINE_GROUP_STATUS in self.dashboard.config:
+            group_status = cast(
+                MachineGroupStatus,
+                self.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS],
+            )
+            group_status.mode = mode
+
     async def set_power(self, enabled: bool) -> bool:
         """Set the power of the machine.
 
@@ -250,17 +264,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         # Update dashboard if command succeeded
         if result:
             mode = MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
-            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
-                machine_status = cast(
-                    MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
-                )
-                machine_status.mode = mode
-            if WidgetType.CM_MACHINE_GROUP_STATUS in self.dashboard.config:
-                group_status = cast(
-                    MachineGroupStatus,
-                    self.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS],
-                )
-                group_status.mode = mode
+            self._update_machine_mode_widgets(mode)
 
         return result
 
@@ -272,17 +276,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
         # Update dashboard if command succeeded
         if result:
-            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
-                machine_status = cast(
-                    MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
-                )
-                machine_status.mode = mode
-            if WidgetType.CM_MACHINE_GROUP_STATUS in self.dashboard.config:
-                group_status = cast(
-                    MachineGroupStatus,
-                    self.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS],
-                )
-                group_status.mode = mode
+            self._update_machine_mode_widgets(mode)
 
         return result
 
