@@ -19,6 +19,7 @@ from pylamarzocco.const import (
     DoseIndex,
     DoseMode,
     MachineMode,
+    GrinderMode,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -158,11 +159,11 @@ async def test_get_thing_dashboard(
 
 async def test_get_grinder_dashboard(
     mock_aioresponse: aioresponses,
-    serial: str,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting the dashboard for a grinder."""
 
+    serial = "GR123456"  # matches the fixture's serialNumber
     mock_aioresponse.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
         status=200,
@@ -655,6 +656,30 @@ async def test_set_plumb_in(
 
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {"enabled": True}
+    assert result is True
+
+
+@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
+async def test_set_grinder_mode(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the mode (wake/standby) for a grinder."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderChangeMode"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_grinder_mode(serial, GrinderMode.GRINDING)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"mode": "GrindingMode"}
     assert result is True
 
 

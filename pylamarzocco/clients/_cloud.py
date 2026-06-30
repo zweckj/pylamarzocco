@@ -30,6 +30,7 @@ from pylamarzocco.const import (
     DoseIndex,
     DoseMode,
     MachineMode,
+    GrinderMode,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -849,16 +850,25 @@ class LaMarzoccoCloudClient:
             serial_number, "CoffeeMachineSettingWakeUpSchedule", schedule.to_dict()
         )
 
+    async def set_grinder_mode(
+        self,
+        serial_number: str,
+        mode: GrinderMode,
+    ) -> bool:
+        """Set the grinder mode (GrindingMode wakes it, StandBy puts it to sleep). """
+        data = {"mode": mode.value}
+        return await self.__execute_command(
+            serial_number, "GrinderChangeMode", data
+        )
+
     async def set_grinder_barista_light(
         self,
         serial_number: str,
         enabled: bool,
+        index: int = 1,
     ) -> bool:
-        """Enable or disable the barista light of a grinder.
-
-        Note: the grinder ignores setting commands while in StandBy.
-        """
-        data = {"index": 1, "enabled": enabled}
+        """Enable or disable the barista light of a grinder."""
+        data = {"index": index, "enabled": enabled}
         return await self.__execute_command(
             serial_number, "GrinderSettingBaristaLightEnabled", data
         )
