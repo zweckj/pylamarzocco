@@ -30,6 +30,8 @@
               'speed_auto_supported': False,
             }),
           ]),
+          'rev_type': list([
+          ]),
           'time_type': list([
             dict({
               'dose': 1.5,
@@ -124,6 +126,8 @@
                 'speed_auto': None,
                 'speed_auto_supported': False,
               }),
+            ]),
+            'rev_type': list([
             ]),
             'time_type': list([
               dict({

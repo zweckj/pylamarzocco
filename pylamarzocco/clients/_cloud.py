@@ -27,8 +27,12 @@ from pylamarzocco.const import (
     BASE_URL,
     CUSTOMER_APP_URL,
     CommandStatus,
+    DoseIndex,
     DoseMode,
+    GrinderDoseMode,
+    GrinderGrindWithMode,
     GrinderMode,
+    GrinderSpeedLevelType,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -696,6 +700,49 @@ class LaMarzoccoCloudClient:
         data = {"index": index, "enabled": enabled}
         return await self.__execute_command(
             serial_number, "GrinderSettingBaristaLightEnabled", data
+        )
+
+    async def set_grinder_grind_with(
+        self,
+        serial_number: str,
+        mode: GrinderGrindWithMode,
+    ) -> bool:
+        """Set the grind-with mode of a grinder."""
+        data = {"index": 1, "mode": str(mode)}
+        return await self.__execute_command(
+            serial_number, "GrinderSettingGrindWithMode", data
+        )
+
+    async def set_grinder_dose(
+        self,
+        serial_number: str,
+        dose_index: DoseIndex,
+        dose: float,
+        mode: GrinderDoseMode,
+        speed_level: GrinderSpeedLevelType | None = None,
+    ) -> bool:
+        """Set the dose, and optionally the speed level, of a grinder dose."""
+        data: dict[str, Any] = {
+            "index": 1,
+            "mode": str(mode),
+            "doseIndex": str(dose_index),
+            "dose": dose,
+        }
+        if speed_level is not None:
+            data["speedLevel"] = str(speed_level)
+        return await self.__execute_command(
+            serial_number, "GrinderSettingDose", data
+        )
+
+    async def set_grinder_more_dose(
+        self,
+        serial_number: str,
+        revolutions: float,
+    ) -> bool:
+        """Set the additional ("more dose") revolutions of a grinder."""
+        data = {"index": 1, "revolutions": revolutions}
+        return await self.__execute_command(
+            serial_number, "GrinderSettingMoreDose", data
         )
 
     async def change_brew_by_weight_dose_mode(
