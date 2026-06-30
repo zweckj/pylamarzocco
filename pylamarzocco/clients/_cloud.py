@@ -692,7 +692,7 @@ class LaMarzoccoCloudClient:
         enabled: bool,
         index: int = 1,
     ) -> bool:
-    """Enable or disable the barista light of a grinder."""
+        """Enable or disable the barista light of a grinder."""
         data = {"index": index, "enabled": enabled}
         return await self.__execute_command(
             serial_number, "GrinderSettingBaristaLightEnabled", data
