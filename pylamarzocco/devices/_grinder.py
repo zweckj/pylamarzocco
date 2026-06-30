@@ -8,6 +8,7 @@ from pylamarzocco.const import (
     DoseIndex,
     GrinderDoseMode,
     GrinderGrindWithMode,
+    GrinderMode,
     GrinderSpeedLevelType,
     ModelCode,
     WidgetType,
@@ -16,6 +17,7 @@ from pylamarzocco.models import (
     GrinderBaristaLight,
     GrinderDoses,
     GrinderGrindWith,
+    GrinderMachineStatus,
     GrinderMoreDose,
     GrinderSpeed,
 )
@@ -25,6 +27,23 @@ from ._thing import LaMarzoccoThing, cloud_only, models_supported
 
 class LaMarzoccoGrinder(LaMarzoccoThing):
     """Class for La Marzocco grinder."""
+
+    @cloud_only
+    async def set_power(self, enabled: bool) -> bool:
+        """Wake the grinder (GrindingMode) or send it to StandBy."""
+        assert self._cloud_client
+        mode = GrinderMode.GRINDING if enabled else GrinderMode.STANDBY
+        result = await self._cloud_client.set_grinder_mode(self.serial_number, mode)
+
+        # Update dashboard if command succeeded
+        if result and WidgetType.G_MACHINE_STATUS in self.dashboard.config:
+            machine_status = cast(
+                GrinderMachineStatus,
+                self.dashboard.config[WidgetType.G_MACHINE_STATUS],
+            )
+            machine_status.mode = mode
+
+        return result
 
     @cloud_only
     async def set_barista_light(self, enabled: bool) -> bool:

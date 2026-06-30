@@ -9,6 +9,7 @@ from pylamarzocco.const import (
     DoseIndex,
     GrinderDoseMode,
     GrinderGrindWithMode,
+    GrinderMode,
     GrinderSpeedLevelType,
     ModelCode,
     WidgetType,
@@ -20,6 +21,7 @@ from pylamarzocco.models import (
     GrinderDoseSettings,
     GrinderDosesSettings,
     GrinderGrindWith,
+    GrinderMachineStatus,
     GrinderMoreDose,
     GrinderSpeed,
     GrinderSpeedLevel,
@@ -44,6 +46,27 @@ def mock_lm_grinder(
         cloud_client=mock_cloud_client,
     )
     return grinder
+
+
+async def test_set_power_updates_mode(
+    mock_grinder: LaMarzoccoGrinder,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_power method (wake / standby)."""
+    mock_grinder.dashboard.config[WidgetType.G_MACHINE_STATUS] = GrinderMachineStatus(
+        status=GrinderMode.STANDBY,
+        available_modes=[GrinderMode.GRINDING, GrinderMode.STANDBY],
+        mode=GrinderMode.STANDBY,
+    )
+
+    assert await mock_grinder.set_power(True)
+    mock_cloud_client.set_grinder_mode.assert_called_once_with(
+        "GR123456", GrinderMode.GRINDING
+    )
+
+    status = mock_grinder.dashboard.config[WidgetType.G_MACHINE_STATUS]
+    assert isinstance(status, GrinderMachineStatus)
+    assert status.mode is GrinderMode.GRINDING
 
 
 async def test_set_barista_light(
