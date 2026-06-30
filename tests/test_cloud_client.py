@@ -286,6 +286,11 @@ async def test_disconnected_commands_do_not_leak_pending(
     for _ in range(5):
         assert await client.set_power(serial, False) is True
 
+    requests = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))]
+    assert len(requests) == 5
+    for call in requests:
+        assert call.kwargs["json"] == {"mode": "StandBy"}
+
     assert client._pending_commands == {}
 
 
