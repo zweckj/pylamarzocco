@@ -15,12 +15,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
 
     @cloud_only
     async def set_power(self, enabled: bool) -> bool:
-        """Wake the grinder (GrindingMode) or send it to StandBy.
-
-        The grinder ignores all other setting commands while in StandBy, so
-        wake it first. The cloud applies the change asynchronously (the
-        dashboard catches up a few seconds later).
-        """
+        """Wake the grinder (GrindingMode) or send it to StandBy."""
         assert self._cloud_client
         mode = GrinderMode.GRINDING if enabled else GrinderMode.STANDBY
         result = await self._cloud_client.set_grinder_mode(self.serial_number, mode)
