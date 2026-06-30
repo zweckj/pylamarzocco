@@ -1,0 +1,81 @@
+{
+  "serialNumber": "SR123456",
+  "type": "CoffeeMachine",
+  "name": "Strada X",
+  "location": "HOME_OR_DWELLING_SPACE",
+  "modelCode": "STRADAX",
+  "modelName": "STRADA X",
+  "gatewayHw": "LinuxLM",
+  "connected": true,
+  "connectionDate": 1781844133803,
+  "offlineMode": false,
+  "requireFirmwareUpdate": false,
+  "availableFirmwareUpdate": false,
+  "coffeeStation": {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "name": "Station",
+    "coffeeMachine": {
+      "serialNumber": "SR123456",
+      "type": "CoffeeMachine",
+      "name": "Strada X",
+      "location": "HOME_OR_DWELLING_SPACE",
+      "modelCode": "STRADAX",
+      "modelName": "STRADA X",
+      "gatewayHw": "LinuxLM",
+      "connected": true,
+      "connectionDate": 1781844133803,
+      "offlineMode": false,
+      "requireFirmwareUpdate": false,
+      "availableFirmwareUpdate": false,
+      "imageUrl": "https://lion.lamarzocco.io/img/thing-model/list/stradax/stradax-1.png",
+      "imageUrlList": "https://lion.lamarzocco.io/img/thing-model/list/stradax/stradax-1.png",
+      "imageUrlDetail": "https://lion.lamarzocco.io/img/thing-model/detail/stradax/stradax-1.png",
+      "bleAuthToken": "0000000000000000000000000000000000000000000000000000000000000000",
+      "shotCounterSupported": false
+    },
+    "grinders": [],
+    "accessories": []
+  },
+  "imageUrl": "https://lion.lamarzocco.io/img/thing-model/detail/stradax/stradax-1.png",
+  "imageUrlList": "https://lion.lamarzocco.io/img/thing-model/list/stradax/stradax-1.png",
+  "imageUrlDetail": "https://lion.lamarzocco.io/img/thing-model/detail/stradax/stradax-1.png",
+  "bleAuthToken": "0000000000000000000000000000000000000000000000000000000000000000",
+  "shotCounterSupported": false,
+  "actualFirmwares": [
+    {
+      "type": "Gateway",
+      "buildVersion": "v2.2.15",
+      "changeLog": "What's new in this version:\n\n* Minor improvements",
+      "thingModelCode": "StradaX",
+      "status": "Updated",
+      "availableUpdate": null
+    },
+    {
+      "type": "File",
+      "buildVersion": "v17",
+      "changeLog": null,
+      "thingModelCode": "StradaX",
+      "status": "Updated",
+      "availableUpdate": null
+    },
+    {
+      "type": "Machine",
+      "buildVersion": "v2.2.0",
+      "changeLog": "What's new in this version:\n\n* Eco mode\n* Rinse",
+      "thingModelCode": "StradaX",
+      "status": "Updated",
+      "availableUpdate": null
+    }
+  ],
+  "wifiSsid": "wifi",
+  "wifiRssi": -68,
+  "plumbInSupported": false,
+  "isPlumbedIn": null,
+  "cropsterSupported": false,
+  "cropsterActive": null,
+  "hemroSupported": false,
+  "hemroActive": null,
+  "factoryResetSupported": false,
+  "autoUpdateSupported": false,
+  "autoUpdate": null
+}

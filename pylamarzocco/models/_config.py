@@ -157,6 +157,26 @@ class MachineStatus(BaseWidgetOutput):
 
 
 @dataclass(kw_only=True)
+class MachineGroupStatus(BaseWidgetOutput):
+    """Machine group status configuration."""
+
+    widget_type = WidgetType.CM_MACHINE_GROUP_STATUS
+    status: MachineState
+    available_modes: list[MachineMode] = field(
+        metadata=field_options(alias="availableModes")
+    )
+    mode: MachineMode
+    next_status: NextStatus | None = field(metadata=field_options(alias="nextStatus"))
+    brewing_start_time: datetime | None = field(
+        metadata=field_options(
+            alias="brewingStartTime",
+            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+        ),
+        default=None,
+    )
+
+
+@dataclass(kw_only=True)
 class NextStatus(DataClassJSONMixin):
     """Next status configuration."""
 
@@ -350,7 +370,23 @@ class RinseFlush(BaseWidgetOutput):
     time_seconds: float = field(metadata=field_options(alias="timeSeconds"))
     time_seconds_min: int = field(metadata=field_options(alias="timeSecondsMin"))
     time_seconds_max: int = field(metadata=field_options(alias="timeSecondsMax"))
-    time_seconds_step: int = field(metadata=field_options(alias="timeSecondsStep"))
+    time_seconds_step: float = field(metadata=field_options(alias="timeSecondsStep"))
+
+
+@dataclass(kw_only=True)
+class AutoFlush(BaseWidgetOutput):
+    """Auto flush configuration."""
+
+    widget_type = WidgetType.CM_AUTO_FLUSH
+    enabled: bool
+
+
+@dataclass(kw_only=True)
+class SteamFlush(BaseWidgetOutput):
+    """Steam flush configuration."""
+
+    widget_type = WidgetType.CM_STEAM_FLUSH
+    enabled: bool
 
 
 @dataclass(kw_only=True)
@@ -439,7 +475,7 @@ class GroupDosesSettings(BaseWidgetOutput):
         metadata=field_options(alias="availableModes"), default_factory=list
     )
     mode: DoseMode = field(default=DoseMode.PULSES_TYPE)
-    profile: str | None = field(default=None)
+    profile: ProfileSettings | None = field(default=None)
     doses: DosePulsesType
     continuous_dose_supported: bool = field(
         metadata=field_options(alias="continuousDoseSupported"), default=False
@@ -450,7 +486,7 @@ class GroupDosesSettings(BaseWidgetOutput):
     brewing_pressure_supported: bool = field(
         metadata=field_options(alias="brewingPressureSupported"), default=False
     )
-    brewing_pressure: str | None = field(
+    brewing_pressure: BrewingPressureSettings | None = field(
         metadata=field_options(alias="brewingPressure"), default=None
     )
 
@@ -462,6 +498,47 @@ class DosePulsesType(DataClassJSONMixin):
     pulses_type: list[DoseSettings] = field(
         metadata=field_options(alias="PulsesType"), default_factory=list
     )
+    manual_type: list[DoseSettings] = field(
+        metadata=field_options(alias="ManualType"), default_factory=list
+    )
+    mass_type: list[DoseSettings] = field(
+        metadata=field_options(alias="MassType"), default_factory=list
+    )
+    brew_ratio_type: list[DoseSettings] = field(
+        metadata=field_options(alias="BrewRatioType"), default_factory=list
+    )
+    profile_type: list[DoseSettings] = field(
+        metadata=field_options(alias="ProfileType"), default_factory=list
+    )
+
+
+@dataclass(kw_only=True)
+class ProfileGraph(DataClassJSONMixin):
+    """Pressure/flow profile graph data points."""
+
+    x: list[float] = field(default_factory=list)
+    y: list[float] = field(default_factory=list)
+
+
+@dataclass(kw_only=True)
+class ProfileSettings(DataClassJSONMixin):
+    """Selected brewing profile configuration."""
+
+    selected_profile: int = field(metadata=field_options(alias="selectedProfile"))
+    number_of_profiles: int = field(metadata=field_options(alias="numberOfProfiles"))
+    mass: float
+    time: float
+    graph: ProfileGraph | None = field(default=None)
+
+
+@dataclass(kw_only=True)
+class BrewingPressureSettings(DataClassJSONMixin):
+    """Brewing pressure configuration."""
+
+    pressure: float
+    pressure_min: float = field(metadata=field_options(alias="pressureMin"))
+    pressure_max: float = field(metadata=field_options(alias="pressureMax"))
+    pressure_step: float = field(metadata=field_options(alias="pressureStep"))
 
 
 @dataclass(kw_only=True)
@@ -471,7 +548,7 @@ class BaseDoseSettings(DataClassJSONMixin):
     dose: float
     dose_min: float = field(metadata=field_options(alias="doseMin"))
     dose_max: float = field(metadata=field_options(alias="doseMax"))
-    dose_step: int = field(metadata=field_options(alias="doseStep"))
+    dose_step: float = field(metadata=field_options(alias="doseStep"))
 
 
 @dataclass(kw_only=True)

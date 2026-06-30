@@ -34,7 +34,9 @@ class FirmwareVersion(DataClassJSONMixin):
 
     type: FirmwareType
     build_version: str = field(metadata=field_options(alias="buildVersion"))
-    change_log: str = field(metadata=field_options(alias="changeLog"))
+    change_log: str | None = field(
+        metadata=field_options(alias="changeLog"), default=None
+    )
     thing_model_code: str = field(metadata=field_options(alias="thingModelCode"))
 
 
