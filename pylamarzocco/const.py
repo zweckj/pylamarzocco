@@ -38,6 +38,22 @@ class GrinderMode(StrEnum):
 
     GRINDING = "GrindingMode"
     STANDBY = "StandBy"
+    POWERED_ON = "PoweredOn"
+
+
+class GrinderSpeedLevelType(StrEnum):
+    """Grinder speed levels."""
+
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+
+
+class GrinderGrindWithMode(StrEnum):
+    """Grinder grind-with modes."""
+
+    PORTAFILTER = "Portafilter"
+    BY_BUTTON = "ByButton"
 
 
 class GrinderDoseMode(StrEnum):
@@ -45,6 +61,7 @@ class GrinderDoseMode(StrEnum):
 
     TIME = "TimeType"
     MASS = "MassType"
+    REV = "RevType"
 
 
 class WidgetType(StrEnum):

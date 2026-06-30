@@ -19,7 +19,10 @@ from pylamarzocco.const import (
     DoseIndex,
     DoseMode,
     MachineMode,
+    GrinderDoseMode,
+    GrinderGrindWithMode,
     GrinderMode,
+    GrinderSpeedLevelType,
     PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
@@ -704,6 +707,119 @@ async def test_set_grinder_barista_light(
 
     call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
     assert call.kwargs["json"] == {"index": 1, "enabled": True}
+    assert result is True
+
+
+async def test_set_grinder_grind_with(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the grind-with mode for a grinder."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingGrindWithMode"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_grinder_grind_with(
+        serial, GrinderGrindWithMode.BY_BUTTON
+    )
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"index": 1, "mode": "ByButton"}
+    assert result is True
+
+
+async def test_set_grinder_dose(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the dose and speed level for a grinder."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingDose"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_grinder_dose(
+        serial,
+        DoseIndex.DOSE_A,
+        12.0,
+        GrinderDoseMode.REV,
+        GrinderSpeedLevelType.HIGH,
+    )
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "index": 1,
+        "mode": "RevType",
+        "doseIndex": "DoseA",
+        "dose": 12.0,
+        "speedLevel": "High",
+    }
+    assert result is True
+
+
+async def test_set_grinder_dose_without_speed(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the dose without a speed level for a grinder."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingDose"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_grinder_dose(
+        serial, DoseIndex.DOSE_B, 9.7, GrinderDoseMode.REV
+    )
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {
+        "index": 1,
+        "mode": "RevType",
+        "doseIndex": "DoseB",
+        "dose": 9.7,
+    }
+    assert result is True
+
+
+async def test_set_grinder_more_dose(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Test setting the more-dose revolutions for a grinder."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingMoreDose"
+
+    mock_aioresponse.post(
+        url=url,
+        status=200,
+        payload=MOCK_COMMAND_RESPONSE,
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+
+    result = await client.set_grinder_more_dose(serial, 2.5)
+
+    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    assert call.kwargs["json"] == {"index": 1, "revolutions": 2.5}
     assert result is True
 
 

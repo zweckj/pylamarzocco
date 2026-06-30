@@ -20,7 +20,9 @@ from pylamarzocco.const import (
     DoseMode,
     FirmwareType,
     GrinderDoseMode,
+    GrinderGrindWithMode,
     GrinderMode,
+    GrinderSpeedLevelType,
     MachineMode,
     MachineState,
     PreExtractionMode,
@@ -657,6 +659,17 @@ class GrinderDosesSettings(DataClassJSONMixin):
     mass_type: list[GrinderDoseSettings] = field(
         metadata=field_options(alias="MassType"), default_factory=list
     )
+    rev_type: list[GrinderDoseSettings] = field(
+        metadata=field_options(alias="RevType"), default_factory=list
+    )
+
+
+@dataclass(kw_only=True)
+class GrinderSpeedLevelSetting(DataClassJSONMixin):
+    """Grinder speed level per dose."""
+
+    dose_index: DoseIndex = field(metadata=field_options(alias="doseIndex"))
+    level: GrinderSpeedLevelType
 
 
 @dataclass(kw_only=True)
@@ -672,7 +685,7 @@ class GrinderDoses(BaseWidgetOutput):
     speed_levels_supported: bool = field(
         metadata=field_options(alias="speedLevelsSupported"), default=False
     )
-    speed_levels: str | None = field(
+    speed_levels: list[GrinderSpeedLevelSetting] | None = field(
         metadata=field_options(alias="speedLevels"), default=None
     )
 
@@ -691,3 +704,42 @@ class GrinderBaristaLight(BaseWidgetOutput):
 
     widget_type = WidgetType.G_BARISTA_LIGHT
     enabled: bool
+
+
+@dataclass(kw_only=True)
+class GrinderSpeedLevel(DataClassJSONMixin):
+    """Grinder speed level configuration."""
+
+    level: GrinderSpeedLevelType
+    auto_enabled: bool = field(metadata=field_options(alias="autoEnabled"))
+    group_index: int | None = field(metadata=field_options(alias="groupIndex"))
+
+
+@dataclass(kw_only=True)
+class GrinderSpeed(BaseWidgetOutput):
+    """Grinder speed configuration."""
+
+    widget_type = WidgetType.G_SPEED
+    doses: dict[str, GrinderSpeedLevel]
+    groups_number: int = field(metadata=field_options(alias="groupsNumber"))
+    speed_auto_supported: bool = field(metadata=field_options(alias="speedAutoSupported"))
+    speed_auto: str | None = field(metadata=field_options(alias="speedAuto"), default=None)
+
+
+@dataclass(kw_only=True)
+class GrinderMoreDose(BaseWidgetOutput):
+    """Grinder more dose configuration."""
+
+    widget_type = WidgetType.G_MORE_DOSE
+    revolutions: float
+    revolutions_min: float = field(metadata=field_options(alias="revolutionsMin"))
+    revolutions_max: float = field(metadata=field_options(alias="revolutionsMax"))
+    revolutions_step: float = field(metadata=field_options(alias="revolutionsStep"))
+
+
+@dataclass(kw_only=True)
+class GrinderGrindWith(BaseWidgetOutput):
+    """Grinder grind mode configuration."""
+
+    widget_type = WidgetType.G_GRIND_WITH
+    mode: GrinderGrindWithMode
