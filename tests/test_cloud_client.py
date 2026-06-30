@@ -264,14 +264,7 @@ async def test_disconnected_commands_do_not_leak_pending(
     serial: str,
 ) -> None:
     """Fire-and-forget commands (websocket disconnected) must not accumulate
-    in _pending_commands.
-
-    Regression test: the pending future used to be registered before the
-    websocket-connected check, so every command sent while disconnected left
-    an entry that was never resolved or popped. The cloud returns a *unique*
-    id per command, so the leak grows unboundedly -- a constant id (as in
-    MOCK_COMMAND_RESPONSE) would mask it by overwriting the same dict key.
-    """
+    in _pending_commands. """
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
