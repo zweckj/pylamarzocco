@@ -19,7 +19,11 @@ from pylamarzocco.const import (
     SteamTargetLevel,
     WidgetType,
 )
-from pylamarzocco.exceptions import BluetoothConnectionFailed, OperationNotAvailable
+from pylamarzocco.exceptions import (
+    BluetoothConnectionFailed,
+    OperationNotAvailable,
+    UnsupportedModel,
+)
 from pylamarzocco.models import (
     BaseDoseSettings,
     BluetoothCommandStatus,
@@ -311,36 +315,42 @@ async def test_set_rinse_flush_time(
     mock_cloud_client.set_rinse_flush_time.assert_called_once_with("MR123456", 4.0)
 
 
+@pytest.mark.parametrize("model_code", (ModelCode.STRADA_X, ModelCode.GS3_AV))
 async def test_set_hot_water_dose(
     mock_machine: LaMarzoccoMachine,
     mock_cloud_client: MagicMock,
+    model_code: ModelCode,
 ) -> None:
     """Test the set_hot_water_dose method."""
-    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    mock_machine.dashboard.model_code = model_code
     assert await mock_machine.set_hot_water_dose(8.0, DoseIndex.DOSE_A)
     mock_cloud_client.set_hot_water_dose.assert_called_once_with(
         "MR123456", 8.0, DoseIndex.DOSE_A
     )
 
 
+@pytest.mark.parametrize("model_code", (ModelCode.STRADA_X, ModelCode.GS3_AV))
 async def test_set_group_dose_mode(
     mock_machine: LaMarzoccoMachine,
     mock_cloud_client: MagicMock,
+    model_code: ModelCode,
 ) -> None:
     """Test the set_group_dose_mode method."""
-    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    mock_machine.dashboard.model_code = model_code
     assert await mock_machine.set_group_dose_mode(DoseMode.PULSES_TYPE)
     mock_cloud_client.set_group_dose_mode.assert_called_once_with(
         "MR123456", DoseMode.PULSES_TYPE, 1
     )
 
 
+@pytest.mark.parametrize("model_code", (ModelCode.STRADA_X, ModelCode.GS3_AV))
 async def test_set_group_dose(
     mock_machine: LaMarzoccoMachine,
     mock_cloud_client: MagicMock,
+    model_code: ModelCode,
 ) -> None:
     """Test the set_group_dose method."""
-    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    mock_machine.dashboard.model_code = model_code
     assert await mock_machine.set_group_dose(
         DoseMode.PULSES_TYPE, DoseIndex.DOSE_A, 36.0
     )
@@ -359,24 +369,28 @@ async def test_set_brewing_pressure(
     mock_cloud_client.set_brewing_pressure.assert_called_once_with("MR123456", 9.0, 1)
 
 
+@pytest.mark.parametrize("model_code", (ModelCode.STRADA_X, ModelCode.GS3_AV))
 async def test_set_continuous_dose_enabled(
     mock_machine: LaMarzoccoMachine,
     mock_cloud_client: MagicMock,
+    model_code: ModelCode,
 ) -> None:
     """Test the set_continuous_dose_enabled method."""
-    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    mock_machine.dashboard.model_code = model_code
     assert await mock_machine.set_continuous_dose_enabled(True)
     mock_cloud_client.set_continuous_dose_enabled.assert_called_once_with(
         "MR123456", True, 1
     )
 
 
+@pytest.mark.parametrize("model_code", (ModelCode.STRADA_X, ModelCode.GS3_AV))
 async def test_set_continuous_dose(
     mock_machine: LaMarzoccoMachine,
     mock_cloud_client: MagicMock,
+    model_code: ModelCode,
 ) -> None:
     """Test the set_continuous_dose method."""
-    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    mock_machine.dashboard.model_code = model_code
     assert await mock_machine.set_continuous_dose(3.0)
     mock_cloud_client.set_continuous_dose.assert_called_once_with("MR123456", 3.0, 1)
 
@@ -389,6 +403,43 @@ async def test_set_mirror_group1(
     mock_machine.dashboard.model_code = ModelCode.STRADA_X
     assert await mock_machine.set_mirror_group1(True)
     mock_cloud_client.set_mirror_group1.assert_called_once_with("MR123456", True, 2)
+
+
+async def test_set_mirror_group1_group_3(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_mirror_group1 method accepts group 3."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+
+    assert await mock_machine.set_mirror_group1(True, group_index=3)
+    mock_cloud_client.set_mirror_group1.assert_called_once_with("MR123456", True, 3)
+
+
+@pytest.mark.parametrize("group_index", (1, 4))
+async def test_set_mirror_group1_invalid_group_index_raises(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+    group_index: int,
+) -> None:
+    """Test the set_mirror_group1 method rejects invalid group indices."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+
+    with pytest.raises(ValueError):
+        await mock_machine.set_mirror_group1(True, group_index=group_index)
+    mock_cloud_client.set_mirror_group1.assert_not_called()
+
+
+async def test_set_continuous_dose_gs3_mp_unsupported(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the set_continuous_dose method remains gated on unsupported models."""
+    mock_machine.dashboard.model_code = ModelCode.GS3_MP
+
+    with pytest.raises(UnsupportedModel):
+        await mock_machine.set_continuous_dose(3.0)
+    mock_cloud_client.set_continuous_dose.assert_not_called()
 
 
 async def test_set_plumb_in(

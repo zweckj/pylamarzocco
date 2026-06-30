@@ -400,7 +400,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported((ModelCode.STRADA_X,))
+    @models_supported((ModelCode.STRADA_X, ModelCode.GS3_AV))
     async def set_hot_water_dose(self, dose: float, dose_index: DoseIndex) -> bool:
         """Set a hot water dose value."""
         assert self._cloud_client
@@ -426,7 +426,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return cast(GroupDosesSettings, widget)
 
     @cloud_only
-    @models_supported((ModelCode.STRADA_X,))
+    @models_supported((ModelCode.STRADA_X, ModelCode.GS3_AV))
     async def set_group_dose_mode(self, mode: DoseMode, group_index: int = 1) -> bool:
         """Set the dose mode of a group."""
         group_doses = self._group_doses_config()
@@ -455,7 +455,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported((ModelCode.STRADA_X,))
+    @models_supported((ModelCode.STRADA_X, ModelCode.GS3_AV))
     async def set_group_dose(
         self,
         mode: DoseMode,
@@ -522,7 +522,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         return result
 
     @cloud_only
-    @models_supported((ModelCode.STRADA_X,))
+    @models_supported((ModelCode.STRADA_X, ModelCode.GS3_AV))
     async def set_continuous_dose_enabled(
         self, enabled: bool, group_index: int = 1
     ) -> bool:
@@ -533,7 +533,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
     @cloud_only
-    @models_supported((ModelCode.STRADA_X,))
+    @models_supported((ModelCode.STRADA_X, ModelCode.GS3_AV))
     async def set_continuous_dose(
         self, seconds: float, group_index: int = 1
     ) -> bool:
@@ -546,12 +546,10 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     @cloud_only
     @models_supported((ModelCode.STRADA_X,))
     async def set_mirror_group1(self, enabled: bool, group_index: int = 2) -> bool:
-        """Make a group mirror group 1's doses.
+        """Make a group mirror group 1's doses."""
+        if group_index not in (2, 3):
+            raise ValueError("group_index must be 2 or 3")
 
-        Args:
-            group_index: The group that should mirror group 1. Defaults to 2,
-                since group 1 cannot mirror itself.
-        """
         assert self._cloud_client
         return await self._cloud_client.set_mirror_group1(
             self.serial_number, enabled, group_index
