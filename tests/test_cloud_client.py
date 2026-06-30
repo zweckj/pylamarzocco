@@ -265,6 +265,36 @@ async def test_set_power(
     assert result is True
 
 
+async def test_disconnected_commands_do_not_leak_pending(
+    mock_aioresponse: aioresponses,
+    serial: str,
+) -> None:
+    """Fire-and-forget commands (websocket disconnected) must not accumulate
+    in _pending_commands. """
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+
+    for i in range(5):
+        mock_aioresponse.post(
+            url=url,
+            status=200,
+            payload=[{"id": f"cmd-{i}", "status": "Pending", "error_code": None}],
+        )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    assert client.websocket.connected is False
+
+    for _ in range(5):
+        assert await client.set_power(serial, False) is True
+
+    requests = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))]
+    assert len(requests) == 5
+    for call in requests:
+        assert call.kwargs["json"] == {"mode": "StandBy"}
+
+    assert client._pending_commands == {}
+
+
 @pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
 async def test_set_power_with_ws_validation(
     mock_aioresponse: aioresponses,
