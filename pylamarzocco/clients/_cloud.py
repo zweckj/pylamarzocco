@@ -680,12 +680,7 @@ class LaMarzoccoCloudClient:
         serial_number: str,
         mode: GrinderMode,
     ) -> bool:
-        """Set the grinder mode (GrindingMode wakes it, StandBy puts it to sleep).
-
-        The grinder ignores setting commands while in StandBy, so waking it
-        first is required before any other grinder command. Application is
-        asynchronous: the dashboard reflects the change a few seconds later.
-        """
+        """Set the grinder mode (GrindingMode wakes it, StandBy puts it to sleep). """
         data = {"mode": mode.value}
         return await self.__execute_command(
             serial_number, "GrinderChangeMode", data
