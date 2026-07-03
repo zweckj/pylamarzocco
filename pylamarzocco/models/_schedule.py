@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Any
 
 from mashumaro import field_options
@@ -12,7 +11,7 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import SmartStandByType, WeekDay
 
-from ._general import CommandResponse, Thing
+from ._general import Thing
 
 
 def _deserialize_auto_on_off(value: Any) -> str | AutoOnOff | None:
@@ -20,6 +19,13 @@ def _deserialize_auto_on_off(value: Any) -> str | AutoOnOff | None:
     if isinstance(value, dict):
         return AutoOnOff.from_dict(value)
     return value
+
+
+def _deserialize_smart_wake_up_sleep(value: Any) -> SmartWakeUpSleepSettings:
+    """Deserialize smartWakeUpSleep which can be null or an object."""
+    if isinstance(value, dict):
+        return SmartWakeUpSleepSettings.from_dict(value)
+    return SmartWakeUpSleepSettings()
 
 
 @dataclass(kw_only=True)
@@ -156,8 +162,11 @@ class ThingSchedulingSettings(Thing):
         metadata=field_options(alias="smartWakeUpSleepSupported"),
         default=True,
     )
-    smart_wake_up_sleep: SmartWakeUpSleepSettings | None = field(
-        metadata=field_options(alias="smartWakeUpSleep"),
+    smart_wake_up_sleep: SmartWakeUpSleepSettings = field(
+        metadata=field_options(
+            alias="smartWakeUpSleep",
+            deserialize=_deserialize_smart_wake_up_sleep,
+        ),
         default_factory=SmartWakeUpSleepSettings,
     )
     auto_stand_by: str | None = field(

@@ -49,7 +49,7 @@ async def test_strada_schedule_eco_mode_and_auto_on_off() -> None:
     fixture = load_fixture("machine", "schedule_strada.json")
     schedule = ThingSchedulingSettings.from_dict(fixture)
 
-    assert schedule.smart_wake_up_sleep is None
+    assert schedule.smart_wake_up_sleep is not None
 
     assert isinstance(schedule.auto_on_off, AutoOnOff)
     assert schedule.auto_on_off.on_time_minutes == 360
