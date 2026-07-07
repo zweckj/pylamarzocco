@@ -5,6 +5,9 @@ This is a library to interface with La Marzocco's Home machines.
 ![workflow](https://github.com/zweckj/pylamarzocco/actions/workflows/pypi.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/zweckj/pylamarzocco/graph/badge.svg?token=350GPTLZXS)](https://codecov.io/gh/zweckj/pylamarzocco)
 
+> [!NOTE]
+> This is an unofficial library, that is not affiliated with, endorsed by, or sponsored by La Marzocco S.r.l in any way. "La Marzocco" and machine names are trademarks of their respective owner, used only to describe what this library talks to.
+
 # Installing this libary
 This project is on pypi and can be installed using pip
 
