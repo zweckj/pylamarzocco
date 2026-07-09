@@ -151,8 +151,9 @@ class LaMarzoccoThing:
         self, config: ThingDashboardWebsocketConfig
     ) -> None:
         """Handler for receiving a websocket message."""
-        self.dashboard.widgets = config.widgets
-        self.dashboard.config = config.config
+        if config.widgets:
+            self.dashboard.widgets = config.widgets
+            self.dashboard.config = config.config
 
         if self._update_callback is not None:
             self._update_callback(config)
