@@ -94,6 +94,7 @@ class WidgetType(StrEnum):
     CM_TAP_GESTURES = "CMTapGestures"
     CM_STEAM_PURGE = "CMSteamPurge"
     CM_TAP_DOSES = "CMTapDoses"
+    CM_MAINTENANCE_STATUS = "CMMaintenanceStatus"
     G_MACHINE_STATUS = "GMachineStatus"
     G_DOSES = "GDoses"
     G_SINGLE_DOSE_MODE = "GSingleDoseMode"
