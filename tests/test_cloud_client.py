@@ -7,7 +7,7 @@ from http import HTTPMethod
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1, generate_private_key
 from syrupy import SnapshotAssertion
 from yarl import URL
@@ -84,10 +84,14 @@ def websocket_mock() -> Generator[MagicMock]:
         yield mock_ws
 
 
-async def test_access_token(mock_aioresponse: aioresponses) -> None:
+async def test_access_token(mock_aiointercept: aiointercept) -> None:
     """Test getting the dashboard for a thing."""
 
-    mock_aioresponse.post(
+    # Drop the autouse repeating sign-in handler; aiointercept rejects adding
+    # one-shot handlers for the same URL on top of a repeat=True handler.
+    mock_aiointercept.clear()
+
+    mock_aiointercept.post(
         url=f"{CUSTOMER_APP_URL}/auth/signin",
         status=200,
         body={
@@ -109,7 +113,7 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
     assert result == "mock-access"
 
     # now get one again to get from cache
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=f"{CUSTOMER_APP_URL}/auth/signin",
         status=200,
         payload={
@@ -121,7 +125,7 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
     assert result == "mock-access"
 
     # now get one from refresh token
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=f"{CUSTOMER_APP_URL}/auth/refreshtoken",
         body={
             "username": "test",
@@ -142,14 +146,14 @@ async def test_access_token(mock_aioresponse: aioresponses) -> None:
 
 @pytest.mark.parametrize("model", ["micra", "gs3av", "mini", "minir", "stradax"])
 async def test_get_thing_dashboard(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     model: str,
     serial: str,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting the dashboard for a thing."""
 
-    mock_aioresponse.get(
+    mock_aiointercept.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
         status=200,
         payload=load_fixture("machine", f"dashboard_{model}.json"),
@@ -161,13 +165,13 @@ async def test_get_thing_dashboard(
 
 
 async def test_get_grinder_dashboard(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting the dashboard for a grinder."""
 
     serial = "GR123456"  # matches the fixture's serialNumber
-    mock_aioresponse.get(
+    mock_aiointercept.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
         status=200,
         payload=load_fixture("grinder", "dashboard_pico.json"),
@@ -179,11 +183,11 @@ async def test_get_grinder_dashboard(
 
 
 async def test_get_thing_settings(
-    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
+    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the settings for a thing."""
 
-    mock_aioresponse.get(
+    mock_aiointercept.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/settings",
         status=200,
         payload=load_fixture("machine", "settings_micra.json"),
@@ -195,11 +199,11 @@ async def test_get_thing_settings(
 
 
 async def test_get_thing_schedule(
-    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
+    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the schedule for a thing."""
 
-    mock_aioresponse.get(
+    mock_aiointercept.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/scheduling",
         status=200,
         payload=load_fixture("machine", "schedule.json"),
@@ -211,11 +215,11 @@ async def test_get_thing_schedule(
 
 
 async def test_list_things(
-    mock_aioresponse: aioresponses, snapshot: SnapshotAssertion
+    mock_aiointercept: aiointercept, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the list of things."""
 
-    mock_aioresponse.get(
+    mock_aiointercept.get(
         url=f"{CUSTOMER_APP_URL}/things",
         status=200,
         payload=[load_fixture("machine", "settings_micra.json")],
@@ -227,11 +231,11 @@ async def test_list_things(
 
 
 async def test_get_statistics(
-    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
+    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the list of things."""
 
-    mock_aioresponse.get(
+    mock_aiointercept.get(
         url=f"{CUSTOMER_APP_URL}/things/{serial}/stats",
         status=200,
         payload=load_fixture("machine", "statistics.json"),
@@ -243,14 +247,14 @@ async def test_get_statistics(
 
 
 async def test_set_power(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the power for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -260,13 +264,13 @@ async def test_set_power(
 
     result = await client.set_power(serial, False)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"mode": "StandBy"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"mode": "StandBy"}
     assert result is True
 
 
 async def test_disconnected_commands_do_not_leak_pending(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Fire-and-forget commands (websocket disconnected) must not accumulate
@@ -275,7 +279,7 @@ async def test_disconnected_commands_do_not_leak_pending(
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
     for i in range(5):
-        mock_aioresponse.post(
+        mock_aiointercept.post(
             url=url,
             status=200,
             payload=[{"id": f"cmd-{i}", "status": "Pending", "error_code": None}],
@@ -287,24 +291,24 @@ async def test_disconnected_commands_do_not_leak_pending(
     for _ in range(5):
         assert await client.set_power(serial, False) is True
 
-    requests = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))]
+    requests = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))]
     assert len(requests) == 5
     for call in requests:
-        assert call.kwargs["json"] == {"mode": "StandBy"}
+        assert await call.json() == {"mode": "StandBy"}
 
     assert client._pending_commands == {}
 
 
 @pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
 async def test_set_power_with_ws_validation(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the power for a thing, validate the command from ws."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -314,20 +318,20 @@ async def test_set_power_with_ws_validation(
 
     result = await client.set_power(serial, False)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"mode": "StandBy"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"mode": "StandBy"}
     assert result is True
 
 
 async def test_set_mode(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the operating mode for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -337,20 +341,20 @@ async def test_set_mode(
 
     result = await client.set_mode(serial, MachineMode.ECO_MODE)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"mode": "EcoMode"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"mode": "EcoMode"}
     assert result is True
 
 
 async def test_set_auto_flush(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test enabling auto flush for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingAutoFlushEnabled"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -360,20 +364,20 @@ async def test_set_auto_flush(
 
     result = await client.set_auto_flush(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"enabled": True}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"enabled": True}
     assert result is True
 
 
 async def test_set_steam_flush(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test enabling steam flush for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamFlushEnabled"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -383,20 +387,20 @@ async def test_set_steam_flush(
 
     result = await client.set_steam_flush(serial, False)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"enabled": False}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"enabled": False}
     assert result is True
 
 
 async def test_set_rinse_flush(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test enabling rinse flush for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingRinseFlushEnabled"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -406,20 +410,20 @@ async def test_set_rinse_flush(
 
     result = await client.set_rinse_flush(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"enabled": True}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"enabled": True}
     assert result is True
 
 
 async def test_set_hot_water_dose_enabled(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test enabling the hot water dose for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingHotWaterDoseEnabled"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -429,20 +433,20 @@ async def test_set_hot_water_dose_enabled(
 
     result = await client.set_hot_water_dose_enabled(serial, False)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"enabled": False}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"enabled": False}
     assert result is True
 
 
 async def test_set_cup_warmer(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test enabling the cup warmer for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingCupWarmerEnabled"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -452,32 +456,32 @@ async def test_set_cup_warmer(
 
     result = await client.set_cup_warmer(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"enabled": True}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"enabled": True}
     assert result is True
 
 
 async def test_set_group_mode(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the mode of a single group."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineGroupChangeMode"
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_group_mode(serial, MachineMode.BREWING_MODE)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"groupIndex": 1, "mode": "BrewingMode"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"groupIndex": 1, "mode": "BrewingMode"}
     assert result is True
 
 
 async def test_set_coffee_boiler(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test enabling the coffee boiler."""
@@ -487,57 +491,57 @@ async def test_set_coffee_boiler(
         "CoffeeMachineSettingCoffeeBoilerEnabled"
     )
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_coffee_boiler(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"boilerIndex": 1, "enabled": True}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"boilerIndex": 1, "enabled": True}
     assert result is True
 
 
 async def test_set_rinse_flush_time(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the rinse flush time."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingRinseFlushTime"
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_rinse_flush_time(serial, 4.0)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"timeSeconds": 4.0}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"timeSeconds": 4.0}
     assert result is True
 
 
 async def test_set_hot_water_dose(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting a hot water dose value."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingHotWaterDose"
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_hot_water_dose(serial, 8.0, DoseIndex.DOSE_A)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"doseIndex": "DoseA", "dose": 8.0}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"doseIndex": "DoseA", "dose": 8.0}
     assert result is True
 
 
 async def test_set_group_dose_mode(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the dose mode of a group."""
@@ -546,19 +550,19 @@ async def test_set_group_dose_mode(
         f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineGroupDoseChangeMode"
     )
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_group_dose_mode(serial, DoseMode.PULSES_TYPE)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"groupIndex": 1, "mode": "PulsesType"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"groupIndex": 1, "mode": "PulsesType"}
     assert result is True
 
 
 async def test_set_group_dose(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting a group dose value."""
@@ -567,7 +571,7 @@ async def test_set_group_dose(
         f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineGroupDoseSettingDose"
     )
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
@@ -575,8 +579,8 @@ async def test_set_group_dose(
         serial, DoseMode.PULSES_TYPE, DoseIndex.DOSE_A, 36.0
     )
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "groupIndex": 1,
         "mode": "PulsesType",
         "doseIndex": "DoseA",
@@ -586,7 +590,7 @@ async def test_set_group_dose(
 
 
 async def test_set_brewing_pressure(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the brewing pressure of a group."""
@@ -596,19 +600,19 @@ async def test_set_brewing_pressure(
         "CoffeeMachineGroupDoseSettingGroupBrewingPressure"
     )
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_brewing_pressure(serial, 9.0)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"groupIndex": 1, "pressure": 9.0}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"groupIndex": 1, "pressure": 9.0}
     assert result is True
 
 
 async def test_set_continuous_dose_enabled(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test enabling the continuous dose of a group."""
@@ -618,19 +622,19 @@ async def test_set_continuous_dose_enabled(
         "CoffeeMachineGroupDoseSettingContinuousDoseEnabled"
     )
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_continuous_dose_enabled(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"groupIndex": 1, "rinseEnabled": True}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"groupIndex": 1, "rinseEnabled": True}
     assert result is True
 
 
 async def test_set_continuous_dose(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the continuous dose duration of a group."""
@@ -640,19 +644,19 @@ async def test_set_continuous_dose(
         "CoffeeMachineGroupDoseSettingContinuousDose"
     )
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_continuous_dose(serial, 3.0)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"groupIndex": 1, "rinseSeconds": 3.0}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"groupIndex": 1, "rinseSeconds": 3.0}
     assert result is True
 
 
 async def test_set_mirror_group1(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test mirroring a group with group 1."""
@@ -662,46 +666,46 @@ async def test_set_mirror_group1(
         "CoffeeMachineGroupDoseSettingMirrorGroup1"
     )
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_mirror_group1(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"groupIndex": 2, "enabled": True}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"groupIndex": 2, "enabled": True}
     assert result is True
 
 
 async def test_set_plumb_in(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test enabling plumb-in mode."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingPlumbIn"
 
-    mock_aioresponse.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
 
     result = await client.set_plumb_in(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"enabled": True}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"enabled": True}
     assert result is True
 
 
 @pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
 async def test_set_grinder_mode(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the mode (wake/standby) for a grinder."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderChangeMode"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -711,21 +715,21 @@ async def test_set_grinder_mode(
 
     result = await client.set_grinder_mode(serial, GrinderMode.GRINDING)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"mode": "GrindingMode"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"mode": "GrindingMode"}
     assert result is True
 
 
 @pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
 async def test_set_grinder_barista_light(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the barista light for a grinder."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingBaristaLightEnabled"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -735,20 +739,20 @@ async def test_set_grinder_barista_light(
 
     result = await client.set_grinder_barista_light(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"index": 1, "enabled": True}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"index": 1, "enabled": True}
     assert result is True
 
 
 async def test_set_grinder_grind_with(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the grind-with mode for a grinder."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingGrindWithMode"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -760,20 +764,20 @@ async def test_set_grinder_grind_with(
         serial, GrinderGrindWithMode.BY_BUTTON
     )
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"index": 1, "mode": "ByButton"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"index": 1, "mode": "ByButton"}
     assert result is True
 
 
 async def test_set_grinder_dose(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the dose and speed level for a grinder."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingDose"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -789,8 +793,8 @@ async def test_set_grinder_dose(
         GrinderSpeedLevelType.HIGH,
     )
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "index": 1,
         "mode": "RevType",
         "doseIndex": "DoseA",
@@ -801,14 +805,14 @@ async def test_set_grinder_dose(
 
 
 async def test_set_grinder_dose_without_speed(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the dose without a speed level for a grinder."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingDose"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -820,8 +824,8 @@ async def test_set_grinder_dose_without_speed(
         serial, DoseIndex.DOSE_B, 9.7, GrinderDoseMode.REV
     )
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "index": 1,
         "mode": "RevType",
         "doseIndex": "DoseB",
@@ -831,14 +835,14 @@ async def test_set_grinder_dose_without_speed(
 
 
 async def test_set_grinder_more_dose(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the more-dose revolutions for a grinder."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingMoreDose"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -848,14 +852,14 @@ async def test_set_grinder_more_dose(
 
     result = await client.set_grinder_more_dose(serial, 2.5)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"index": 1, "revolutions": 2.5}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"index": 1, "revolutions": 2.5}
     assert result is True
 
 
 @pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
 async def test_failing_response_ws_validation(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     mock_ws_command_response: CommandResponse,
     serial: str,
 ) -> None:
@@ -863,7 +867,7 @@ async def test_failing_response_ws_validation(
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -879,7 +883,7 @@ async def test_failing_response_ws_validation(
 
 @pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
 async def test_pending_command_ws_validation_timeout(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     mock_wait_for_ws_command_response: AsyncMock,
     serial: str,
 ) -> None:
@@ -887,7 +891,7 @@ async def test_pending_command_ws_validation_timeout(
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -902,7 +906,7 @@ async def test_pending_command_ws_validation_timeout(
 
 
 async def test_disconnected_ws_returns_true(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     mock_websocket: MagicMock,
     serial: str,
 ) -> None:
@@ -910,7 +914,7 @@ async def test_disconnected_ws_returns_true(
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -922,20 +926,20 @@ async def test_disconnected_ws_returns_true(
 
     result = await client.set_power(serial, False)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"mode": "StandBy"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"mode": "StandBy"}
     assert result is True
 
 
 async def test_set_steam(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the steam for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerEnabled"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -944,8 +948,8 @@ async def test_set_steam(
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_steam(serial, True)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "boilerIndex": 1,
         "enabled": True,
     }
@@ -953,14 +957,14 @@ async def test_set_steam(
 
 
 async def test_set_coffee_temperature(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the steam for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingCoffeeBoilerTargetTemperature"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -969,8 +973,8 @@ async def test_set_coffee_temperature(
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_coffee_target_temperature(serial, 94.584)
 
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "boilerIndex": 1,
         "targetTemperature": 94.6,
     }
@@ -978,14 +982,14 @@ async def test_set_coffee_temperature(
 
 
 async def test_set_steam_target_level(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the steam target level for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerTargetLevel"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -993,8 +997,8 @@ async def test_set_steam_target_level(
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_steam_target_level(serial, SteamTargetLevel.LEVEL_1)
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "boilerIndex": 1,
         "targetLevel": "Level1",
     }
@@ -1002,14 +1006,14 @@ async def test_set_steam_target_level(
 
 
 async def test_set_steam_target_temperature(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the steam target temperature for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSteamBoilerTargetTemperature"
 
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -1017,8 +1021,8 @@ async def test_set_steam_target_temperature(
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_steam_target_temperature(serial, 122.1)
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "boilerIndex": 1,
         "targetTemperature": 122.1,
     }
@@ -1026,13 +1030,13 @@ async def test_set_steam_target_temperature(
 
 
 async def test_start_backflush_cleaning(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test starting backflush cleaning for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBackFlushStartCleaning"
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -1040,15 +1044,15 @@ async def test_start_backflush_cleaning(
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.start_backflush_cleaning(serial)
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "enabled": True,
     }
     assert result is True
 
 
 async def test_change_pre_extraction_mode(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test changing the pre-extraction mode for a thing."""
@@ -1056,7 +1060,7 @@ async def test_change_pre_extraction_mode(
     url = (
         f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingChangeMode"
     )
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -1066,21 +1070,21 @@ async def test_change_pre_extraction_mode(
     result = await client.change_pre_extraction_mode(
         serial, PreExtractionMode.PREBREWING
     )
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "mode": "PreBrewing",
     }
     assert result is True
 
 
 async def test_change_pre_extraction_times(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test changing the pre-extraction times for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachinePreBrewingSettingTimes"
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -1091,8 +1095,8 @@ async def test_change_pre_extraction_times(
         serial,
         PrebrewSettingTimes(times=SecondsInOut(seconds_in=5.12, seconds_out=5.03)),
     )
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "times": {"In": 5.1, "Out": 5.0},
         "groupIndex": 1,
         "doseIndex": "ByGroup",
@@ -1101,13 +1105,13 @@ async def test_change_pre_extraction_times(
 
 
 async def test_setting_smart_standby(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the smart standby for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingSmartStandBy"
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -1117,8 +1121,8 @@ async def test_setting_smart_standby(
     result = await client.set_smart_standby(
         serial, False, 20, SmartStandByType.LAST_BREW
     )
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "enabled": False,
         "minutes": 20,
         "after": "LastBrewing",
@@ -1127,13 +1131,13 @@ async def test_setting_smart_standby(
 
 
 async def test_set_wake_up_schedule(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the wake up schedule for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingWakeUpSchedule"
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -1153,7 +1157,7 @@ async def test_set_wake_up_schedule(
             days=[WeekDay.MONDAY, WeekDay.FRIDAY],
         ),
     )
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
     expected_output = {
         "enabled": True,
         "onTimeMinutes": 50,
@@ -1164,7 +1168,7 @@ async def test_set_wake_up_schedule(
         ],
         "steamBoiler": False,
     }
-    assert call.kwargs["json"] == expected_output
+    assert await call.json() == expected_output
     assert result is True
 
     # existing schedule
@@ -1179,8 +1183,8 @@ async def test_set_wake_up_schedule(
             days=[WeekDay.MONDAY, WeekDay.FRIDAY],
         ),
     )
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][1]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][1]
+    assert await call.json() == {
         "id": "aBc23d",
         **expected_output,
     }
@@ -1188,12 +1192,12 @@ async def test_set_wake_up_schedule(
 
 
 async def test_get_update_details(
-    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
+    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the update details for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/update-fw"
-    mock_aioresponse.get(
+    mock_aiointercept.get(
         url=url,
         status=200,
         payload={
@@ -1210,12 +1214,12 @@ async def test_get_update_details(
 
 
 async def test_start_update(
-    mock_aioresponse: aioresponses, serial: str, snapshot: SnapshotAssertion
+    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion
 ) -> None:
     """Test getting the update details for a thing."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/update-fw"
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload={
@@ -1232,13 +1236,13 @@ async def test_start_update(
 
 
 async def test_change_brew_by_weight_dose_mode(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test changing the brew by weight dose mode."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBrewByWeightChangeMode"
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -1246,19 +1250,19 @@ async def test_change_brew_by_weight_dose_mode(
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.change_brew_by_weight_dose_mode(serial, DoseMode.DOSE_1)
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {"mode": "Dose1"}
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"mode": "Dose1"}
     assert result is True
 
 
 async def test_set_brew_by_weight_dose(
-    mock_aioresponse: aioresponses,
+    mock_aiointercept: aiointercept,
     serial: str,
 ) -> None:
     """Test setting the brew by weight doses."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineBrewByWeightSettingDoses"
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=url,
         status=200,
         payload=MOCK_COMMAND_RESPONSE,
@@ -1266,8 +1270,8 @@ async def test_set_brew_by_weight_dose(
 
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.set_brew_by_weight_dose(serial, 32.56, 45.67)
-    call = mock_aioresponse.requests[(HTTPMethod.POST, URL(url))][0]
-    assert call.kwargs["json"] == {
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {
         "doses": {
             "Dose1": 32.6,
             "Dose2": 45.7,
