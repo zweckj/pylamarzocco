@@ -1,12 +1,12 @@
 """Setting up pytest fixtures for the tests."""
 
 import json
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 
 from pylamarzocco.const import CUSTOMER_APP_URL
 
@@ -19,17 +19,17 @@ def load_fixture(device_type: str, file_name: str) -> dict:
         return json.load(f)
 
 
-@pytest.fixture(name="mock_aioresponse")
-def fixture_mock_aioresponse() -> Generator[aioresponses, None, None]:
-    """Fixture for aioresponses."""
-    with aioresponses() as m:
+@pytest.fixture(name="mock_aiointercept")
+async def fixture_mock_aiointercept() -> AsyncGenerator[aiointercept]:
+    """Fixture for aiointercept."""
+    async with aiointercept(mock_external_urls=True) as m:
         yield m
 
 
 @pytest.fixture(autouse=True)
-def mock_access_token(mock_aioresponse: aioresponses) -> Generator[AsyncMock]:
+def mock_access_token(mock_aiointercept: aiointercept) -> Generator[AsyncMock]:
     """Mock access getting token."""
-    mock_aioresponse.post(
+    mock_aiointercept.post(
         url=f"{CUSTOMER_APP_URL}/auth/signin",
         status=200,
         payload={

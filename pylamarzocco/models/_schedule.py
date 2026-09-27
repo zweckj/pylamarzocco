@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, override
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -82,6 +82,7 @@ class SmartWakeUpSleepSettings(DataClassJSONMixin):
     )
 
     @classmethod
+    @override
     def __post_deserialize__(cls, obj: SmartWakeUpSleepSettings) -> SmartWakeUpSleepSettings:
         # move the firmware to a dict with type as key
         obj.schedules_dict = {schedule.identifier: schedule for schedule in obj.schedules if schedule.identifier}

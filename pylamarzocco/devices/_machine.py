@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import Any, cast, override
 
 from bleak.exc import BleakError
 
@@ -810,6 +810,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
         return result
 
+    @override
     def to_dict(self) -> dict[Any, Any]:
         """Return self in dict represenation."""
         return {

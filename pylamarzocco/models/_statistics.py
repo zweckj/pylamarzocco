@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, override
 
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
@@ -85,6 +85,7 @@ class ThingStatistics(Thing):
     widgets: dict[WidgetType, BaseWidgetOutput] = field(default_factory=dict)
 
     @classmethod
+    @override
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
         # Filter out widgets with unknown codes and log warnings
         valid_widgets = _filter_valid_widgets(
@@ -109,6 +110,7 @@ class ThingStatistics(Thing):
         return d
 
     @classmethod
+    @override
     def __post_deserialize__(cls, obj: ThingStatistics) -> ThingStatistics:
         # move the firmware to a dict with type as key
         obj.widgets = {widget.code: widget.output for widget in obj.selected_widgets}
