@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-from aiohttp import WSMessage, WSMsgType
+from aiohttp import WebSocketError, WSCloseCode, WSMessage, WSMsgType
 
 from pylamarzocco.clients import LaMarzoccoCloudClient
 from pylamarzocco.const import StompMessageType
@@ -31,44 +31,45 @@ class TestWebSocketMessageHandling:
 
     async def test_handle_websocket_message_closing(self, mock_client) -> None:
         """Test handling websocket CLOSING message."""
-        mock_ws = MagicMock()
         msg = MagicMock()
         msg.type = WSMsgType.CLOSING
         
         result = await mock_client._LaMarzoccoCloudClient__handle_websocket_message(
-            mock_ws, msg
+            msg
         )
         
         assert result is True
 
     async def test_handle_websocket_message_closed(self, mock_client) -> None:
         """Test handling websocket CLOSED message."""
-        mock_ws = MagicMock()
         msg = MagicMock()
         msg.type = WSMsgType.CLOSED
         
         result = await mock_client._LaMarzoccoCloudClient__handle_websocket_message(
-            mock_ws, msg
+            msg
         )
         
         assert result is True
 
-    async def test_handle_websocket_message_error(self, mock_client) -> None:
+    async def test_handle_websocket_message_error(
+        self, mock_client, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test handling websocket ERROR message."""
-        mock_ws = MagicMock()
-        mock_ws.exception.return_value = Exception("Connection error")
-        msg = MagicMock()
-        msg.type = WSMsgType.ERROR
+        msg = WSMessage(
+            WSMsgType.ERROR,
+            WebSocketError(WSCloseCode.INVALID_TEXT, "Invalid UTF-8 text message"),
+            None,
+        )
         
         result = await mock_client._LaMarzoccoCloudClient__handle_websocket_message(
-            mock_ws, msg
+            msg
         )
         
         assert result is True
+        assert "disconnected with error: Invalid UTF-8 text message" in caplog.text
 
     async def test_handle_websocket_message_text_error(self, mock_client) -> None:
         """Test handling websocket text message with STOMP ERROR."""
-        mock_ws = MagicMock()
         msg = MagicMock()
         msg.type = WSMsgType.TEXT
         
@@ -81,14 +82,13 @@ class TestWebSocketMessageHandling:
         msg.data = error_msg
         
         result = await mock_client._LaMarzoccoCloudClient__handle_websocket_message(
-            mock_ws, msg
+            msg
         )
         
         assert result is False
 
     async def test_handle_websocket_message_non_message_type(self, mock_client) -> None:
         """Test handling websocket text with non-MESSAGE STOMP type."""
-        mock_ws = MagicMock()
         msg = MagicMock()
         msg.type = WSMsgType.TEXT
         
@@ -101,27 +101,25 @@ class TestWebSocketMessageHandling:
         msg.data = connected_msg
         
         result = await mock_client._LaMarzoccoCloudClient__handle_websocket_message(
-            mock_ws, msg
+            msg
         )
         
         assert result is False
 
     async def test_handle_websocket_message_invalid_format(self, mock_client) -> None:
         """Test handling websocket message with invalid format."""
-        mock_ws = MagicMock()
         msg = MagicMock()
         msg.type = WSMsgType.TEXT
         msg.data = "invalid message format"
         
         result = await mock_client._LaMarzoccoCloudClient__handle_websocket_message(
-            mock_ws, msg
+            msg
         )
         
         assert result is False
 
     async def test_handle_websocket_message_with_valid_message(self, mock_client) -> None:
         """Test handling websocket message with valid STOMP MESSAGE."""
-        mock_ws = MagicMock()
         msg = MagicMock()
         msg.type = WSMsgType.TEXT
         
@@ -136,7 +134,7 @@ class TestWebSocketMessageHandling:
         # Mock the parse method to prevent actual parsing
         with patch.object(mock_client, '_LaMarzoccoCloudClient__parse_websocket_message') as mock_parse:
             result = await mock_client._LaMarzoccoCloudClient__handle_websocket_message(
-                mock_ws, msg
+                msg
             )
             
             mock_parse.assert_called_once_with('{"test": "data"}', None)

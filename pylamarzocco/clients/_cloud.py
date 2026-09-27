@@ -355,7 +355,7 @@ class LaMarzoccoCloudClient:
                             connect_callback()
                         async for msg in ws:
                             if await self.__handle_websocket_message(
-                                ws, msg, notification_callback
+                                msg, notification_callback
                             ):
                                 break
                     except asyncio.CancelledError:
@@ -435,7 +435,6 @@ class LaMarzoccoCloudClient:
 
     async def __handle_websocket_message(
         self,
-        ws: ClientWebSocketResponse,
         msg: WSMessage,
         notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
         | None = None,
@@ -445,7 +444,9 @@ class LaMarzoccoCloudClient:
             _LOGGER.debug("Websocket disconnected gracefully")
             return True
         if msg.type == WSMsgType.ERROR:
-            _LOGGER.warning("Websocket disconnected with error %s", ws.exception())
+            # aiohttp passes the error as msg.data; ws.exception() is unset for
+            # protocol errors such as invalid UTF-8.
+            _LOGGER.warning("Websocket disconnected with error: %s", msg.data)
             return True
         _LOGGER.debug("Received websocket message: %s", msg)
         try:

@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, override
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -87,6 +87,7 @@ class ThingConfig(DataClassJSONMixin):
     config: dict[WidgetType, BaseWidgetOutput] = field(default_factory=dict)
 
     @classmethod
+    @override
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
         # Filter out widgets with unknown codes and log warnings
         widgets = d.get("widgets", [])
@@ -101,6 +102,7 @@ class ThingConfig(DataClassJSONMixin):
         return d
 
     @classmethod
+    @override
     def __post_deserialize__(cls, obj: ThingConfig) -> ThingConfig:
         # move the widgets to a dict with type as key for easy access to config
         obj.config = {widget.code: widget.output for widget in obj.widgets}
@@ -125,6 +127,7 @@ class ThingDashboardWebsocketConfig(ThingConfig):
     commands: list[CommandResponse]
 
     @classmethod
+    @override
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
         # First call parent's __pre_deserialize__ to handle widgets
         d = super().__pre_deserialize__(d)
@@ -430,6 +433,7 @@ class ThingSettings(Thing):
     firmwares: dict[FirmwareType, FirmwareSettings] = field(default_factory=dict)
 
     @classmethod
+    @override
     def __post_deserialize__(cls, obj: ThingSettings) -> ThingSettings:
         # move the firmware to a dict with type as key
         obj.firmwares = {firmware.type: firmware for firmware in obj.actual_firmwares}
@@ -446,6 +450,7 @@ class PrebrewSettingTimes(DataClassJSONMixin):
         metadata=field_options(alias="doseIndex"), default=DoseIndexType.BY_GROUP
     )
 
+    @override
     def __pre_serialize__(self) -> PrebrewSettingTimes:
         self.times.seconds_in = round(self.times.seconds_in, 1)
         self.times.seconds_out = round(self.times.seconds_out, 1)
