@@ -300,3 +300,19 @@ async def test_all_widgets_invalid(caplog: pytest.LogCaptureFixture) -> None:
     assert "InvalidWidget1" in caplog.text
     assert "InvalidWidget2" in caplog.text
     assert "InvalidWidget3" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(True, True), (False, False), (None, False)],
+)
+async def test_shot_counter_supported(value: bool | None, expected: bool) -> None:
+    """Test the shotCounterSupported flag, including null."""
+    dashboard = ThingDashboardConfig.from_dict(
+        {"serialNumber": "MR123456", "shotCounterSupported": value}
+    )
+    assert dashboard.shot_counter_supported is expected
+    assert (
+        ThingDashboardConfig.from_dict({"serialNumber": "MR123456"}).shot_counter_supported
+        is False
+    )

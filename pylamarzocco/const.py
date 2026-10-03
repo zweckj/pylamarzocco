@@ -22,6 +22,7 @@ class MachineState(StrEnum):
     STANDBY = "StandBy"
     POWERED_ON = "PoweredOn"
     BREWING = "Brewing"
+    ECO_MODE = "EcoMode"
     OFF = "Off"
 
 
@@ -247,6 +248,7 @@ class BoilerStatus(StrEnum):
     HEATING = "HeatingUp"
     READY = "Ready"
     NO_WATER = "NoWater"
+    ECO_MODE = "EcoMode"
     OFF = "Off"
 
 
@@ -302,3 +304,13 @@ class BluetoothReadSetting(StrEnum):
     TANK_STATUS = "tankStatus"
     BOILERS = "boilers"
     SMART_STAND_BY = "smartStandBy"
+    IS_PLUMBED_IN = "isPlumbedIn"
+
+
+class BluetoothBrewingState(StrEnum):
+    """Brewing states derived from the Bluetooth shot counter notifications."""
+
+    BREWING = "Brewing"
+    BREWING_STOPPED = "BrewingStopped"
+    FLUSHED = "Flushed"
+    BACKFLUSHING = "Backflushing"

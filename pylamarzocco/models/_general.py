@@ -73,6 +73,12 @@ class Thing(DataClassJSONMixin):
     ble_auth_token: str | None = field(
         metadata=field_options(alias="bleAuthToken"), default=None
     )
+    shot_counter_supported: bool = field(
+        metadata=field_options(
+            alias="shotCounterSupported", deserialize=lambda v: bool(v)
+        ),
+        default=False,
+    )
 
 
 @dataclass(kw_only=True)

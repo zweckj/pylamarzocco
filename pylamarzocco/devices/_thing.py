@@ -126,6 +126,7 @@ class LaMarzoccoThing:
         self.dashboard = await self._cloud_client.get_thing_dashboard(
             self.serial_number
         )
+        self._dashboard_config_updated()
 
     @cloud_only
     async def get_settings(self) -> None:
@@ -154,9 +155,13 @@ class LaMarzoccoThing:
         if config.widgets:
             self.dashboard.widgets = config.widgets
             self.dashboard.config = config.config
+            self._dashboard_config_updated()
 
         if self._update_callback is not None:
             self._update_callback(config)
+
+    def _dashboard_config_updated(self) -> None:
+        """Hook called after the dashboard config was (re)loaded."""
 
     @cloud_only
     async def connect_dashboard_websocket(
