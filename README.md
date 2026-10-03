@@ -220,6 +220,45 @@ await machine.connect_dashboard_websocket(callback)
 await machine.websocket.disconnect()
 ```
 
+### Bluetooth Shot Counter
+
+Newer firmware pushes brewing events over Bluetooth in real time. This removes the ~4 s delay of the cloud websocket for shot start/stop.
+
+Requirements:
+
+- an ESP-gateway machine (Linea Micra, Linea Mini, Linea Mini R, GS3 AV/MP) with shot counter firmware; `connect_bluetooth_shot_counter` returns `False` otherwise. `dashboard.shot_counter_supported` tells whether the cloud reports support.
+- a Bluetooth client with a valid token
+- a free, persistent Bluetooth connection slot (the machine likely accepts only one central at a time)
+
+```python
+from pylamarzocco.models import BluetoothShotCounterUpdate
+
+def on_shot(update: BluetoothShotCounterUpdate | None):
+    """Called on every brewing update, and with None when Bluetooth disconnects."""
+    if update is not None:
+        print(update.state, update.timer_value, update.final_shot_time)
+
+await machine.get_dashboard()  # or get_dashboard_from_bluetooth()
+if await machine.connect_bluetooth_shot_counter(on_shot):
+    ...  # machine.dashboard is now updated in real time
+
+# Later
+await machine.disconnect_bluetooth_shot_counter()
+```
+
+While the shot counter is running:
+
+- The connection stays open and reconnects automatically. Idle disconnects are paused.
+- Reconnects back off up to 60 s. They stop after 3 failed logins in a row; `bluetooth_client.authentication_failed` then reports the likely wrong token.
+- A single failed command does not drop the connection.
+- The `CMMachineStatus` widget is overridden with the Bluetooth state (`status` and `brewing_start_time`), including after later cloud updates.
+- If no Bluetooth update arrives for 60 s, the cloud state is used again and the callback receives `None`.
+- `machine.last_shot_time` holds the duration of the last shot.
+- Bluetooth commands such as `set_power` share the same connection. Requests are serialized, so responses can't mix up.
+- If no callback is passed, the dashboard websocket `update_callback` is used instead.
+
+For long-running hosts (e.g. Home Assistant with adapters or proxies), pass `ble_device_callback` to `LaMarzoccoBluetoothClient` so reconnects use the most recent `BLEDevice`.
+
 ## Complete Example
 
 Here's a complete example of using the library:

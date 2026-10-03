@@ -37,3 +37,7 @@ class UnsupportedModel(LaMarzoccoError):
 
 class OperationNotAvailable(LaMarzoccoError):
     """Raised when an operation is not available in the machine's current state."""
+
+
+class BluetoothAuthenticationFailed(BluetoothConnectionFailed):
+    """Error to indicate the machine rejected the Bluetooth auth token"""

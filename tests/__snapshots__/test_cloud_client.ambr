@@ -87,6 +87,7 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'GR123456',
+    'shot_counter_supported': False,
     'type': 'Grinder',
     'widgets': list([
       dict({
@@ -368,6 +369,7 @@
       }),
     ]),
     'serial_number': 'MR123456',
+    'shot_counter_supported': False,
     'type': 'CoffeeMachine',
     'widgets': dict({
       'COFFEE_AND_FLUSH_COUNTER': dict({
@@ -809,6 +811,7 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'GS123456',
+    'shot_counter_supported': False,
     'type': 'CoffeeMachine',
     'widgets': list([
       dict({
@@ -1256,6 +1259,7 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'MR123456',
+    'shot_counter_supported': False,
     'type': 'CoffeeMachine',
     'widgets': list([
       dict({
@@ -1592,6 +1596,7 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'LM123456',
+    'shot_counter_supported': False,
     'type': 'CoffeeMachine',
     'widgets': list([
       dict({
@@ -1894,6 +1899,7 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'MI123456',
+    'shot_counter_supported': False,
     'type': 'CoffeeMachine',
     'widgets': list([
       dict({
@@ -2148,6 +2154,7 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'SR123456',
+    'shot_counter_supported': False,
     'type': 'CoffeeMachine',
     'widgets': list([
       dict({
@@ -2298,6 +2305,7 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'MR123456',
+    'shot_counter_supported': False,
     'smart_stand_by': None,
     'smart_stand_by_supported': False,
     'smart_wake_up_sleep': dict({
@@ -2456,6 +2464,7 @@
     'plumb_in_supported': True,
     'require_firmware_update': False,
     'serial_number': 'MR123456',
+    'shot_counter_supported': False,
     'type': 'CoffeeMachine',
     'wifi_rssi': -51,
     'wifi_ssid': 'MyWifi',
@@ -2484,6 +2493,7 @@
     'offline_mode': False,
     'require_firmware_update': False,
     'serial_number': 'MR123456',
+    'shot_counter_supported': False,
     'type': 'CoffeeMachine',
   })
 # ---

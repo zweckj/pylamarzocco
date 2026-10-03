@@ -1,6 +1,8 @@
 """Test the machine module."""
 
-from unittest.mock import MagicMock
+import asyncio
+from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -10,10 +12,12 @@ from pylamarzocco import (
     LaMarzoccoMachine,
 )
 from pylamarzocco.const import (
+    BluetoothBrewingState,
     BoilerType,
     DoseIndex,
     DoseMode,
     MachineMode,
+    MachineState,
     ModelCode,
     SmartStandByType,
     SteamTargetLevel,
@@ -26,12 +30,17 @@ from pylamarzocco.exceptions import (
 )
 from pylamarzocco.models import (
     BaseDoseSettings,
+    BluetoothBrewingData,
     BluetoothCommandStatus,
+    BluetoothShotCounterUpdate,
     BrewByWeightDoses,
     BrewByWeightDoseSettings,
     DosePulsesType,
     DoseSettings,
     GroupDosesSettings,
+    MachineStatus,
+    ThingDashboardWebsocketConfig,
+    Widget,
 )
 
 
@@ -665,3 +674,176 @@ async def test_set_group_dose_active_passes(
         "MR123456", DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0, 1
     )
     assert group_doses.doses.mass_type[0].dose == 18.0
+
+
+def _brewing_update(
+    state: BluetoothBrewingState,
+    timer_value: float | None = None,
+    final_shot_time: float | None = None,
+) -> BluetoothShotCounterUpdate:
+    return BluetoothShotCounterUpdate(
+        state=state,
+        timer_value=timer_value,
+        final_shot_time=final_shot_time,
+        received_at=datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+        raw=BluetoothBrewingData(),
+    )
+
+
+def _machine_status(
+    status: MachineState, brewing_start_time: datetime | None = None
+) -> MachineStatus:
+    return MachineStatus(
+        status=status,
+        available_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
+        mode=MachineMode.BREWING_MODE,
+        next_status=None,
+        brewing_start_time=brewing_start_time,
+    )
+
+
+def _websocket_config(status: MachineStatus) -> ThingDashboardWebsocketConfig:
+    return ThingDashboardWebsocketConfig(
+        widgets=[Widget(code=WidgetType.CM_MACHINE_STATUS, index=1, output=status)],
+        config={WidgetType.CM_MACHINE_STATUS: status},
+        connected=True,
+        connection_date=0,
+        uuid="uuid",
+        commands=[],
+    )
+
+
+async def test_connect_bluetooth_shot_counter(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test starting the shot counter doesn't depend on cloud data."""
+    mock_bluetooth_client.start_shot_counter.return_value = True
+
+    assert not mock_machine.dashboard.shot_counter_supported
+    assert await mock_machine.connect_bluetooth_shot_counter() is True
+    mock_bluetooth_client.start_shot_counter.assert_awaited_once()
+
+    mock_bluetooth_client.start_shot_counter.return_value = False
+    assert await mock_machine.connect_bluetooth_shot_counter() is False
+
+    mock_machine._bluetooth_client = None  # pylint: disable=protected-access
+    assert await mock_machine.connect_bluetooth_shot_counter() is False
+
+
+async def test_shot_counter_overrides_machine_status(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test BLE brewing states override the machine status widget."""
+    cloud_start = datetime(2026, 1, 1, 11, 0, 0, tzinfo=timezone.utc)
+    status = _machine_status(MachineState.POWERED_ON, cloud_start)
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = status
+    callback = MagicMock()
+
+    await mock_machine.connect_bluetooth_shot_counter(callback)
+    on_update = mock_bluetooth_client.start_shot_counter.call_args.args[0]
+    on_connection = mock_bluetooth_client.start_shot_counter.call_args.kwargs[
+        "connection_callback"
+    ]
+
+    brewing = _brewing_update(BluetoothBrewingState.BREWING, timer_value=12.5)
+    on_update(brewing)
+    callback.assert_called_once_with(brewing)
+    assert status.status == MachineState.BREWING
+    assert status.brewing_start_time == brewing.received_at - timedelta(seconds=12.5)
+
+    on_update(_brewing_update(BluetoothBrewingState.BREWING_STOPPED, None, 27.4))
+    assert status.status == MachineState.POWERED_ON
+    assert status.brewing_start_time == cloud_start
+    assert mock_machine.last_shot_time == 27.4
+
+    # a late cloud "Brewing" message after the BLE stop is overridden
+    late = _machine_status(MachineState.BREWING, cloud_start)
+    mock_machine._websocket_dashboard_update_received(  # pylint: disable=protected-access
+        _websocket_config(late)
+    )
+    assert mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] is late
+    assert late.status == MachineState.POWERED_ON
+
+    # flushes keep non-brewing cloud states
+    mock_machine._websocket_dashboard_update_received(  # pylint: disable=protected-access
+        _websocket_config(standby := _machine_status(MachineState.STANDBY))
+    )
+    on_update(_brewing_update(BluetoothBrewingState.FLUSHED))
+    assert standby.status == MachineState.STANDBY
+    assert mock_machine.last_shot_time == 27.4
+
+    # losing the connection restores the cloud state
+    on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=1))
+    assert standby.status == MachineState.BREWING
+    callback.reset_mock()
+    on_connection(False)
+    callback.assert_called_once_with(None)
+    assert standby.status == MachineState.STANDBY
+    assert standby.brewing_start_time is None
+    assert mock_machine.ble_brewing_update is None
+
+
+async def test_shot_counter_falls_back_to_websocket_callback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test the dashboard update callback is used without a dedicated callback."""
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = _machine_status(
+        MachineState.POWERED_ON
+    )
+    update_callback = MagicMock()
+    mock_machine._update_callback = update_callback  # pylint: disable=protected-access
+
+    await mock_machine.connect_bluetooth_shot_counter()
+    on_update = mock_bluetooth_client.start_shot_counter.call_args.args[0]
+    on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=3))
+
+    update_callback.assert_called_once()
+    config: ThingDashboardWebsocketConfig = update_callback.call_args.args[0]
+    assert config.config[WidgetType.CM_MACHINE_STATUS].status == MachineState.BREWING
+
+
+async def test_disconnect_bluetooth_shot_counter(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test stopping the shot counter restores the cloud state."""
+    status = _machine_status(MachineState.POWERED_ON)
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = status
+    await mock_machine.connect_bluetooth_shot_counter()
+    on_update = mock_bluetooth_client.start_shot_counter.call_args.args[0]
+    on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=3))
+    assert status.status == MachineState.BREWING
+
+    await mock_machine.disconnect_bluetooth_shot_counter()
+
+    mock_bluetooth_client.stop_shot_counter.assert_awaited_once()
+    assert status.status == MachineState.POWERED_ON
+    assert mock_machine.ble_brewing_update is None
+
+
+async def test_shot_counter_state_expires(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test a stale Bluetooth state falls back to the cloud state."""
+    status = _machine_status(MachineState.POWERED_ON)
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = status
+    callback = MagicMock()
+    with patch("pylamarzocco.devices._machine.BLE_BREWING_STATE_TIMEOUT", 0.02):
+        await mock_machine.connect_bluetooth_shot_counter(callback)
+        on_update = mock_bluetooth_client.start_shot_counter.call_args.args[0]
+        on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=3))
+        await asyncio.sleep(0.01)
+        # a new notification extends the lifetime
+        on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=4))
+        await asyncio.sleep(0.015)
+        assert status.status == MachineState.BREWING
+
+        await asyncio.sleep(0.02)
+
+    assert status.status == MachineState.POWERED_ON
+    assert mock_machine.ble_brewing_update is None
+    callback.assert_called_with(None)

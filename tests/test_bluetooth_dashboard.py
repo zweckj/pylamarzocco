@@ -35,6 +35,7 @@ from pylamarzocco.models import (
 def mock_lm_bluetooth_client() -> MagicMock:
     """Mock the LaMarzoccoBluetoothClient."""
     client = MagicMock(spec=LaMarzoccoBluetoothClient)
+    client.get_plumbed_in = AsyncMock(return_value=False)
     return client
 
 
@@ -631,3 +632,143 @@ async def test_bluetooth_exception_does_not_update_dashboard(
         mock_machine_with_dashboard.dashboard.config[WidgetType.CM_COFFEE_BOILER],
     )
     assert coffee_boiler.target_temperature == original_temp
+
+
+@pytest.mark.parametrize(
+    ("mode", "plumbed_in", "tank_ok", "steam_enabled", "expected"),
+    [
+        (
+            MachineMode.BREWING_MODE,
+            False,
+            True,
+            True,
+            (MachineState.POWERED_ON, BoilerStatus.READY, BoilerStatus.READY, False),
+        ),
+        (
+            MachineMode.ECO_MODE,
+            False,
+            True,
+            True,
+            (MachineState.ECO_MODE, BoilerStatus.ECO_MODE, BoilerStatus.ECO_MODE, False),
+        ),
+        (
+            MachineMode.STANDBY,
+            False,
+            True,
+            False,
+            (MachineState.STANDBY, BoilerStatus.STAND_BY, BoilerStatus.OFF, False),
+        ),
+        (
+            MachineMode.BREWING_MODE,
+            False,
+            False,
+            True,
+            (
+                MachineState.POWERED_ON,
+                BoilerStatus.NO_WATER,
+                BoilerStatus.NO_WATER,
+                True,
+            ),
+        ),
+        # plumbed-in machines report an empty tank, that's not a water alarm
+        (
+            MachineMode.BREWING_MODE,
+            True,
+            False,
+            True,
+            (MachineState.POWERED_ON, BoilerStatus.READY, BoilerStatus.READY, False),
+        ),
+    ],
+)
+async def test_get_dashboard_from_bluetooth_statuses(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mode: MachineMode,
+    plumbed_in: bool,
+    tank_ok: bool,
+    steam_enabled: bool,
+    expected: tuple[MachineState, BoilerStatus, BoilerStatus, bool],
+) -> None:
+    """Test statuses are derived from mode and water status."""
+    mock_bluetooth_client.get_machine_mode = AsyncMock(return_value=mode)
+    mock_bluetooth_client.get_plumbed_in = AsyncMock(return_value=plumbed_in)
+    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=tank_ok)
+    mock_bluetooth_client.get_boilers = AsyncMock(
+        return_value=[
+            BluetoothBoilerDetails(
+                id=BoilerType.COFFEE, is_enabled=True, target=93, current=92
+            ),
+            BluetoothBoilerDetails(
+                id=BoilerType.STEAM, is_enabled=steam_enabled, target=128, current=120
+            ),
+        ]
+    )
+
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+
+    config = mock_machine_with_dashboard.dashboard.config
+    assert (
+        cast(MachineStatus, config[WidgetType.CM_MACHINE_STATUS]).status,
+        cast(CoffeeBoiler, config[WidgetType.CM_COFFEE_BOILER]).status,
+        cast(SteamBoilerLevel, config[WidgetType.CM_STEAM_BOILER_LEVEL]).status,
+        cast(NoWater, config[WidgetType.CM_NO_WATER]).allarm,
+    ) == expected
+
+
+@pytest.mark.parametrize(
+    ("target", "level"),
+    [
+        (0, SteamTargetLevel.LEVEL_3),
+        (126, SteamTargetLevel.LEVEL_1),
+        (127.9, SteamTargetLevel.LEVEL_1),
+        (128, SteamTargetLevel.LEVEL_2),
+        (130, SteamTargetLevel.LEVEL_2),
+        (131, SteamTargetLevel.LEVEL_3),
+    ],
+)
+async def test_get_dashboard_from_bluetooth_steam_level(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    target: float,
+    level: SteamTargetLevel,
+) -> None:
+    """Test the steam level is derived from the steam boiler target."""
+    mock_bluetooth_client.get_machine_mode = AsyncMock(
+        return_value=MachineMode.BREWING_MODE
+    )
+    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
+    mock_bluetooth_client.get_boilers = AsyncMock(
+        return_value=[
+            BluetoothBoilerDetails(
+                id=BoilerType.STEAM, is_enabled=True, target=target, current=120
+            ),
+        ]
+    )
+
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+
+    steam_level = cast(
+        SteamBoilerLevel,
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
+    )
+    assert steam_level.target_level == level
+
+
+async def test_get_dashboard_from_bluetooth_plumb_in_unsupported(
+    mock_machine_with_dashboard: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test an unparsable plumb-in response falls back to the tank status."""
+    mock_bluetooth_client.get_machine_mode = AsyncMock(
+        return_value=MachineMode.BREWING_MODE
+    )
+    mock_bluetooth_client.get_plumbed_in = AsyncMock(side_effect=ValueError("bad"))
+    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=False)
+    mock_bluetooth_client.get_boilers = AsyncMock(return_value=[])
+
+    await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+
+    no_water = cast(
+        NoWater, mock_machine_with_dashboard.dashboard.config[WidgetType.CM_NO_WATER]
+    )
+    assert no_water.allarm is True

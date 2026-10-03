@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections.abc import Callable
+from datetime import datetime
 from typing import Any, cast, override
 
 from bleak.exc import BleakError
 
 from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
+    BluetoothBrewingState,
     BoilerStatus,
     BoilerType,
     DoseIndex,
@@ -24,6 +28,7 @@ from pylamarzocco.const import (
 from pylamarzocco.exceptions import BluetoothConnectionFailed, OperationNotAvailable
 from pylamarzocco.models import (
     AutoFlush,
+    BluetoothShotCounterUpdate,
     BrewByWeightDoses,
     CoffeeAndFlushCounter,
     CoffeeAndFlushTrend,
@@ -40,6 +45,7 @@ from pylamarzocco.models import (
     SteamBoilerLevel,
     SteamBoilerTemperature,
     SteamFlush,
+    ThingDashboardWebsocketConfig,
     ThingSchedulingSettings,
     WakeUpScheduleSettings,
 )
@@ -54,6 +60,31 @@ STEAM_LEVEL_MAPPING = {
     SteamTargetLevel.LEVEL_2: 128,
     SteamTargetLevel.LEVEL_3: 131,
 }
+
+BLE_MACHINE_STATE = {
+    MachineMode.BREWING_MODE: MachineState.POWERED_ON,
+    MachineMode.ECO_MODE: MachineState.ECO_MODE,
+    MachineMode.STANDBY: MachineState.STANDBY,
+}
+
+BLE_BOILER_STATUS = {
+    MachineMode.BREWING_MODE: BoilerStatus.READY,
+    MachineMode.ECO_MODE: BoilerStatus.ECO_MODE,
+    MachineMode.STANDBY: BoilerStatus.STAND_BY,
+}
+
+
+def _steam_level_from_temperature(temperature: float) -> SteamTargetLevel:
+    """Map the steam boiler target temperature to a steam level."""
+    if 0 < temperature < 128:
+        return SteamTargetLevel.LEVEL_1
+    if 128 <= temperature <= 130:
+        return SteamTargetLevel.LEVEL_2
+    return SteamTargetLevel.LEVEL_3
+
+
+# drop the Bluetooth brewing state if no notification arrived for this long
+BLE_BREWING_STATE_TIMEOUT = 60  # seconds
 
 DOSE_MODE_DOSES_ATTR = {
     DoseMode.PULSES_TYPE: "pulses_type",
@@ -76,6 +107,160 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         """Set up machine."""
         super().__init__(serial_number, cloud_client, bluetooth_client)
         self.schedule = ThingSchedulingSettings(serial_number=serial_number)
+        self._ble_brewing_update: BluetoothShotCounterUpdate | None = None
+        self._last_shot_time: float | None = None
+        self._shot_counter_callback: (
+            Callable[[BluetoothShotCounterUpdate | None], Any] | None
+        ) = None
+        # cloud values of the machine status widget, before BLE overrides
+        self._cloud_machine_status: (
+            tuple[MachineStatus, MachineState, datetime | None] | None
+        ) = None
+        self._ble_brewing_expiry: asyncio.TimerHandle | None = None
+
+    @property
+    def ble_brewing_update(self) -> BluetoothShotCounterUpdate | None:
+        """Return the latest brewing update from the Bluetooth shot counter."""
+        return self._ble_brewing_update
+
+    @property
+    def last_shot_time(self) -> float | None:
+        """Return the duration (s) of the last shot reported over Bluetooth."""
+        return self._last_shot_time
+
+    @property
+    def bluetooth_shot_counter_active(self) -> bool:
+        """Return whether the Bluetooth shot counter is subscribed."""
+        return (
+            self._bluetooth_client is not None
+            and self._bluetooth_client.shot_counter_active
+        )
+
+    async def connect_bluetooth_shot_counter(
+        self,
+        update_callback: Callable[[BluetoothShotCounterUpdate | None], Any]
+        | None = None,
+    ) -> bool:
+        """Start the real-time Bluetooth shot counter.
+
+        Keeps a persistent Bluetooth connection and overrides the machine status
+        widget with the brewing state reported by the machine.
+
+        Args:
+            update_callback: Called with every brewing update, and with None when
+                the Bluetooth state is no longer applied (connection lost or no
+                update for BLE_BREWING_STATE_TIMEOUT seconds). Defaults to the
+                dashboard websocket update callback, if set.
+
+        Returns:
+            False if the shot counter is not supported or available.
+        """
+        if self._bluetooth_client is None:
+            return False
+        self._shot_counter_callback = update_callback
+        return await self._bluetooth_client.start_shot_counter(
+            self._on_shot_counter_update,
+            connection_callback=self._on_shot_counter_connection,
+        )
+
+    async def disconnect_bluetooth_shot_counter(self) -> None:
+        """Stop the Bluetooth shot counter."""
+        if self._bluetooth_client is not None:
+            await self._bluetooth_client.stop_shot_counter()
+        self._shot_counter_callback = None
+        self._clear_ble_brewing_state()
+
+    def _on_shot_counter_update(self, update: BluetoothShotCounterUpdate) -> None:
+        """Handle a brewing update from the Bluetooth shot counter."""
+        self._ble_brewing_update = update
+        if update.final_shot_time is not None:
+            self._last_shot_time = update.final_shot_time
+        self._apply_ble_brewing_state()
+        # never let a stale Bluetooth state mask the cloud on a long-running host
+        if self._ble_brewing_expiry is not None:
+            self._ble_brewing_expiry.cancel()
+        self._ble_brewing_expiry = asyncio.get_running_loop().call_later(
+            BLE_BREWING_STATE_TIMEOUT, self._drop_ble_brewing_state
+        )
+        self._notify_shot_counter_listeners(update)
+
+    def _on_shot_counter_connection(self, connected: bool) -> None:
+        """Handle connection changes of the Bluetooth shot counter."""
+        if not connected:
+            self._drop_ble_brewing_state()
+
+    def _drop_ble_brewing_state(self) -> None:
+        """Fall back to the cloud state and tell the listeners."""
+        self._clear_ble_brewing_state()
+        self._notify_shot_counter_listeners(None)
+
+    def _notify_shot_counter_listeners(
+        self, update: BluetoothShotCounterUpdate | None
+    ) -> None:
+        """Call the shot counter callback, or the dashboard callback as fallback."""
+        if self._shot_counter_callback is not None:
+            self._shot_counter_callback(update)
+        elif self._update_callback is not None:
+            self._update_callback(
+                ThingDashboardWebsocketConfig(
+                    widgets=self.dashboard.widgets,
+                    config=self.dashboard.config,
+                    connected=self.dashboard.connected,
+                    connection_date=int(
+                        self.dashboard.connection_date.timestamp() * 1000
+                    ),
+                    uuid="",
+                    commands=[],
+                )
+            )
+
+    def _clear_ble_brewing_state(self) -> None:
+        """Drop the Bluetooth brewing state and restore the cloud values."""
+        self._ble_brewing_update = None
+        if self._ble_brewing_expiry is not None:
+            self._ble_brewing_expiry.cancel()
+            self._ble_brewing_expiry = None
+        if self._cloud_machine_status is None:
+            return
+        widget, status, brewing_start_time = self._cloud_machine_status
+        self._cloud_machine_status = None
+        if self.dashboard.config.get(WidgetType.CM_MACHINE_STATUS) is widget:
+            widget.status = status
+            widget.brewing_start_time = brewing_start_time
+
+    def _apply_ble_brewing_state(self) -> None:
+        """Override the machine status widget with the Bluetooth brewing state."""
+        update = self._ble_brewing_update
+        if update is None or WidgetType.CM_MACHINE_STATUS not in self.dashboard.config:
+            return
+        widget = cast(MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS])
+
+        # remember the cloud values of a freshly loaded widget
+        if (
+            self._cloud_machine_status is None
+            or self._cloud_machine_status[0] is not widget
+        ):
+            self._cloud_machine_status = (
+                widget,
+                widget.status,
+                widget.brewing_start_time,
+            )
+        _, cloud_status, cloud_brewing_start_time = self._cloud_machine_status
+
+        if update.state == BluetoothBrewingState.BREWING:
+            widget.status = MachineState.BREWING
+            widget.brewing_start_time = update.brewing_start_time
+        else:
+            widget.status = (
+                MachineState.POWERED_ON
+                if cloud_status == MachineState.BREWING
+                else cloud_status
+            )
+            widget.brewing_start_time = cloud_brewing_start_time
+
+    @override
+    def _dashboard_config_updated(self) -> None:
+        self._apply_ble_brewing_state()
 
     @cloud_only
     async def get_schedule(self) -> None:
@@ -113,12 +298,28 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         if self._bluetooth_client is None:
             raise BluetoothConnectionFailed("Bluetooth client not initialized")
 
-        # Get machine mode and update machine status
         try:
             machine_mode = await self._bluetooth_client.get_machine_mode()
+            try:
+                plumbed_in = await self._bluetooth_client.get_plumbed_in()
+            except ValueError as exc:
+                # older firmware might not know this setting
+                _LOGGER.debug("Could not read plumb-in status: %s", exc)
+                plumbed_in = False
+            tank_status = await self._bluetooth_client.get_tank_status()
+            boilers = await self._bluetooth_client.get_boilers()
         except (BleakError, BluetoothConnectionFailed) as exc:
-            _LOGGER.error("Failed to get machine mode from Bluetooth: %s", exc)
+            _LOGGER.error("Failed to get dashboard from Bluetooth: %s", exc)
             raise
+
+        water_ok = plumbed_in or tank_status
+
+        def boiler_status(enabled: bool = True) -> BoilerStatus:
+            if not water_ok:
+                return BoilerStatus.NO_WATER
+            if not enabled:
+                return BoilerStatus.OFF
+            return BLE_BOILER_STATUS[machine_mode]
 
         # Initialize or update machine status widget
         machine_status = cast(
@@ -134,14 +335,8 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             ),
         )
         machine_status.mode = machine_mode
+        machine_status.status = BLE_MACHINE_STATE[machine_mode]
         self.dashboard.config[WidgetType.CM_MACHINE_STATUS] = machine_status
-
-        # Get boilers and update dashboard
-        try:
-            boilers = await self._bluetooth_client.get_boilers()
-        except (BleakError, BluetoothConnectionFailed) as exc:
-            _LOGGER.error("Failed to get boilers from Bluetooth: %s", exc)
-            raise
 
         for boiler in boilers:
             if boiler.id == BoilerType.COFFEE:
@@ -156,11 +351,12 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                             enabled_supported=False,
                             target_temperature=float(boiler.target),
                             target_temperature_min=80,
-                            target_temperature_max=100,
+                            target_temperature_max=110,
                             target_temperature_step=0.1,
                         ),
                     ),
                 )
+                coffee_boiler.status = boiler_status()
                 coffee_boiler.enabled = boiler.is_enabled
                 coffee_boiler.target_temperature = float(boiler.target)
                 self.dashboard.config[WidgetType.CM_COFFEE_BOILER] = coffee_boiler
@@ -184,7 +380,11 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                             ),
                         ),
                     )
+                    steam_level.status = boiler_status(boiler.is_enabled)
                     steam_level.enabled = boiler.is_enabled
+                    steam_level.target_level = _steam_level_from_temperature(
+                        boiler.target
+                    )
                     self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL] = (
                         steam_level
                     )
@@ -194,6 +394,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                     )
                 else:
                     # Other models (GS3, original Mini) use steam temperature widget
+                    is_mini = self.dashboard.model_code == ModelCode.LINEA_MINI
                     steam_temp = cast(
                         SteamBoilerTemperature,
                         self.dashboard.config.get(
@@ -203,13 +404,14 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                                 enabled=boiler.is_enabled,
                                 enabled_supported=False,
                                 target_temperature=float(boiler.target),
-                                target_temperature_min=126,
-                                target_temperature_max=131,
-                                target_temperature_step=1.0,
-                                target_temperature_supported=True,
+                                target_temperature_min=95 if is_mini else 20,
+                                target_temperature_max=140 if is_mini else 134,
+                                target_temperature_step=0.1,
+                                target_temperature_supported=not is_mini,
                             ),
                         ),
                     )
+                    steam_temp.status = boiler_status(boiler.is_enabled)
                     steam_temp.enabled = boiler.is_enabled
                     steam_temp.target_temperature = float(boiler.target)
                     self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE] = (
@@ -218,23 +420,18 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                     # Remove level widget if it exists (not applicable for this model)
                     self.dashboard.config.pop(WidgetType.CM_STEAM_BOILER_LEVEL, None)
 
-        # Get tank status and update dashboard
-        try:
-            tank_status = await self._bluetooth_client.get_tank_status()
-        except (BleakError, BluetoothConnectionFailed) as exc:
-            _LOGGER.error("Failed to get tank status from Bluetooth: %s", exc)
-            raise
-
         # Initialize or update no water widget
         no_water = cast(
             NoWater,
             self.dashboard.config.get(
                 WidgetType.CM_NO_WATER,
-                NoWater(allarm=not tank_status),
+                NoWater(allarm=not water_ok),
             ),
         )
-        no_water.allarm = not tank_status
+        no_water.allarm = not water_ok
         self.dashboard.config[WidgetType.CM_NO_WATER] = no_water
+
+        self._dashboard_config_updated()
 
     def _update_machine_mode_widgets(self, mode: MachineMode) -> None:
         """Update the machine and group status widgets with the given mode."""
