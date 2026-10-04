@@ -864,3 +864,56 @@ async def test_shot_counter_state_expires(
     assert status.status == MachineState.POWERED_ON
     assert mock_machine.ble_brewing_update is None
     callback.assert_called_with(None)
+
+
+def _mock_bluetooth_dashboard(client: MagicMock, mode: MachineMode) -> None:
+    client.get_machine_mode.return_value = mode
+    client.get_plumbed_in.return_value = False
+    client.get_tank_status.return_value = True
+    client.get_boilers.return_value = []
+
+
+async def test_bluetooth_refresh_after_shot_replaces_cloud_status(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test a Bluetooth refresh during the override is kept after it expires."""
+    status = _machine_status(MachineState.POWERED_ON)
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = status
+    _mock_bluetooth_dashboard(mock_bluetooth_client, MachineMode.STANDBY)
+    with patch("pylamarzocco.devices._machine.BLE_BREWING_STATE_TIMEOUT", 0.02):
+        await mock_machine.connect_bluetooth_shot_counter()
+        on_update = mock_bluetooth_client.start_shot_counter.call_args.args[0]
+        on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=3))
+        on_update(_brewing_update(BluetoothBrewingState.BREWING_STOPPED, None, 27.4))
+
+        # the machine is put in standby and the widget is refreshed in place
+        await mock_machine.get_dashboard_from_bluetooth()
+        assert status.status == MachineState.STANDBY
+
+        await asyncio.sleep(0.04)
+
+    assert mock_machine.ble_brewing_update is None
+    assert status.status == MachineState.STANDBY
+
+
+async def test_bluetooth_refresh_while_brewing_keeps_cloud_start_time(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test a Bluetooth refresh during a shot doesn't keep its start time."""
+    cloud_start = datetime(2026, 1, 1, 11, 0, 0, tzinfo=timezone.utc)
+    status = _machine_status(MachineState.POWERED_ON, cloud_start)
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = status
+    _mock_bluetooth_dashboard(mock_bluetooth_client, MachineMode.BREWING_MODE)
+    await mock_machine.connect_bluetooth_shot_counter()
+    on_update = mock_bluetooth_client.start_shot_counter.call_args.args[0]
+    on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=3))
+
+    await mock_machine.get_dashboard_from_bluetooth()
+    assert status.status == MachineState.BREWING
+
+    on_update(_brewing_update(BluetoothBrewingState.BREWING_STOPPED, None, 27.4))
+    assert status.status == MachineState.POWERED_ON
+    assert status.brewing_start_time == cloud_start
+    await mock_machine.disconnect_bluetooth_shot_counter()
