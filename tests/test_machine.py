@@ -731,6 +731,23 @@ async def test_connect_bluetooth_shot_counter(
     assert await mock_machine.connect_bluetooth_shot_counter() is False
 
 
+async def test_register_bluetooth_connection_callback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test connection callbacks are registered on the Bluetooth client."""
+    callback = MagicMock()
+
+    unregister = mock_machine.register_bluetooth_connection_callback(callback)
+
+    mock_bluetooth_client.register_connection_callback.assert_called_once_with(callback)
+    assert unregister is mock_bluetooth_client.register_connection_callback.return_value
+
+    # without a Bluetooth client, registering is a no-op
+    mock_machine._bluetooth_client = None  # pylint: disable=protected-access
+    mock_machine.register_bluetooth_connection_callback(callback)()
+
+
 async def test_shot_counter_overrides_machine_status(
     mock_machine: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,

@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Generator
 from datetime import timedelta
 from typing import Any
-from unittest.mock import DEFAULT, AsyncMock, MagicMock, patch
+from unittest.mock import DEFAULT, AsyncMock, MagicMock, call, patch
 
 import pytest
 from bleak.backends.device import BLEDevice
@@ -956,3 +956,85 @@ async def test_missing_shot_counter_clears_service_cache(
     assert await client.start_shot_counter(MagicMock()) is False
     mock_bleak_client.clear_cache.assert_awaited_once()
     await client.disconnect()
+
+
+async def test_connection_callback_connect_and_idle_disconnect(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
+    """Test the connection callback follows connects and idle disconnects."""
+    connection_callback = MagicMock()
+    with patch("pylamarzocco.clients._bluetooth.IDLE_TIMEOUT", 0.05):
+        client = LaMarzoccoBluetoothClient(ble_device, "token")
+        client.register_connection_callback(connection_callback)
+
+        await client.set_power(True)
+        await client.set_steam(True)
+        connection_callback.assert_called_once_with(True)
+
+        await asyncio.sleep(0.1)
+
+    assert not client.is_connected
+    assert connection_callback.call_args_list == [call(True), call(False)]
+
+
+async def test_connection_callback_connection_lost(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
+    """Test a lost connection is reported once and a reconnect again."""
+    connection_callback = MagicMock()
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    client.register_connection_callback(connection_callback)
+    await client.set_power(True)
+    disconnected_callback = mock_bleak_client.establish_mock.call_args.kwargs[
+        "disconnected_callback"
+    ]
+
+    mock_bleak_client.is_connected = False
+    disconnected_callback(mock_bleak_client)
+    await client.disconnect()
+    assert connection_callback.call_args_list == [call(True), call(False)]
+
+    await client.set_power(True)
+    await client.disconnect()
+    assert connection_callback.call_args_list == [
+        call(True),
+        call(False),
+        call(True),
+        call(False),
+    ]
+
+
+async def test_connection_callback_not_called_on_failed_authentication(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
+    """Test an unauthenticated connection is never reported as connected."""
+    mock_bleak_client.read_gatt_char.side_effect = None
+    mock_bleak_client.read_gatt_char.return_value = b"\x00"
+    connection_callback = MagicMock()
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    client.register_connection_callback(connection_callback)
+
+    with (
+        patch("pylamarzocco.clients._bluetooth.AUTH_READ_INTERVAL", 0),
+        pytest.raises(BluetoothAuthenticationFailed),
+    ):
+        await client.set_power(True)
+    await asyncio.sleep(0.01)
+
+    connection_callback.assert_not_called()
+
+
+async def test_connection_callback_unregister(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
+    """Test unregistered connection callbacks are no longer called."""
+    connection_callback = MagicMock()
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    unregister = client.register_connection_callback(connection_callback)
+
+    unregister()
+    unregister()
+    await client.set_power(True)
+    await client.disconnect()
+
+    connection_callback.assert_not_called()

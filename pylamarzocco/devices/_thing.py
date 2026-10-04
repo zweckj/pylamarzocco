@@ -113,6 +113,18 @@ class LaMarzoccoThing:
             self._bluetooth_client is not None and self._bluetooth_client.is_connected
         )
 
+    def register_bluetooth_connection_callback(
+        self, callback: Callable[[bool], Any]
+    ) -> Callable[[], None]:
+        """Register a callback for Bluetooth connection changes.
+
+        Returns:
+            A function that unregisters the callback.
+        """
+        if self._bluetooth_client is None:
+            return lambda: None
+        return self._bluetooth_client.register_connection_callback(callback)
+
     @cloud_only
     async def ensure_token_valid(self) -> None:
         """Ensure the cloud token is valid."""
