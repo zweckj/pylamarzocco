@@ -260,6 +260,11 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     @override
     def _dashboard_config_updated(self) -> None:
+        if self._cloud_machine_status is not None:
+            widget, _, brewing_start_time = self._cloud_machine_status
+            if self.dashboard.config.get(WidgetType.CM_MACHINE_STATUS) is widget:
+                # refreshed in place by Bluetooth, which doesn't report the start time
+                self._cloud_machine_status = (widget, widget.status, brewing_start_time)
         self._apply_ble_brewing_state()
 
     @cloud_only
