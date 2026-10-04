@@ -65,7 +65,7 @@ def _safe_call(callback: Callable[[Any], Any] | None, arg: Any) -> None:
     try:
         callback(arg)
     except Exception:  # pylint: disable=broad-except
-        _logger.exception("Error in shot counter callback")
+        _logger.exception("Error in Bluetooth callback")
 
 
 def disconnect_on_exception[
@@ -120,6 +120,8 @@ class LaMarzoccoBluetoothClient:
         self._request_lock: asyncio.Lock = asyncio.Lock()
         self._authentication_failed = False
         self._disconnect_task: asyncio.Task[None] | None = None
+        self._connection_callbacks: list[Callable[[bool], Any]] = []
+        self._reported_connected = False
 
         # shot counter state
         self._shot_counter_enabled = False
@@ -135,6 +137,34 @@ class LaMarzoccoBluetoothClient:
     def is_connected(self) -> bool:
         """Return whether the client is currently connected."""
         return self._client is not None and self._client.is_connected
+
+    def register_connection_callback(
+        self, callback: Callable[[bool], Any]
+    ) -> Callable[[], None]:
+        """Register a callback for connection changes.
+
+        The callback is called with True once a connection is established and
+        authenticated, and with False when it is closed or lost, including
+        idle disconnects.
+
+        Returns:
+            A function that unregisters the callback.
+        """
+        self._connection_callbacks.append(callback)
+
+        def unregister() -> None:
+            if callback in self._connection_callbacks:
+                self._connection_callbacks.remove(callback)
+
+        return unregister
+
+    def _set_connected(self, connected: bool) -> None:
+        """Notify the connection callbacks if the connection state changed."""
+        if connected == self._reported_connected:
+            return
+        self._reported_connected = connected
+        for callback in tuple(self._connection_callbacks):
+            _safe_call(callback, connected)
 
     @property
     def authentication_failed(self) -> bool:
@@ -188,6 +218,7 @@ class LaMarzoccoBluetoothClient:
                 _logger.debug("Successfully connected to Bluetooth device %s", self._address)
                 # Start the disconnect timer
                 self._reset_disconnect_timer()
+                self._set_connected(True)
 
     def _reset_disconnect_timer(self) -> None:
         """Reset the auto-disconnect timer."""
@@ -226,6 +257,7 @@ class LaMarzoccoBluetoothClient:
                 _logger.error("Error disconnecting from Bluetooth device: %s", e)
             finally:
                 self._client = None
+        self._set_connected(False)
 
     async def _drop_connection(self) -> None:
         """Disconnect without stopping the shot counter (it will reconnect)."""
@@ -358,6 +390,7 @@ class LaMarzoccoBluetoothClient:
         if client is not self._client:
             return
         _logger.debug("Bluetooth device %s disconnected", self._address)
+        self._set_connected(False)
         self._handle_connection_lost()
 
     def _handle_connection_lost(self) -> None:
