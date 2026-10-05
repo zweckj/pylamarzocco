@@ -32,6 +32,7 @@ from pylamarzocco.models import (
     BaseDoseSettings,
     BluetoothBrewingData,
     BluetoothCommandStatus,
+    BluetoothMachineTelemetry,
     BluetoothShotCounterUpdate,
     BrewByWeightDoses,
     BrewByWeightDoseSettings,
@@ -826,19 +827,32 @@ async def test_disconnect_bluetooth_shot_counter(
     mock_machine: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
 ) -> None:
-    """Test stopping the shot counter restores the cloud state."""
+    """Test stopping the shot counter restores the cloud state without callbacks."""
     status = _machine_status(MachineState.POWERED_ON)
     mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = status
-    await mock_machine.connect_bluetooth_shot_counter()
+    callback = MagicMock()
+    await mock_machine.connect_bluetooth_shot_counter(callback)
     on_update = mock_bluetooth_client.start_shot_counter.call_args.args[0]
+    on_connection = mock_bluetooth_client.start_shot_counter.call_args.kwargs[
+        "connection_callback"
+    ]
+    on_telemetry = mock_bluetooth_client.start_shot_counter.call_args.kwargs[
+        "telemetry_callback"
+    ]
+    # like the client, stopping reports the shot counter as disconnected
+    mock_bluetooth_client.stop_shot_counter.side_effect = lambda: on_connection(False)
     on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=3))
+    on_telemetry(BluetoothMachineTelemetry(coffee_boiler_temperature=93))
     assert status.status == MachineState.BREWING
+    callback.reset_mock()
 
     await mock_machine.disconnect_bluetooth_shot_counter()
 
     mock_bluetooth_client.stop_shot_counter.assert_awaited_once()
+    callback.assert_not_called()
     assert status.status == MachineState.POWERED_ON
     assert mock_machine.ble_brewing_update is None
+    assert mock_machine.bluetooth_telemetry == BluetoothMachineTelemetry()
 
 
 async def test_shot_counter_state_expires(
@@ -917,3 +931,86 @@ async def test_bluetooth_refresh_while_brewing_keeps_cloud_start_time(
     assert status.status == MachineState.POWERED_ON
     assert status.brewing_start_time == cloud_start
     await mock_machine.disconnect_bluetooth_shot_counter()
+
+
+async def test_bluetooth_telemetry(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test live values are kept and the machine mode is applied right away."""
+    status = _machine_status(MachineState.POWERED_ON)
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = status
+    callback = MagicMock()
+    telemetry_callback = MagicMock()
+    await mock_machine.connect_bluetooth_shot_counter(callback, telemetry_callback)
+    on_telemetry = mock_bluetooth_client.start_shot_counter.call_args.kwargs[
+        "telemetry_callback"
+    ]
+    on_connection = mock_bluetooth_client.start_shot_counter.call_args.kwargs[
+        "connection_callback"
+    ]
+
+    steam = BluetoothMachineTelemetry(steam_boiler_temperature=130)
+    on_telemetry(steam)
+    telemetry_callback.assert_called_once_with(steam)
+    assert status.mode == MachineMode.BREWING_MODE
+
+    standby = BluetoothMachineTelemetry(
+        machine_mode=MachineMode.STANDBY, sleep="command"
+    )
+    on_telemetry(standby)
+    telemetry_callback.assert_called_with(standby)
+    callback.assert_not_called()
+    assert (status.mode, status.status) == (MachineMode.STANDBY, MachineState.STANDBY)
+    assert mock_machine.bluetooth_telemetry == BluetoothMachineTelemetry(
+        steam_boiler_temperature=130, machine_mode=MachineMode.STANDBY, sleep="command"
+    )
+
+    # the live values are dropped with the connection
+    on_connection(False)
+    assert mock_machine.bluetooth_telemetry == BluetoothMachineTelemetry()
+
+
+async def test_bluetooth_machine_mode_during_shot(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test a machine mode received while brewing is kept once the shot ends."""
+    status = _machine_status(MachineState.POWERED_ON)
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = status
+    await mock_machine.connect_bluetooth_shot_counter(MagicMock(), MagicMock())
+    on_update = mock_bluetooth_client.start_shot_counter.call_args.args[0]
+    on_telemetry = mock_bluetooth_client.start_shot_counter.call_args.kwargs[
+        "telemetry_callback"
+    ]
+
+    on_update(_brewing_update(BluetoothBrewingState.BREWING, timer_value=3))
+    on_telemetry(BluetoothMachineTelemetry(machine_mode=MachineMode.ECO_MODE))
+    assert status.status == MachineState.BREWING
+
+    on_update(_brewing_update(BluetoothBrewingState.FLUSHED))
+    assert (status.mode, status.status) == (MachineMode.ECO_MODE, MachineState.ECO_MODE)
+
+
+async def test_bluetooth_machine_mode_falls_back_to_websocket_callback(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test machine mode changes use the dashboard callback without a callback."""
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = _machine_status(
+        MachineState.POWERED_ON
+    )
+    update_callback = MagicMock()
+    mock_machine._update_callback = update_callback  # pylint: disable=protected-access
+    await mock_machine.connect_bluetooth_shot_counter()
+    on_telemetry = mock_bluetooth_client.start_shot_counter.call_args.kwargs[
+        "telemetry_callback"
+    ]
+
+    on_telemetry(BluetoothMachineTelemetry(coffee_boiler_temperature=93))
+    update_callback.assert_not_called()
+
+    on_telemetry(BluetoothMachineTelemetry(machine_mode=MachineMode.STANDBY))
+    update_callback.assert_called_once()
+    config: ThingDashboardWebsocketConfig = update_callback.call_args.args[0]
+    assert config.config[WidgetType.CM_MACHINE_STATUS].mode == MachineMode.STANDBY

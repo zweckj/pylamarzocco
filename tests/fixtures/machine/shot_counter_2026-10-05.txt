@@ -1,0 +1,85 @@
+# Shot counter notifications of a Linea Micra, recorded on 2026-10-05 (local time).
+# Format: <time> <payload>. "# replay" marks the replay of the machine's last
+# notification when subscribing, it starts a new session.
+# The HeatingCoeff and MachineStatistics payloads keep the recorded structure,
+# the coefficient values are made up.
+07:47:38.548 {"BrewingUpdateGroup1Time":3.34,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}  # replay
+07:47:47.412 {"SteamBoilerUpdateTemperature":112}
+07:48:05.342 {"SteamBoilerUpdateTemperature":115}
+07:48:20.075 {"SteamBoilerUpdateTemperature":118}
+07:48:34.251 {"SteamBoilerUpdateTemperature":121}
+07:48:48.657 {"SteamBoilerUpdateTemperature":124}
+07:49:03.904 {"SteamBoilerUpdateTemperature":127}
+07:49:22.144 {"SteamBoilerHeatingCoeff":"[{\"temperature\":18,\"coefficent\":0.1957},{\"temperature\":40,\"coefficent\":0.2012},{\"temperature\":70,\"coefficent\":0.2105},{\"temperature\":100,\"coefficent\":0.2231},{\"temperature\":130,\"coefficent\":0.2398}]"}
+07:49:22.179 {"SteamBoilerUpdateTemperature":130}
+07:50:02.612 {"BrewingStartedGroup1DoseIndex":"ContinuousDose"}
+07:50:02.682 {"BrewingUpdateGroup1Time":0.089,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:50:03.742 {"BrewingUpdateGroup1Time":1.159,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:50:04.525 {"FlushStoppedGroup1DoseIndex":"ContinuousDose","FlushStoppedGroup1Time":1.891}
+07:50:09.360 {"BrewingStartedGroup1DoseIndex":"ContinuousDose"}
+07:50:09.507 {"BrewingUpdateGroup1Time":0.107,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:50:11.215 {"BrewingUpdateGroup1Time":1.177,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:50:11.218 {"FlushStoppedGroup1DoseIndex":"ContinuousDose","FlushStoppedGroup1Time":1.374}
+07:50:17.940 {"MachineStatistics":"{\"groups\":[{\"doses\":[{\"DoseA\":2123},{\"DoseB\":0},{\"DoseC\":0},{\"DoseD\":0},{\"ContinuousDose\":0}],\"clean\":0,\"ev_activations\":3577,\"ev_ontime\":51431}],\"tot_doses\":2123,\"boilers\":[{\"rsteam_ontime\":152},{\"rcoffee_ontime\":217}],\"tea\":{\"count\":0,\"ev_activation\":0,\"ev_ontime\":0},\"pump_ontime\":41289,\"machine_ontime\":25594,\"refill_ontime\":1432,\"count_liter\":0}"}
+07:52:56.703 {"SteamBoilerUpdateTemperature":133}
+07:53:10.381 {"SteamBoilerUpdateTemperature":130}
+07:53:27.093 {"CoffeeBoiler1UpdateTemperature":95}
+07:53:37.006 {"SteamBoilerUpdateTemperature":133}
+07:53:55.232 {"SteamBoilerUpdateTemperature":130}
+07:54:14.224 {"SteamBoilerUpdateTemperature":133}
+07:54:32.536 {"SteamBoilerUpdateTemperature":130}
+07:54:47.689 {"SteamBoilerUpdateTemperature":133}
+07:55:13.515 {"SteamBoilerUpdateTemperature":130}
+07:55:31.741 {"SteamBoilerUpdateTemperature":133}
+07:55:51.501 {"SteamBoilerUpdateTemperature":130}
+07:56:46.249 {"SteamBoilerUpdateTemperature":133}
+07:57:14.615 {"SteamBoilerUpdateTemperature":130}
+07:57:34.881 {"SteamBoilerUpdateTemperature":133}
+07:57:49.729 {"BrewingStartedGroup1DoseIndex":"ContinuousDose"}
+07:57:49.831 {"BrewingUpdateGroup1Time":0.108,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:50.894 {"BrewingUpdateGroup1Time":1.178,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:51.983 {"BrewingUpdateGroup1Time":2.251,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:53.054 {"BrewingUpdateGroup1Time":3.324,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:54.132 {"BrewingUpdateGroup1Time":4.394,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:55.192 {"BrewingUpdateGroup1Time":5.479,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:56.282 {"BrewingUpdateGroup1Time":6.556,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:57.352 {"BrewingUpdateGroup1Time":7.631,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:58.433 {"BrewingUpdateGroup1Time":8.703,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:57:59.493 {"BrewingUpdateGroup1Time":9.773,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:58:00.583 {"BrewingUpdateGroup1Time":10.846,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:58:01.659 {"BrewingUpdateGroup1Time":11.897,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:58:02.461 {"BrewingStoppedGroup1StopType":"Continuous","BrewingStoppedGroup1StopReason":"Manual","BrewingStoppedGroup1DoseIndex":"ContinuousDose","BrewingStoppedGroup1Time":12.727}
+07:58:08.805 {"SteamBoilerUpdateTemperature":130}
+07:58:29.357 {"SteamBoilerUpdateTemperature":133}
+07:58:38.418 {"SteamBoilerUpdateTemperature":130}
+07:58:43.009 {"SteamBoilerUpdateTemperature":127}
+07:58:49.062 {"SteamBoilerUpdateTemperature":124}
+07:59:02.749 {"SteamBoilerUpdateTemperature":127}
+07:59:14.925 {"SteamBoilerUpdateTemperature":130}
+07:59:22.007 {"BrewingStartedGroup1DoseIndex":"ContinuousDose"}
+07:59:22.140 {"BrewingUpdateGroup1Time":0.118,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:23.219 {"BrewingUpdateGroup1Time":1.189,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:24.267 {"BrewingUpdateGroup1Time":2.259,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:25.392 {"BrewingUpdateGroup1Time":3.343,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:26.428 {"BrewingUpdateGroup1Time":4.423,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:27.520 {"BrewingUpdateGroup1Time":5.485,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:28.592 {"BrewingUpdateGroup1Time":6.557,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:29.798 {"BrewingUpdateGroup1Time":7.639,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:30.726 {"BrewingUpdateGroup1Time":8.716,"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Backflush":false}
+07:59:31.412 {"FlushStoppedGroup1DoseIndex":"ContinuousDose","FlushStoppedGroup1Time":9.314}
+07:59:38.589 {"CoffeeBoiler1UpdateTemperature":92}
+07:59:42.983 {"MachineMode":"StandBy"}
+07:59:42.983 {"Sleep":"command"}
+08:36:59.441 {"Sleep":"command"}  # replay
+08:37:20.950 {"SteamBoilerUpdateTemperature":106}
+08:37:25.509 {"CoffeeBoiler1UpdateTemperature":75}
+08:37:32.318 {"SteamBoilerUpdateTemperature":109}
+08:37:33.088 {"CoffeeBoiler1UpdateTemperature":78}
+08:37:40.800 {"CoffeeBoiler1HeatingCoeff":"[{\"temperature\":17,\"coefficent\":0.4083},{\"temperature\":40,\"coefficent\":0.4121},{\"temperature\":60,\"coefficent\":0.4176},{\"temperature\":80,\"coefficent\":0.4252},{\"temperature\":95,\"coefficent\":0.4317}]"}
+08:37:40.803 {"CoffeeBoiler1UpdateTemperature":81}
+08:37:45.273 {"SteamBoilerUpdateTemperature":112}
+08:37:49.062 {"CoffeeBoiler1UpdateTemperature":84}
+08:37:54.637 {"MachineMode":"StandBy"}
+08:37:54.638 {"Sleep":"command"}
+08:37:55.104 {"CoffeeBoiler1UpdateTemperature":87}
+08:37:57.458 {"SteamBoilerUpdateTemperature":115}

@@ -28,6 +28,7 @@ from pylamarzocco.const import (
 from pylamarzocco.exceptions import BluetoothConnectionFailed, OperationNotAvailable
 from pylamarzocco.models import (
     AutoFlush,
+    BluetoothMachineTelemetry,
     BluetoothShotCounterUpdate,
     BrewByWeightDoses,
     CoffeeAndFlushCounter,
@@ -112,6 +113,11 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         self._shot_counter_callback: (
             Callable[[BluetoothShotCounterUpdate | None], Any] | None
         ) = None
+        self._telemetry_callback: (
+            Callable[[BluetoothMachineTelemetry], Any] | None
+        ) = None
+        self._bluetooth_telemetry = BluetoothMachineTelemetry()
+        self._stopping_shot_counter = False
         # cloud values of the machine status widget, before BLE overrides
         self._cloud_machine_status: (
             tuple[MachineStatus, MachineState, datetime | None] | None
@@ -122,6 +128,14 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     def ble_brewing_update(self) -> BluetoothShotCounterUpdate | None:
         """Return the latest brewing update from the Bluetooth shot counter."""
         return self._ble_brewing_update
+
+    @property
+    def bluetooth_telemetry(self) -> BluetoothMachineTelemetry:
+        """Return the latest live values sent with the Bluetooth shot counter.
+
+        Reset when the shot counter stops or loses its connection.
+        """
+        return self._bluetooth_telemetry
 
     @property
     def last_shot_time(self) -> float | None:
@@ -140,6 +154,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         self,
         update_callback: Callable[[BluetoothShotCounterUpdate | None], Any]
         | None = None,
+        telemetry_callback: Callable[[BluetoothMachineTelemetry], Any] | None = None,
     ) -> bool:
         """Start the real-time Bluetooth shot counter.
 
@@ -151,6 +166,11 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 the Bluetooth state is no longer applied (connection lost or no
                 update for BLE_BREWING_STATE_TIMEOUT seconds). Defaults to the
                 dashboard websocket update callback, if set.
+            telemetry_callback: Called with the values of every telemetry
+                notification, like boiler temperatures or the machine mode. A
+                machine mode is applied to the dashboard first. Without it,
+                machine mode changes go to the dashboard websocket update
+                callback, if set.
 
         Returns:
             False if the shot counter is not supported or available.
@@ -158,16 +178,27 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         if self._bluetooth_client is None:
             return False
         self._shot_counter_callback = update_callback
+        self._telemetry_callback = telemetry_callback
         return await self._bluetooth_client.start_shot_counter(
             self._on_shot_counter_update,
             connection_callback=self._on_shot_counter_connection,
+            telemetry_callback=self._on_bluetooth_telemetry,
         )
 
     async def disconnect_bluetooth_shot_counter(self) -> None:
-        """Stop the Bluetooth shot counter."""
-        if self._bluetooth_client is not None:
-            await self._bluetooth_client.stop_shot_counter()
+        """Stop the Bluetooth shot counter and restore the cloud machine status.
+
+        The update callbacks are not called, refresh after awaiting this.
+        """
+        self._stopping_shot_counter = True
+        try:
+            if self._bluetooth_client is not None:
+                await self._bluetooth_client.stop_shot_counter()
+        finally:
+            self._stopping_shot_counter = False
         self._shot_counter_callback = None
+        self._telemetry_callback = None
+        self._bluetooth_telemetry = BluetoothMachineTelemetry()
         self._clear_ble_brewing_state()
 
     def _on_shot_counter_update(self, update: BluetoothShotCounterUpdate) -> None:
@@ -186,8 +217,25 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     def _on_shot_counter_connection(self, connected: bool) -> None:
         """Handle connection changes of the Bluetooth shot counter."""
-        if not connected:
-            self._drop_ble_brewing_state()
+        if connected or self._stopping_shot_counter:
+            return
+        self._bluetooth_telemetry = BluetoothMachineTelemetry()
+        self._drop_ble_brewing_state()
+
+    def _on_bluetooth_telemetry(self, telemetry: BluetoothMachineTelemetry) -> None:
+        """Handle live machine values from the Bluetooth shot counter."""
+        self._bluetooth_telemetry = self._bluetooth_telemetry.merge(telemetry)
+        if (mode := telemetry.machine_mode) is not None:
+            self._update_machine_mode_widgets(mode)
+            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
+                cast(
+                    MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
+                ).status = BLE_MACHINE_STATE[mode]
+            self._dashboard_config_updated()
+        if self._telemetry_callback is not None:
+            self._telemetry_callback(telemetry)
+        elif mode is not None:
+            self._notify_dashboard_listeners()
 
     def _drop_ble_brewing_state(self) -> None:
         """Fall back to the cloud state and tell the listeners."""
@@ -200,7 +248,12 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         """Call the shot counter callback, or the dashboard callback as fallback."""
         if self._shot_counter_callback is not None:
             self._shot_counter_callback(update)
-        elif self._update_callback is not None:
+        else:
+            self._notify_dashboard_listeners()
+
+    def _notify_dashboard_listeners(self) -> None:
+        """Pass the locally updated dashboard to the websocket update callback."""
+        if self._update_callback is not None:
             self._update_callback(
                 ThingDashboardWebsocketConfig(
                     widgets=self.dashboard.widgets,

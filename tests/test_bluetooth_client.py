@@ -1,16 +1,20 @@
 """Test the bluetooth client."""
 
 import asyncio
-from collections.abc import Generator
-from datetime import timedelta
-from typing import Any
+import itertools
+import json
+from collections.abc import Callable, Generator
+from datetime import date, datetime, timedelta, timezone
+from functools import reduce
+from pathlib import Path
+from typing import Any, NamedTuple
 from unittest.mock import DEFAULT, AsyncMock, MagicMock, call, patch
 
 import pytest
 from bleak.backends.device import BLEDevice
 from bleak.exc import BleakError
 
-from pylamarzocco import LaMarzoccoBluetoothClient
+from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoMachine
 from pylamarzocco.const import (
     BluetoothBrewingState,
     BoilerType,
@@ -25,6 +29,7 @@ from pylamarzocco.exceptions import (
 from pylamarzocco.models import (
     BluetoothBoilerDetails,
     BluetoothMachineCapabilities,
+    BluetoothMachineTelemetry,
     BluetoothShotCounterUpdate,
     BluetoothSmartStandbyDetails,
 )
@@ -38,6 +43,28 @@ def ble_device_fixture() -> BLEDevice:
         name="Test Device",
         details=None,
     )
+
+
+class FakeClock:
+    """Clock for the shot counter notifications."""
+
+    def __init__(self) -> None:
+        self.now = datetime(2026, 10, 5, 7, 0, tzinfo=timezone.utc)
+
+    def __call__(self) -> datetime:
+        return self.now
+
+    def tick(self, seconds: float) -> None:
+        """Advance the clock."""
+        self.now += timedelta(seconds=seconds)
+
+
+@pytest.fixture(name="clock")
+def clock_fixture() -> Generator[FakeClock]:
+    """Patch the time the shot counter notifications are received at."""
+    clock = FakeClock()
+    with patch("pylamarzocco.clients._bluetooth._utcnow", clock):
+        yield clock
 
 
 @pytest.fixture(name="mock_bleak_client", autouse=True)
@@ -450,6 +477,37 @@ async def test_reconnect_after_disconnect(
 
 
 SHOT_COUNTER_CHAR = "0e0b7847-e12b-09a8-b04b-8e0922a9abab"
+STARTED = b'{"BrewingStartedGroup1DoseIndex":"DoseA"}'
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _tick(time: float, backflush: bool = False) -> bytes:
+    """Return a timer notification of a running shot."""
+    return json.dumps(
+        {
+            "BrewingUpdateGroup1Time": time,
+            "BrewingUpdateGroup1Ev": True,
+            "BrewingUpdateGroup1Backflush": backflush,
+        }
+    ).encode()
+
+
+async def _start_shot_counter(
+    client: LaMarzoccoBluetoothClient,
+    mock_bleak_client: MagicMock,
+    *args: Any,
+    **kwargs: Any,
+) -> Callable[[bytes], None]:
+    """Start the shot counter and return a function sending it notifications."""
+    assert await client.start_shot_counter(*args, **kwargs)
+    handler = mock_bleak_client.start_notify.call_args.args[1]
+
+    def notify(payload: bytes) -> None:
+        handler(MagicMock(), bytearray(payload))
+
+    # the machine first replays its last notification
+    notify(_tick(3.34))
+    return notify
 
 
 async def test_auth_read_back_failure(
@@ -500,7 +558,7 @@ async def test_auth_read_back_retries_until_confirmed(
 async def test_start_shot_counter_characteristic_missing(
     mock_bleak_client: MagicMock, ble_device: BLEDevice
 ) -> None:
-    """Test the shot counter is not started without the characteristic."""
+    """Test the shot counter is not started if rediscovery doesn't find it."""
     mock_bleak_client.services.get_characteristic.side_effect = lambda char: (
         None if char == SHOT_COUNTER_CHAR else "mock_characteristic"
     )
@@ -509,11 +567,41 @@ async def test_start_shot_counter_characteristic_missing(
     assert await client.start_shot_counter(MagicMock()) is False
 
     mock_bleak_client.start_notify.assert_not_awaited()
-    mock_bleak_client.disconnect.assert_not_awaited()
+    # only the cached services are cleared, before rediscovering them once
+    mock_bleak_client.clear_cache.assert_awaited_once()
+    mock_bleak_client.disconnect.assert_awaited_once()
+    assert [
+        connect.kwargs["use_services_cache"]
+        for connect in mock_bleak_client.establish_mock.call_args_list
+    ] == [True, False]
     assert client.is_connected
     assert not client.shot_counter_active
     # idle disconnect timer is running again
     assert client._disconnect_task is not None  # pylint: disable=protected-access
+    await client.disconnect()
+
+
+async def test_start_shot_counter_rediscovers_services(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
+    """Test a characteristic missing from stale cached services is found again."""
+    mock_bleak_client.services.get_characteristic.side_effect = lambda char: (
+        None
+        if char == SHOT_COUNTER_CHAR
+        and mock_bleak_client.establish_mock.await_count < 2
+        else char
+    )
+    connection_callback = MagicMock()
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+
+    assert await client.start_shot_counter(MagicMock(), connection_callback) is True
+
+    mock_bleak_client.clear_cache.assert_awaited_once()
+    mock_bleak_client.disconnect.assert_awaited_once()
+    assert mock_bleak_client.establish_mock.call_args.kwargs["use_services_cache"] is False
+    mock_bleak_client.start_notify.assert_awaited_once()
+    assert client.shot_counter_active
+    connection_callback.assert_called_once_with(True)
     await client.disconnect()
 
 
@@ -557,70 +645,64 @@ async def test_shot_counter_suppresses_auto_disconnect(
         assert not client.is_connected
 
 
+BREWING = BluetoothBrewingState.BREWING
+BREWING_STOPPED = BluetoothBrewingState.BREWING_STOPPED
+FLUSHED = BluetoothBrewingState.FLUSHED
+BACKFLUSHING = BluetoothBrewingState.BACKFLUSHING
+
+
 @pytest.mark.parametrize(
-    ("payloads", "expected"),
+    "steps",
     [
-        (
+        pytest.param(
             [
-                b'{"BrewingUpdateGroup1Ev":true}',
-                b'{"BrewingUpdateGroup1Time":0.5}',
-                b'{"BrewingUpdateGroup1Time":12.3}',
-                b'{"BrewingUpdateGroup1Ev":false}',
-                b'{"BrewingStoppedGroup1Time":27.4,"BrewingStoppedGroup1DoseIndex":"DoseA","BrewingStoppedGroup1StopType":"X"}',
-                b'{"FlushStoppedGroup1Time":3.1}',
-                b'{"BrewingUpdateGroup1Backflush":true}',
-                b'{"BrewingUpdateGroup1Backflush":false,"BrewingUpdateGroup1Ev":false}',
-                b'{"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Time":1}',
+                (STARTED, (BREWING, 0.0, None)),
+                (_tick(0.1), (BREWING, 0.1, None)),
+                (_tick(1.17), (BREWING, 1.17, None)),
+                (b'{"BrewingUpdateGroup1Ev":false}', (BREWING_STOPPED, None, None)),
+                (
+                    b'{"BrewingStoppedGroup1Time":27.4,"BrewingStoppedGroup1DoseIndex":"DoseA",'
+                    b'"BrewingStoppedGroup1StopType":"X","BrewingStoppedGroup1StopReason":"Manual"}',
+                    (BREWING_STOPPED, None, 27.4),
+                ),
+                (b'{"FlushStoppedGroup1Time":3.1}', (FLUSHED, None, None)),
+                (STARTED, (BREWING, 0.0, None)),
+                (_tick(0.1, backflush=True), (BACKFLUSHING, None, None)),
+                (b'{"BrewingUpdateGroup1Ev":false}', (BREWING_STOPPED, None, None)),
+                # without a start event, e.g. when subscribing during a shot
+                (_tick(5.2), (BREWING, 5.2, None)),
             ],
-            [
-                None,
-                (BluetoothBrewingState.BREWING, 0.5, None),
-                (BluetoothBrewingState.BREWING, 12.3, None),
-                (BluetoothBrewingState.BREWING_STOPPED, None, None),
-                (BluetoothBrewingState.BREWING_STOPPED, None, 27.4),
-                (BluetoothBrewingState.FLUSHED, None, None),
-                (BluetoothBrewingState.BACKFLUSHING, None, None),
-                (BluetoothBrewingState.BREWING_STOPPED, None, None),
-                (BluetoothBrewingState.BREWING, 1, None),
-            ],
+            id="sequence",
         ),
-        (
+        pytest.param(
             [
-                b'{"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Time":2.0}\x00',
-                b"not json",
-                b'{"BrewingUpdateGroup1Time":"abc"}',
-                b"[]",
-                b"\xff\xfe",
-                b'{"SomethingNew":1,"BrewingUpdateGroup1Time":3.5}',
+                (STARTED, (BREWING, 0.0, None)),
+                (b"not json", None),
+                (b'{"BrewingUpdateGroup1Time":"abc"}', None),
+                (b"[]", None),
+                (b"\xff\xfe", None),
+                (b'{"SteamBoilerUpdateTemperature":130}', None),
+                (b'{"SomethingNew":1,"BrewingUpdateGroup1Time":3.5}', (BREWING, 3.5, None)),
+                (_tick(4.5) + b"\x00", (BREWING, 4.5, None)),
             ],
-            [
-                (BluetoothBrewingState.BREWING, 2.0, None),
-                (BluetoothBrewingState.BREWING, 2.0, None),
-                (BluetoothBrewingState.BREWING, 2.0, None),
-                (BluetoothBrewingState.BREWING, 2.0, None),
-                (BluetoothBrewingState.BREWING, 2.0, None),
-                (BluetoothBrewingState.BREWING, 3.5, None),
-            ],
+            id="malformed",
         ),
     ],
-    ids=["sequence", "malformed"],
 )
 async def test_shot_counter_state_machine(
     mock_bleak_client: MagicMock,
     ble_device: BLEDevice,
-    payloads: list[bytes],
-    expected: list[tuple[BluetoothBrewingState, float | None, float | None] | None],
+    steps: list[tuple[bytes, tuple[BluetoothBrewingState, float | None, float | None] | None]],
 ) -> None:
-    """Test the shot counter state machine."""
+    """Test the shot counter state machine, other messages never repeat a state."""
     callback = MagicMock()
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    await client.start_shot_counter(callback)
-    handler = mock_bleak_client.start_notify.call_args.args[1]
+    notify = await _start_shot_counter(client, mock_bleak_client, callback)
 
-    for payload, expected_update in zip(payloads, expected, strict=True):
+    for payload, expected in steps:
         callback.reset_mock()
-        handler(MagicMock(), bytearray(payload))
-        if expected_update is None:
+        notify(payload)
+        if expected is None:
             callback.assert_not_called()
             continue
         callback.assert_called_once()
@@ -629,27 +711,220 @@ async def test_shot_counter_state_machine(
             update.state,
             update.timer_value,
             update.final_shot_time,
-        ) == expected_update, payload
+        ) == expected, payload
 
     await client.disconnect()
 
 
-async def test_shot_counter_brewing_start_time(
+REPLAY = b'{"MachineMode":"StandBy"}'
+
+
+@pytest.mark.parametrize(
+    ("during_subscribe", "after_subscribe"),
+    [
+        pytest.param([REPLAY], [], id="during_subscribe"),
+        # proxies may deliver it after subscribing
+        pytest.param([], [REPLAY], id="after_subscribe"),
+    ],
+)
+async def test_shot_counter_discards_replay(
+    mock_bleak_client: MagicMock,
+    ble_device: BLEDevice,
+    during_subscribe: list[bytes],
+    after_subscribe: list[bytes],
+) -> None:
+    """Test the replay of the machine's last notification on subscribe is dropped."""
+    callback = MagicMock()
+    telemetry_callback = MagicMock()
+
+    async def start_notify(_: Any, handler: Callable[..., None]) -> None:
+        for payload in during_subscribe:
+            handler(MagicMock(), bytearray(payload))
+
+    mock_bleak_client.start_notify.side_effect = start_notify
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    await client.start_shot_counter(callback, telemetry_callback=telemetry_callback)
+    handler = mock_bleak_client.start_notify.call_args.args[1]
+    for payload in after_subscribe:
+        handler(MagicMock(), bytearray(payload))
+
+    callback.assert_not_called()
+    telemetry_callback.assert_not_called()
+
+    # only the first notification is dropped
+    handler(MagicMock(), bytearray(REPLAY))
+    telemetry_callback.assert_called_once_with(
+        BluetoothMachineTelemetry(machine_mode=MachineMode.STANDBY)
+    )
+    await client.disconnect()
+
+
+async def test_shot_counter_telemetry(
     mock_bleak_client: MagicMock, ble_device: BLEDevice
 ) -> None:
-    """Test the brewing start time is computed from the receive time."""
+    """Test telemetry is passed on without touching the brewing state."""
+    callback = MagicMock()
+    telemetry_callback = MagicMock()
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    notify = await _start_shot_counter(
+        client,
+        mock_bleak_client,
+        callback,
+        telemetry_callback=telemetry_callback,
+    )
+
+    notify(b'{"CoffeeBoiler1UpdateTemperature":95}')
+    telemetry_callback.assert_called_once_with(
+        BluetoothMachineTelemetry(coffee_boiler_temperature=95)
+    )
+    # values the library doesn't know are ignored
+    telemetry_callback.reset_mock()
+    notify(b'{"SteamBoilerHeatingCoeff":"[{\\"temperature\\":18}]"}')
+    notify(b'{"MachineMode":"Unknown"}')
+    telemetry_callback.assert_not_called()
+
+    notify(b'{"MachineStatistics":"{\\"tot_doses\\":2123}"}')
+    telemetry_callback.assert_called_once_with(
+        BluetoothMachineTelemetry(machine_statistics={"tot_doses": 2123})
+    )
+
+    # a notification with both kinds of data
+    telemetry_callback.reset_mock()
+    notify(b'{"BrewingStartedGroup1DoseIndex":"DoseA","SteamBoilerUpdateTemperature":127}')
+    telemetry_callback.assert_called_once_with(
+        BluetoothMachineTelemetry(steam_boiler_temperature=127)
+    )
+    callback.assert_called_once()
+    assert callback.call_args.args[0].state == BREWING
+    await client.disconnect()
+
+
+class _Session(NamedTuple):
+    """Recorded shot counter session."""
+
+    replay: tuple[datetime, bytes]
+    notifications: list[tuple[datetime, bytes]]
+
+
+def _load_sessions(file_name: str, day: date) -> list[_Session]:
+    """Load recorded shot counter sessions."""
+    sessions: list[_Session] = []
+    for line in (FIXTURES / "machine" / file_name).read_text().splitlines():
+        if line.startswith("#"):
+            continue
+        time, payload = line.split(" ", 1)
+        received_at = datetime.combine(
+            day, datetime.strptime(time, "%H:%M:%S.%f").time(), timezone.utc
+        )
+        if payload.endswith("# replay"):
+            replay = payload.removesuffix("# replay").strip().encode()
+            sessions.append(_Session((received_at, replay), []))
+        else:
+            sessions[-1].notifications.append((received_at, payload.encode()))
+    return sessions
+
+
+async def test_shot_counter_recorded_sessions(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice, clock: FakeClock
+) -> None:
+    """Test the brewing states and telemetry of a recorded morning."""
+    updates: list[BluetoothShotCounterUpdate] = []
+    telemetry: list[BluetoothMachineTelemetry] = []
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+
+    for session in _load_sessions("shot_counter_2026-10-05.txt", date(2026, 10, 5)):
+
+        async def start_notify(
+            _: Any, handler: Callable[..., None], session: _Session = session
+        ) -> None:
+            clock.now, payload = session.replay
+            handler(MagicMock(), bytearray(payload))
+
+        mock_bleak_client.start_notify.side_effect = start_notify
+        assert await client.start_shot_counter(
+            updates.append, telemetry_callback=telemetry.append
+        )
+        handler = mock_bleak_client.start_notify.call_args.args[1]
+        for received_at, payload in session.notifications:
+            clock.now = received_at
+            handler(MagicMock(), bytearray(payload))
+        # the machine went to standby, which stops the shot counter
+        await client.stop_shot_counter()
+
+    assert [
+        (state, len(list(group)))
+        for state, group in itertools.groupby(update.state for update in updates)
+    ] == [
+        (BREWING, 3),
+        (FLUSHED, 1),
+        (BREWING, 3),
+        (FLUSHED, 1),
+        (BREWING, 13),
+        (BREWING_STOPPED, 1),
+        (BREWING, 10),
+        (FLUSHED, 1),
+    ]
+    starts = [update for update in updates if update.timer_value == 0.0]
+    assert [f"{update.received_at:%H:%M:%S.%f}"[:-3] for update in starts] == [
+        "07:50:02.612",
+        "07:50:09.360",
+        "07:57:49.729",
+        "07:59:22.007",
+    ]
+    # late ticks, like 0.64 s at 07:50:11.215, don't move the start time
+    for update in updates:
+        if update.timer_value == 0.0:
+            started_at = update.received_at
+        if update.brewing_start_time is not None:
+            assert timedelta(0) <= started_at - update.brewing_start_time
+            assert started_at - update.brewing_start_time < timedelta(seconds=0.05)
+
+    stopped = next(update for update in updates if update.state == BREWING_STOPPED)
+    assert f"{stopped.received_at:%H:%M:%S}" == "07:58:02"
+    assert stopped.final_shot_time == 12.727
+    assert stopped.stop_reason == "Manual"
+    assert stopped.started_dose_index == "ContinuousDose"
+
+    assert [item.machine_mode for item in telemetry if item.machine_mode] == [
+        MachineMode.STANDBY,
+        MachineMode.STANDBY,
+    ]
+    latest = reduce(BluetoothMachineTelemetry.merge, telemetry)
+    assert (
+        latest.coffee_boiler_temperature,
+        latest.steam_boiler_temperature,
+        latest.sleep,
+    ) == (87, 115, "command")
+    assert latest.machine_statistics is not None
+    assert latest.machine_statistics["tot_doses"] == 2123
+
+
+async def test_shot_counter_brewing_start_time(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice, clock: FakeClock
+) -> None:
+    """Test the brewing start time is the earliest estimate of the running shot."""
     callback = MagicMock()
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    await client.start_shot_counter(callback)
-    handler = mock_bleak_client.start_notify.call_args.args[1]
+    notify = await _start_shot_counter(client, mock_bleak_client, callback)
 
-    handler(
-        MagicMock(),
-        bytearray(b'{"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Time":5}'),
-    )
+    started_at = clock.now
+    notify(STARTED)
+    assert callback.call_args.args[0].brewing_start_time == started_at
+
+    # a late tick doesn't move the start
+    clock.tick(5.07)
+    notify(_tick(5))
     update: BluetoothShotCounterUpdate = callback.call_args.args[0]
-    assert update.brewing_start_time == update.received_at - timedelta(seconds=5)
-    assert update.received_at.tzinfo is not None
+    assert update.timer_value == 5
+    assert update.brewing_start_time == started_at
+    assert update.started_dose_index == "DoseA"
+
+    # an earlier estimate does
+    clock.tick(1)
+    notify(_tick(6.1))
+    assert callback.call_args.args[0].brewing_start_time == clock.now - timedelta(
+        seconds=6.1
+    )
     await client.disconnect()
 
 
@@ -657,14 +932,12 @@ async def test_shot_counter_callback_exception_is_caught(
     mock_bleak_client: MagicMock, ble_device: BLEDevice
 ) -> None:
     """Test exceptions in the user callback don't escape into bleak."""
+    callback = MagicMock(side_effect=ValueError("boom"))
     client = LaMarzoccoBluetoothClient(ble_device, "token")
-    await client.start_shot_counter(MagicMock(side_effect=ValueError("boom")))
-    handler = mock_bleak_client.start_notify.call_args.args[1]
+    notify = await _start_shot_counter(client, mock_bleak_client, callback)
 
-    handler(
-        MagicMock(),
-        bytearray(b'{"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Time":5}'),
-    )
+    notify(STARTED)
+    callback.assert_called_once()
     await client.disconnect()
 
 
@@ -676,14 +949,16 @@ async def test_shot_counter_reconnects_after_disconnect(
     connection_callback = MagicMock()
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     with patch("pylamarzocco.clients._bluetooth.RECONNECT_INITIAL_DELAY", 0):
-        await client.start_shot_counter(callback, connection_callback)
-        handler = mock_bleak_client.start_notify.call_args.args[1]
+        notify = await _start_shot_counter(
+            client, mock_bleak_client, callback, connection_callback
+        )
         disconnected_callback = mock_bleak_client.establish_mock.call_args.kwargs[
             "disconnected_callback"
         ]
 
-        # partial data in the accumulator must be dropped on disconnect
-        handler(MagicMock(), bytearray(b'{"BrewingUpdateGroup1Ev":true}'))
+        # the running shot must be forgotten on disconnect
+        notify(STARTED)
+        callback.reset_mock()
 
         mock_bleak_client.is_connected = False
         disconnected_callback(mock_bleak_client)
@@ -697,8 +972,10 @@ async def test_shot_counter_reconnects_after_disconnect(
     connection_callback.assert_called_with(True)
     assert client.shot_counter_active
 
+    # the new subscription drops the replay again, then nothing of the shot is left
     handler = mock_bleak_client.start_notify.call_args.args[1]
-    handler(MagicMock(), bytearray(b'{"BrewingUpdateGroup1Time":1}'))
+    handler(MagicMock(), bytearray(_tick(3.34)))
+    handler(MagicMock(), bytearray(b'{"BrewingUpdateGroup1Backflush":false}'))
     callback.assert_not_called()
 
     await client.disconnect()
@@ -723,7 +1000,7 @@ async def test_shot_counter_gives_up_after_auth_failures(
 
     # initial connection + 3 failed reconnects
     assert mock_bleak_client.establish_mock.await_count == 4
-    assert client._reconnect_task.done()  # pylint: disable=protected-access
+    assert client._reconnect_task is None  # pylint: disable=protected-access
     assert client.authentication_failed
     assert not client.shot_counter_active
 
@@ -754,17 +1031,69 @@ async def test_start_shot_counter_twice(
     client = LaMarzoccoBluetoothClient(ble_device, "token")
 
     assert await client.start_shot_counter(first) is True
-    assert await client.start_shot_counter(second) is True
+    notify = await _start_shot_counter(client, mock_bleak_client, second)
 
     mock_bleak_client.start_notify.assert_awaited_once()
-    handler = mock_bleak_client.start_notify.call_args.args[1]
-    handler(
-        MagicMock(),
-        bytearray(b'{"BrewingUpdateGroup1Ev":true,"BrewingUpdateGroup1Time":5}'),
-    )
+    notify(STARTED)
     first.assert_not_called()
     second.assert_called_once()
     await client.disconnect()
+
+
+@pytest.mark.parametrize("stop", ["stop_shot_counter", "disconnect"])
+async def test_stop_shot_counter_reentrant(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice, stop: str
+) -> None:
+    """Test stopping again from the connection callback doesn't recurse."""
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    loop = asyncio.get_running_loop()
+    calls: list[bool] = []
+    stops: list[asyncio.Task[None]] = []
+
+    def connection_callback(connected: bool) -> None:
+        calls.append(connected)
+        if not connected:
+            # like Home Assistant, in a task that runs eagerly up to its first await
+            stops.append(
+                asyncio.Task(
+                    getattr(client, stop)(), loop=loop, eager_start=True
+                )
+            )
+
+    await client.start_shot_counter(MagicMock(), connection_callback)
+    await getattr(client, stop)()
+    await asyncio.gather(*stops)
+
+    assert calls == [True, False]
+    assert len(stops) == 1
+    assert not client.shot_counter_active
+    mock_bleak_client.stop_notify.assert_awaited_once()
+
+
+async def test_machine_stop_from_update_callback(
+    mock_bleak_client: MagicMock, ble_device: BLEDevice
+) -> None:
+    """Test stopping from the update callback ends, it recursed in 2.5.1."""
+    client = LaMarzoccoBluetoothClient(ble_device, "token")
+    machine = LaMarzoccoMachine("MR012345", bluetooth_client=client)
+    loop = asyncio.get_running_loop()
+    stops: list[asyncio.Task[None]] = []
+
+    def update_callback(_: Any) -> None:
+        # Home Assistant stopped the shot counter on every update in standby
+        stops.append(
+            asyncio.Task(
+                machine.disconnect_bluetooth_shot_counter(), loop=loop, eager_start=True
+            )
+        )
+
+    assert await machine.connect_bluetooth_shot_counter(update_callback)
+    update_callback(None)
+    await asyncio.gather(*stops)
+
+    assert len(stops) == 1
+    assert not client.shot_counter_active
+    mock_bleak_client.stop_notify.assert_awaited_once()
 
 
 async def test_stop_shot_counter_notifies_connection_callback(
@@ -944,25 +1273,18 @@ async def test_ble_device_callback(
     await client.disconnect()
 
 
-async def test_missing_shot_counter_clears_service_cache(
-    mock_bleak_client: MagicMock, ble_device: BLEDevice
-) -> None:
-    """Test a missing characteristic refreshes services on the next connect."""
-    mock_bleak_client.services.get_characteristic.side_effect = lambda char: (
-        None if char == SHOT_COUNTER_CHAR else "mock_characteristic"
-    )
-    client = LaMarzoccoBluetoothClient(ble_device, "token")
-
-    assert await client.start_shot_counter(MagicMock()) is False
-    mock_bleak_client.clear_cache.assert_awaited_once()
-    await client.disconnect()
-
-
 async def test_connection_callback_connect_and_idle_disconnect(
     mock_bleak_client: MagicMock, ble_device: BLEDevice
 ) -> None:
     """Test the connection callback follows connects and idle disconnects."""
     connection_callback = MagicMock()
+
+    async def disconnect() -> None:
+        # a real disconnect yields, the idle timer must not cancel itself
+        await asyncio.sleep(0)
+        mock_bleak_client.is_connected = False
+
+    mock_bleak_client.disconnect.side_effect = disconnect
     with patch("pylamarzocco.clients._bluetooth.IDLE_TIMEOUT", 0.05):
         client = LaMarzoccoBluetoothClient(ble_device, "token")
         client.register_connection_callback(connection_callback)
@@ -974,6 +1296,7 @@ async def test_connection_callback_connect_and_idle_disconnect(
         await asyncio.sleep(0.1)
 
     assert not client.is_connected
+    assert not mock_bleak_client.is_connected
     assert connection_callback.call_args_list == [call(True), call(False)]
 
 

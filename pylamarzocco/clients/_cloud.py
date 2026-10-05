@@ -76,6 +76,17 @@ TOKEN_TIME_TO_REFRESH = 10 * 60  # 10 minutes before expiration
 PENDING_COMMAND_TIMEOUT = 10
 
 
+def _mask_bluetooth_token(data: Any) -> Any:
+    """Return a copy of a JSON response with the Bluetooth token masked."""
+    # json.loads calls object_hook for every decoded object, nested ones included
+    return json.loads(
+        json.dumps(data),
+        object_hook=lambda obj: (
+            obj | {"bleAuthToken": "**REDACTED**"} if obj.get("bleAuthToken") else obj
+        ),
+    )
+
+
 class LaMarzoccoCloudClient:
     """La Marzocco Cloud Client."""
 
@@ -232,7 +243,7 @@ class LaMarzoccoCloudClient:
         if is_success(response):
             json_response = await response.json()
             _LOGGER.debug("Request to %s successful", url)
-            _LOGGER.debug("Response: %s", json_response)
+            _LOGGER.debug("Response: %s", _mask_bluetooth_token(json_response))
             return json_response
 
         if response.status == 401:
@@ -400,8 +411,8 @@ class LaMarzoccoCloudClient:
         await ws.send_str(connect_msg)
 
         msg = await ws.receive()
-        _LOGGER.debug("Received websocket message: %s", msg.data)
         result, _, _ = decode_stomp_ws_message(str(msg.data))
+        _LOGGER.debug("Received websocket message: %s", result)
         if result is not StompMessageType.CONNECTED:
             raise ClientConnectionError("No connected message")
 

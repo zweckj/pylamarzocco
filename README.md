@@ -231,20 +231,37 @@ Requirements:
 - a free, persistent Bluetooth connection slot (the machine likely accepts only one central at a time)
 
 ```python
-from pylamarzocco.models import BluetoothShotCounterUpdate
+from pylamarzocco.models import BluetoothMachineTelemetry, BluetoothShotCounterUpdate
 
 def on_shot(update: BluetoothShotCounterUpdate | None):
     """Called on every brewing update, and with None when Bluetooth disconnects."""
     if update is not None:
-        print(update.state, update.timer_value, update.final_shot_time)
+        print(update.state, update.timer_value, update.brewing_start_time)
+
+def on_telemetry(telemetry: BluetoothMachineTelemetry):
+    """Called with the values of each telemetry notification."""
+    print(telemetry.steam_boiler_temperature, telemetry.machine_mode)
 
 await machine.get_dashboard()  # or get_dashboard_from_bluetooth()
-if await machine.connect_bluetooth_shot_counter(on_shot):
+if await machine.connect_bluetooth_shot_counter(on_shot, on_telemetry):
     ...  # machine.dashboard is now updated in real time
 
-# Later
+# Later. This doesn't call the callbacks, refresh afterwards if needed.
 await machine.disconnect_bluetooth_shot_counter()
 ```
+
+Brewing states:
+
+- A shot or flush is reported as `Brewing` right away when the machine sends its start event, with a timer of 0. A flush only differs from a shot once it stops.
+- When connecting during a shot, `Brewing` follows with the next timer notification.
+- `brewing_start_time` is the earliest estimate of the running shot, so late notifications don't move it.
+- When subscribing, the machine first replays its last notification, which can be hours old. The first notification of every subscription is discarded.
+
+Telemetry:
+
+- Most notifications carry live machine values: boiler temperatures, the machine mode, and statistics. They never change the brewing state.
+- `machine.bluetooth_telemetry` holds the latest values until the shot counter stops or disconnects.
+- A machine mode is applied to the `CMMachineStatus` widget right away, for example standby half a second after switching the machine off.
 
 While the shot counter is running:
 
@@ -255,7 +272,9 @@ While the shot counter is running:
 - If no Bluetooth update arrives for 60 s, the cloud state is used again and the callback receives `None`.
 - `machine.last_shot_time` holds the duration of the last shot.
 - Bluetooth commands such as `set_power` share the same connection. Requests are serialized, so responses can't mix up.
-- If no callback is passed, the dashboard websocket `update_callback` is used instead.
+- Without callbacks, the dashboard websocket `update_callback` is used for brewing updates and machine mode changes.
+
+If the shot counter characteristic is missing, it may be a stale service cache. The cached services are then cleared and rediscovered once before `connect_bluetooth_shot_counter` returns `False`.
 
 For long-running hosts (e.g. Home Assistant with adapters or proxies), pass `ble_device_callback` to `LaMarzoccoBluetoothClient` so reconnects use the most recent `BLEDevice`.
 
