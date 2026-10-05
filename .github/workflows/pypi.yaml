@@ -33,11 +33,11 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install --system -r pyproject.toml --extra dev
+        uv pip install --system -e ".[dev]"
 
     - name: Run Tests
       run: |
-        coverage run --source=pylamarzocco -m pytest tests/
+        coverage run --source=src/pylamarzocco -m pytest tests/
         coverage report -m
       
     - name: Upload coverage reports to Codecov

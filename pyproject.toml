@@ -38,5 +38,9 @@ dev = [
     "aiointercept == 0.1.11",
 ]
 
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
