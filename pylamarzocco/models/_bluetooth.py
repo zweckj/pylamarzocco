@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field, fields, replace
 from datetime import datetime, timedelta, timezone
+from typing import Any, Self
 
 from mashumaro import field_options
 from mashumaro.mixins.json import DataClassJSONMixin
@@ -63,10 +65,35 @@ class BluetoothCommandStatus(DataClassJSONMixin):
     status: str
 
 
-@dataclass(kw_only=True)
-class BluetoothBrewingData(DataClassJSONMixin):
-    """Payload of a shot counter notification (all fields optional)."""
+def _known_machine_mode(value: str) -> MachineMode | None:
+    """Parse a machine mode, ignoring modes this library doesn't know."""
+    return MachineMode(value) if value in MachineMode else None
 
+
+@dataclass(kw_only=True)
+class _PartialNotification(DataClassJSONMixin):
+    """Part of a shot counter notification, all fields are optional."""
+
+    def _set_fields(self) -> dict[str, Any]:
+        return {f.name: v for f in fields(self) if (v := getattr(self, f.name)) is not None}
+
+    @property
+    def is_empty(self) -> bool:
+        """Return whether no field is set."""
+        return not self._set_fields()
+
+    def merge(self, other: Self) -> Self:
+        """Return a copy of self, overridden by every non-None field of other."""
+        return replace(self, **other._set_fields())
+
+
+@dataclass(kw_only=True)
+class BluetoothBrewingData(_PartialNotification):
+    """Brewing part of a shot counter notification."""
+
+    started_dose_index: str | None = field(
+        default=None, metadata=field_options(alias="BrewingStartedGroup1DoseIndex")
+    )
     ev: bool | None = field(
         default=None, metadata=field_options(alias="BrewingUpdateGroup1Ev")
     )
@@ -91,17 +118,9 @@ class BluetoothBrewingData(DataClassJSONMixin):
     brewing_stopped_stop_type: str | None = field(
         default=None, metadata=field_options(alias="BrewingStoppedGroup1StopType")
     )
-
-    def merge(self, other: BluetoothBrewingData) -> BluetoothBrewingData:
-        """Return a copy of self, overridden by every non-None field of other."""
-        return replace(
-            self,
-            **{
-                f.name: getattr(other, f.name)
-                for f in fields(other)
-                if getattr(other, f.name) is not None
-            },
-        )
+    brewing_stopped_stop_reason: str | None = field(
+        default=None, metadata=field_options(alias="BrewingStoppedGroup1StopReason")
+    )
 
     def derive_state(
         self, received_at: datetime | None = None
@@ -111,6 +130,7 @@ class BluetoothBrewingData(DataClassJSONMixin):
             self.brewing_stopped_time is not None
             or self.brewing_stopped_dose_index is not None
             or self.brewing_stopped_stop_type is not None
+            or self.brewing_stopped_stop_reason is not None
             or self.ev is False
         ):
             state = BluetoothBrewingState.BREWING_STOPPED
@@ -121,7 +141,9 @@ class BluetoothBrewingData(DataClassJSONMixin):
             state = BluetoothBrewingState.FLUSHED
         elif self.backflush is True:
             state = BluetoothBrewingState.BACKFLUSHING
-        elif self.ev is True and self.brewing_time is not None:
+        elif self.started_dose_index is not None or (
+            self.ev is True and self.brewing_time is not None
+        ):
             state = BluetoothBrewingState.BREWING
         else:
             return None
@@ -129,9 +151,13 @@ class BluetoothBrewingData(DataClassJSONMixin):
         return BluetoothShotCounterUpdate(
             state=state,
             timer_value=(
-                self.brewing_time if state is BluetoothBrewingState.BREWING else None
+                (self.brewing_time or 0.0)
+                if state is BluetoothBrewingState.BREWING
+                else None
             ),
             final_shot_time=self.brewing_stopped_time,
+            started_dose_index=self.started_dose_index,
+            stop_reason=self.brewing_stopped_stop_reason,
             received_at=received_at or datetime.now(timezone.utc),
             raw=self,
         )
@@ -144,12 +170,44 @@ class BluetoothShotCounterUpdate:
     state: BluetoothBrewingState
     timer_value: float | None = None
     final_shot_time: float | None = None
+    started_dose_index: str | None = None
+    stop_reason: str | None = None
     received_at: datetime
     raw: BluetoothBrewingData
+    # when the current shot started, defaults to received_at - timer_value
+    brewing_start_time: datetime | None = None
 
-    @property
-    def brewing_start_time(self) -> datetime | None:
-        """Return when the current shot started, if brewing."""
-        if self.state is not BluetoothBrewingState.BREWING or self.timer_value is None:
-            return None
-        return self.received_at - timedelta(seconds=self.timer_value)
+    def __post_init__(self) -> None:
+        if (
+            self.brewing_start_time is None
+            and self.state is BluetoothBrewingState.BREWING
+            and self.timer_value is not None
+        ):
+            self.brewing_start_time = self.received_at - timedelta(
+                seconds=self.timer_value
+            )
+
+
+@dataclass(kw_only=True)
+class BluetoothMachineTelemetry(_PartialNotification):
+    """Live machine values sent with the shot counter notifications.
+
+    A notification usually carries only one of them.
+    """
+
+    coffee_boiler_temperature: float | None = field(
+        default=None, metadata=field_options(alias="CoffeeBoiler1UpdateTemperature")
+    )
+    steam_boiler_temperature: float | None = field(
+        default=None, metadata=field_options(alias="SteamBoilerUpdateTemperature")
+    )
+    machine_mode: MachineMode | None = field(
+        default=None,
+        metadata=field_options(alias="MachineMode", deserialize=_known_machine_mode),
+    )
+    sleep: str | None = field(default=None, metadata=field_options(alias="Sleep"))
+    # sent as a JSON encoded string, the meaning of the counters is unverified
+    machine_statistics: dict[str, Any] | None = field(
+        default=None,
+        metadata=field_options(alias="MachineStatistics", deserialize=json.loads),
+    )

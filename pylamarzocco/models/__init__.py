@@ -82,6 +82,7 @@ from ._bluetooth import (
     BluetoothBrewingData,
     BluetoothCommandStatus,
     BluetoothMachineCapabilities,
+    BluetoothMachineTelemetry,
     BluetoothShotCounterUpdate,
     BluetoothSmartStandbyDetails,
 )
@@ -98,6 +99,7 @@ __all__ = [
     "BluetoothBrewingData",
     "BluetoothCommandStatus",
     "BluetoothMachineCapabilities",
+    "BluetoothMachineTelemetry",
     "BluetoothShotCounterUpdate",
     "BluetoothSmartStandbyDetails",
     "BrewByWeightDoseSettings",

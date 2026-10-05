@@ -30,6 +30,7 @@ from pylamarzocco.models import (
     BluetoothBrewingData,
     BluetoothCommandStatus,
     BluetoothMachineCapabilities,
+    BluetoothMachineTelemetry,
     BluetoothShotCounterUpdate,
     BluetoothSmartStandbyDetails,
 )
@@ -53,6 +54,11 @@ RECONNECT_INITIAL_DELAY = 1  # seconds
 RECONNECT_MAX_DELAY = 60  # seconds
 
 
+def _utcnow() -> datetime:
+    """Return the current time in UTC."""
+    return datetime.now(timezone.utc)
+
+
 def _parse_bool(value: Any) -> bool:
     """Parse a boolean that the machine may send as JSON bool or string."""
     return str(value).lower() == "true"
@@ -66,6 +72,43 @@ def _safe_call(callback: Callable[[Any], Any] | None, arg: Any) -> None:
         callback(arg)
     except Exception:  # pylint: disable=broad-except
         _logger.exception("Error in Bluetooth callback")
+
+
+class _BrewingTracker:
+    """Turn the brewing part of shot counter notifications into state updates."""
+
+    _data: BluetoothBrewingData
+    _start_time: datetime | None
+
+    def __init__(self) -> None:
+        self._reset()
+
+    def _reset(self) -> None:
+        self._data = BluetoothBrewingData()
+        self._start_time = None
+
+    def process(
+        self, message: BluetoothBrewingData, received_at: datetime
+    ) -> BluetoothShotCounterUpdate | None:
+        """Process a notification and return the resulting state, if any."""
+        if message.started_dose_index is not None:
+            # a new shot or flush started
+            self._reset()
+        self._data = self._data.merge(message)
+        update = self._data.derive_state(received_at)
+        if update is None:
+            _logger.debug("No brewing state could be extracted")
+        elif update.state in (
+            BluetoothBrewingState.FLUSHED,
+            BluetoothBrewingState.BREWING_STOPPED,
+        ):
+            self._reset()
+        elif update.brewing_start_time is not None:
+            # notifications can only be delayed, so the earliest start is the best
+            if self._start_time is None or update.brewing_start_time < self._start_time:
+                self._start_time = update.brewing_start_time
+            update.brewing_start_time = self._start_time
+        return update
 
 
 def disconnect_on_exception[
@@ -130,7 +173,11 @@ class LaMarzoccoBluetoothClient:
             Callable[[BluetoothShotCounterUpdate], Any] | None
         ) = None
         self._shot_counter_connection_callback: Callable[[bool], Any] | None = None
-        self._brewing_acc = BluetoothBrewingData()
+        self._shot_counter_telemetry_callback: (
+            Callable[[BluetoothMachineTelemetry], Any] | None
+        ) = None
+        self._brewing_tracker = _BrewingTracker()
+        self._replay_pending = False
         self._reconnect_task: asyncio.Task[None] | None = None
 
     @property
@@ -183,7 +230,7 @@ class LaMarzoccoBluetoothClient:
             and self.is_connected
         )
 
-    async def _ensure_connected(self) -> None:
+    async def _ensure_connected(self, use_services_cache: bool = True) -> None:
         """Ensure we're connected to the device, connecting if necessary."""
         async with self._lock:
             if self.is_connected:
@@ -204,6 +251,7 @@ class LaMarzoccoBluetoothClient:
                     disconnected_callback=self._on_bleak_disconnected,
                     max_attempts=3,
                     ble_device_callback=self._ble_device_callback,
+                    use_services_cache=use_services_cache,
                 )
                 await self._authenticate()
             except BaseException as e:
@@ -244,19 +292,22 @@ class LaMarzoccoBluetoothClient:
 
     async def _disconnect_internal(self) -> None:
         """Internal disconnect that doesn't acquire lock (assumes lock is already held)."""
-        # Cancel disconnect timer
-        if self._disconnect_task is not None and not self._disconnect_task.done():
+        # cancel the idle timer, unless it is the one disconnecting
+        if (
+            self._disconnect_task is not None
+            and self._disconnect_task is not asyncio.current_task()
+        ):
             self._disconnect_task.cancel()
-            self._disconnect_task = None
+        self._disconnect_task = None
 
-        if self._client is not None and self._client.is_connected:
+        # detach first, so bleak doesn't report this as a lost connection
+        client, self._client = self._client, None
+        if client is not None and client.is_connected:
             _logger.debug("Disconnecting from Bluetooth device %s", self._address)
             try:
-                await self._client.disconnect()
+                await client.disconnect()
             except Exception as e:
                 _logger.error("Error disconnecting from Bluetooth device: %s", e)
-            finally:
-                self._client = None
         self._set_connected(False)
 
     async def _drop_connection(self) -> None:
@@ -267,15 +318,17 @@ class LaMarzoccoBluetoothClient:
 
     async def disconnect(self) -> None:
         """Disconnect from the device and stop the shot counter."""
-        self._disable_shot_counter()
+        connection_callback = self._disable_shot_counter()
         async with self._lock:
             await self._stop_notify_internal()
             await self._disconnect_internal()
+        _safe_call(connection_callback, False)
 
     async def start_shot_counter(
         self,
         callback: Callable[[BluetoothShotCounterUpdate], Any],
         connection_callback: Callable[[bool], Any] | None = None,
+        telemetry_callback: Callable[[BluetoothMachineTelemetry], Any] | None = None,
     ) -> bool:
         """Subscribe to real-time brewing notifications from the machine.
 
@@ -285,13 +338,18 @@ class LaMarzoccoBluetoothClient:
         Args:
             callback: Called with every brewing state update.
             connection_callback: Called with True when notifications are
-                (re-)subscribed and with False when the connection is lost.
+                (re-)subscribed and with False when the connection is lost or
+                the shot counter is stopped.
+            telemetry_callback: Called with the live machine values, like boiler
+                temperatures or the machine mode, sent with the notifications.
+                Only the values of the notification are set.
 
         Returns:
             False if the machine does not expose the shot counter characteristic.
         """
         self._shot_counter_callback = callback
         self._shot_counter_connection_callback = connection_callback
+        self._shot_counter_telemetry_callback = telemetry_callback
         self._shot_counter_enabled = True
         supported = False
         try:
@@ -305,23 +363,35 @@ class LaMarzoccoBluetoothClient:
 
     async def stop_shot_counter(self) -> None:
         """Unsubscribe from brewing notifications and resume idle disconnects."""
-        self._disable_shot_counter()
+        connection_callback = self._disable_shot_counter()
         async with self._lock:
             await self._stop_notify_internal()
             if self.is_connected:
                 self._reset_disconnect_timer()
+        _safe_call(connection_callback, False)
 
-    def _disable_shot_counter(self) -> None:
-        """Clear the shot counter state and stop reconnecting."""
-        if self._shot_counter_enabled and self._shot_counter_subscribed:
-            _safe_call(self._shot_counter_connection_callback, False)
+    def _disable_shot_counter(self) -> Callable[[bool], Any] | None:
+        """Clear the shot counter state and stop reconnecting.
+
+        Returns the connection callback if notifications were subscribed. Call
+        it last, so a callback stopping the shot counter again is a no-op.
+        """
+        if not self._shot_counter_enabled:
+            return None
+        connection_callback = (
+            self._shot_counter_connection_callback
+            if self._shot_counter_subscribed
+            else None
+        )
         self._shot_counter_enabled = False
         self._shot_counter_callback = None
         self._shot_counter_connection_callback = None
-        self._brewing_acc = BluetoothBrewingData()
+        self._shot_counter_telemetry_callback = None
+        self._brewing_tracker = _BrewingTracker()
         if self._reconnect_task is not None:
             self._reconnect_task.cancel()
             self._reconnect_task = None
+        return connection_callback
 
     async def _stop_notify_internal(self) -> None:
         """Best-effort unsubscribe from the shot counter (lock must be held)."""
@@ -332,58 +402,67 @@ class LaMarzoccoBluetoothClient:
 
     async def _subscribe_shot_counter(self) -> bool:
         """Connect, authenticate and subscribe to the shot counter."""
-        await self._ensure_connected()
-        async with self._lock:
-            if self._client is None or not self._client.is_connected:
-                raise BluetoothConnectionFailed("Client is not connected")
-            if not self._shot_counter_enabled:
-                return False
-            if self._shot_counter_subscribed:
-                return True
-            characteristic = self._client.services.get_characteristic(
-                SHOT_COUNTER_CHARACTERISTIC
-            )
-            if characteristic is None:
-                _logger.debug(
-                    "Shot counter characteristic not found on %s, not subscribing",
-                    self._address,
+        # use the cache, then try without it if necessary
+        for use_services_cache in (True, False):
+            await self._ensure_connected(use_services_cache)
+            async with self._lock:
+                if self._client is None or not self._client.is_connected:
+                    raise BluetoothConnectionFailed("Client is not connected")
+                if not self._shot_counter_enabled:
+                    return False
+                if self._shot_counter_subscribed:
+                    return True
+                characteristic = self._client.services.get_characteristic(
+                    SHOT_COUNTER_CHARACTERISTIC
                 )
-                # services are cached across connections, refresh them next time
-                # in case a firmware update adds the characteristic
-                await self._client.clear_cache()
-                return False
-            self._brewing_acc = BluetoothBrewingData()
-            await self._client.start_notify(
-                characteristic, self._handle_shot_counter_notification
-            )
-            self._shot_counter_subscribed = True
-        _logger.debug("Subscribed to shot counter on %s", self._address)
-        _safe_call(self._shot_counter_connection_callback, True)
-        return True
+                if characteristic is None:
+                    _logger.info(
+                        "Shot counter characteristic not found on %s", self._address
+                    )
+                    if not use_services_cache:
+                        return False
+                    # the cached service table may be stale or incomplete
+                    await self._client.clear_cache()
+                    await self._disconnect_internal()
+                    continue
+                self._brewing_tracker = _BrewingTracker()
+                # on subscribe, the machine first replays its last notification,
+                # which can be hours old
+                self._replay_pending = True
+                await self._client.start_notify(
+                    characteristic, self._handle_shot_counter_notification
+                )
+                self._shot_counter_subscribed = True
+            _logger.debug("Subscribed to shot counter on %s", self._address)
+            _safe_call(self._shot_counter_connection_callback, True)
+            return True
+        return False
 
     def _handle_shot_counter_notification(
         self, _: BleakGATTCharacteristic, data: bytearray
     ) -> None:
         """Handle a shot counter notification from the machine."""
-        received_at = datetime.now(timezone.utc)
+        received_at = _utcnow()
+        if self._replay_pending:
+            self._replay_pending = False
+            _logger.debug("Ignoring the replayed shot counter notification: %s", data)
+            return
         _logger.debug("Shot counter received data: %s", data)
         try:
-            message = BluetoothBrewingData.from_json(bytes(data).strip(b"\x00"))
+            payload = json.loads(bytes(data).strip(b"\x00"))
+            brewing = BluetoothBrewingData.from_dict(payload)
+            telemetry = BluetoothMachineTelemetry.from_dict(payload)
         except Exception as e:  # pylint: disable=broad-except
-            _logger.debug("Failed to parse brewing data %s: %s", data, e)
-            message = BluetoothBrewingData()
-
-        self._brewing_acc = self._brewing_acc.merge(message)
-        update = self._brewing_acc.derive_state(received_at)
-        if update is None:
-            _logger.debug("No brewing state could be extracted")
+            _logger.debug("Failed to parse shot counter data %s: %s", data, e)
             return
-        if update.state in (
-            BluetoothBrewingState.FLUSHED,
-            BluetoothBrewingState.BREWING_STOPPED,
-        ):
-            self._brewing_acc = BluetoothBrewingData()
-        _safe_call(self._shot_counter_callback, update)
+
+        # most notifications are telemetry only and must not touch the brewing state
+        if not brewing.is_empty:
+            update = self._brewing_tracker.process(brewing, received_at)
+            if update is not None:
+                _safe_call(self._shot_counter_callback, update)
+        if not telemetry.is_empty:
+            _safe_call(self._shot_counter_telemetry_callback, telemetry)
 
     def _on_bleak_disconnected(self, client: BleakClient) -> None:
         """Handle a disconnect reported by bleak."""
@@ -397,7 +476,7 @@ class LaMarzoccoBluetoothClient:
         """Reset the shot counter and schedule a reconnect if still enabled."""
         was_subscribed = self._shot_counter_subscribed
         self._shot_counter_subscribed = False
-        self._brewing_acc = BluetoothBrewingData()
+        self._brewing_tracker = _BrewingTracker()
         if not self._shot_counter_enabled:
             return
         if was_subscribed:
@@ -424,17 +503,21 @@ class LaMarzoccoBluetoothClient:
                 )
                 if auth_failures >= MAX_AUTH_FAILURES:
                     _logger.error("Giving up reconnecting the shot counter")
-                    self._shot_counter_enabled = False
+                    break
             except (BleakError, TimeoutError, BluetoothConnectionFailed) as e:
                 _logger.debug("Shot counter reconnect failed: %s", e)
                 async with self._lock:
                     await self._disconnect_internal()
                 delay = min(delay * 2, RECONNECT_MAX_DELAY)
             else:
-                if not supported:
-                    self._shot_counter_enabled = False
-                    self._reset_disconnect_timer()
-                return
+                if supported:
+                    return
+                break
+        # give up for good, without cancelling this task
+        self._reconnect_task = None
+        self._disable_shot_counter()
+        if self.is_connected:
+            self._reset_disconnect_timer()
 
     @staticmethod
     async def discover_devices(

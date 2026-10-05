@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator
 from http import HTTPMethod
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -228,6 +229,28 @@ async def test_list_things(
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.list_things()
     assert result[0].to_dict() == snapshot
+
+
+async def test_debug_log_masks_bluetooth_token(
+    mock_aiointercept: aiointercept, serial: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test the Bluetooth token never ends up in the debug log."""
+    caplog.set_level(logging.DEBUG, logger="pylamarzocco")
+    thing = load_fixture("machine", "settings_micra.json") | {
+        "bleAuthToken": "secret-token"
+    }
+    mock_aiointercept.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/settings", status=200, payload=thing
+    )
+    mock_aiointercept.get(url=f"{CUSTOMER_APP_URL}/things", status=200, payload=[thing])
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    settings = await client.get_thing_settings(serial)
+    things = await client.list_things()
+
+    assert settings.ble_auth_token == things[0].ble_auth_token == "secret-token"
+    assert caplog.text.count("Response:") == 2
+    assert "secret-token" not in caplog.text
 
 
 async def test_get_statistics(
