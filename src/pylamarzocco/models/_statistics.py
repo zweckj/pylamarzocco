@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, override
 
 from mashumaro import field_options
@@ -12,48 +11,14 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from pylamarzocco.const import DoseIndex, DoseMode, WidgetType
 
-from ._general import BaseWidgetOutput, Thing, Widget
-
-_LOGGER = logging.getLogger(__name__)
-
-
-def _filter_valid_widgets(
-    items: list[dict[str, Any] | str], field_name: str
-) -> list[dict[str, Any] | str]:
-    """Filter items with valid WidgetType codes, logging warnings for invalid ones.
-    
-    Args:
-        items: List of widget dicts or code strings
-        field_name: Name of the field being filtered (for logging)
-    
-    Returns:
-        List of items with valid widget codes
-    """
-    valid_items = []
-    for item in items:
-        # Extract code - either directly if string, or from 'code' key if dict
-        code = item if isinstance(item, str) else item.get("code")
-        if code:
-            try:
-                WidgetType(code)
-            except ValueError:
-                # Log entire JSON if it's a dict, otherwise just the code
-                if isinstance(item, dict):
-                    import json
-                    _LOGGER.warning(
-                        "Unknown widget in field '%s' will be discarded: %s",
-                        field_name,
-                        json.dumps(item),
-                    )
-                else:
-                    _LOGGER.warning(
-                        "Unknown widget code '%s' in field '%s' will be discarded",
-                        code,
-                        field_name,
-                    )
-            else:
-                valid_items.append(item)
-    return valid_items
+from ._general import (
+    BaseWidgetOutput,
+    Thing,
+    Widget,
+    filter_valid_widgets,
+    from_epoch_ms,
+    prepare_widgets,
+)
 
 
 @dataclass(kw_only=True)
@@ -87,23 +52,13 @@ class ThingStatistics(Thing):
     @classmethod
     @override
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
-        # Filter out widgets with unknown codes and log warnings
-        valid_widgets = _filter_valid_widgets(
-            d.get("selectedWidgets", []), "selectedWidgets"
-        )
-        
-        # Set widget_type for valid widgets
-        for item in valid_widgets:
-            assert isinstance(item, dict)
-            item["output"]["widget_type"] = item["code"]
-        
-        d["selectedWidgets"] = valid_widgets
-        
+        prepare_widgets(d, "selectedWidgets")
+
         # Filter widget code lists using helper
-        d["selectedWidgetCodes"] = _filter_valid_widgets(
+        d["selectedWidgetCodes"] = filter_valid_widgets(
             d.get("selectedWidgetCodes", []), "selectedWidgetCodes"
         )
-        d["allWidgetCodes"] = _filter_valid_widgets(
+        d["allWidgetCodes"] = filter_valid_widgets(
             d.get("allWidgetCodes", []), "allWidgetCodes"
         )
         
@@ -133,7 +88,7 @@ class CoffeeHistoryEvent(DataClassJSONMixin):
 
     timestamp: datetime = field(
         metadata=field_options(
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, tz=timezone.utc),
+            deserialize=from_epoch_ms,
         )
     )
     value: int
@@ -156,7 +111,7 @@ class LastCoffee(DataClassJSONMixin):
 
     time: datetime = field(
         metadata=field_options(
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, tz=timezone.utc),
+            deserialize=from_epoch_ms,
         )
     )
     extraction_seconds: float = field(

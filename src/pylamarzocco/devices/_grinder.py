@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 from pylamarzocco.const import (
     DoseIndex,
     GrinderDoseMode,
@@ -11,7 +9,6 @@ from pylamarzocco.const import (
     GrinderMode,
     GrinderSpeedLevelType,
     ModelCode,
-    WidgetType,
 )
 from pylamarzocco.models import (
     GrinderBaristaLight,
@@ -36,11 +33,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
         result = await self._cloud_client.set_grinder_mode(self.serial_number, mode)
 
         # Update dashboard if command succeeded
-        if result and WidgetType.G_MACHINE_STATUS in self.dashboard.config:
-            machine_status = cast(
-                GrinderMachineStatus,
-                self.dashboard.config[WidgetType.G_MACHINE_STATUS],
-            )
+        if result and (machine_status := self._widget(GrinderMachineStatus)):
             machine_status.mode = mode
 
         return result
@@ -54,11 +47,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.G_BARISTA_LIGHT in self.dashboard.config:
-            barista_light = cast(
-                GrinderBaristaLight,
-                self.dashboard.config[WidgetType.G_BARISTA_LIGHT],
-            )
+        if result and (barista_light := self._widget(GrinderBaristaLight)):
             barista_light.enabled = enabled
 
         return result
@@ -72,11 +61,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
             self.serial_number, mode
         )
 
-        if result and WidgetType.G_GRIND_WITH in self.dashboard.config:
-            grind_with = cast(
-                GrinderGrindWith,
-                self.dashboard.config[WidgetType.G_GRIND_WITH],
-            )
+        if result and (grind_with := self._widget(GrinderGrindWith)):
             grind_with.mode = mode
 
         return result
@@ -92,11 +77,8 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
         """Set the dose, and optionally the speed level, of a grinder dose."""
         assert self._cloud_client
         if mode is None:
-            if WidgetType.G_DOSES in self.dashboard.config:
-                doses = cast(GrinderDoses, self.dashboard.config[WidgetType.G_DOSES])
-                mode = doses.mode
-            else:
-                mode = GrinderDoseMode.REV
+            doses = self._widget(GrinderDoses)
+            mode = doses.mode if doses else GrinderDoseMode.REV
         result = await self._cloud_client.set_grinder_dose(
             self.serial_number, dose_index, dose, mode, speed_level
         )
@@ -104,8 +86,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
         if not result:
             return result
 
-        if WidgetType.G_DOSES in self.dashboard.config:
-            doses = cast(GrinderDoses, self.dashboard.config[WidgetType.G_DOSES])
+        if doses := self._widget(GrinderDoses):
             dose_list = getattr(doses.doses, mode.name.lower() + "_type", None)
             if dose_list is not None:
                 for dose_setting in dose_list:
@@ -116,11 +97,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
                     if speed_setting.dose_index == dose_index:
                         speed_setting.level = speed_level
 
-        if (
-            speed_level is not None
-            and WidgetType.G_SPEED in self.dashboard.config
-        ):
-            speed = cast(GrinderSpeed, self.dashboard.config[WidgetType.G_SPEED])
+        if speed_level is not None and (speed := self._widget(GrinderSpeed)):
             if str(dose_index) in speed.doses:
                 speed.doses[str(dose_index)].level = speed_level
 
@@ -135,11 +112,7 @@ class LaMarzoccoGrinder(LaMarzoccoThing):
             self.serial_number, revolutions
         )
 
-        if result and WidgetType.G_MORE_DOSE in self.dashboard.config:
-            more_dose = cast(
-                GrinderMoreDose,
-                self.dashboard.config[WidgetType.G_MORE_DOSE],
-            )
+        if result and (more_dose := self._widget(GrinderMoreDose)):
             more_dose.revolutions = revolutions
 
         return result

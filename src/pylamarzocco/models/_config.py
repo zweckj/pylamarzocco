@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import json
-import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, override
 
 from mashumaro import field_options
@@ -30,53 +28,17 @@ from pylamarzocco.const import (
     WidgetType,
 )
 
-_LOGGER = logging.getLogger(__name__)
-
 from ._general import (
     BaseWidget,
     BaseWidgetOutput,
     CommandResponse,
     Thing,
     Widget,
+    filter_valid_widgets,
+    from_epoch_ms,
+    prepare_widgets,
 )
 from ._update import FirmwareSettings
-
-
-def _filter_valid_widgets(
-    items: list[dict[str, Any] | str], field_name: str
-) -> list[dict[str, Any] | str]:
-    """Filter items with valid WidgetType codes, logging warnings for invalid ones.
-
-    Args:
-        items: List of widget dicts or code strings
-        field_name: Name of the field being filtered (for logging)
-
-    Returns:
-        List of items with valid widget codes
-    """
-    valid_items = []
-    for item in items:
-        # Extract code - either directly if string, or from 'code' key if dict
-        if code := (item if isinstance(item, str) else item.get("code")):
-            try:
-                WidgetType(code)
-            except ValueError:
-                # Log entire JSON if it's a dict, otherwise just the code
-                if isinstance(item, dict):
-                    _LOGGER.warning(
-                        "Unknown widget in field '%s' will be discarded: %s",
-                        field_name,
-                        json.dumps(item),
-                    )
-                else:
-                    _LOGGER.warning(
-                        "Unknown widget code '%s' in field '%s' will be discarded",
-                        code,
-                        field_name,
-                    )
-            else:
-                valid_items.append(item)
-    return valid_items
 
 
 @dataclass(kw_only=True)
@@ -89,16 +51,7 @@ class ThingConfig(DataClassJSONMixin):
     @classmethod
     @override
     def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
-        # Filter out widgets with unknown codes and log warnings
-        widgets = d.get("widgets", [])
-        valid_widgets = _filter_valid_widgets(widgets, "widgets")
-
-        # Set widget_type for valid widgets
-        for item in valid_widgets:
-            assert isinstance(item, dict)
-            item["output"]["widget_type"] = item["code"]
-
-        d["widgets"] = valid_widgets
+        prepare_widgets(d, "widgets")
         return d
 
     @classmethod
@@ -133,17 +86,16 @@ class ThingDashboardWebsocketConfig(ThingConfig):
         d = super().__pre_deserialize__(d)
 
         # Filter out removed_widgets with unknown codes and log warnings
-        d["removedWidgets"] = _filter_valid_widgets(
+        d["removedWidgets"] = filter_valid_widgets(
             d.get("removedWidgets", []), "removedWidgets"
         )
         return d
 
 
 @dataclass(kw_only=True)
-class MachineStatus(BaseWidgetOutput):
-    """Machine status configuration."""
+class _ModeStatus(BaseWidgetOutput):
+    """Fields shared by the machine and group status widgets."""
 
-    widget_type = WidgetType.CM_MACHINE_STATUS
     status: MachineState
     available_modes: list[MachineMode] = field(
         metadata=field_options(alias="availableModes")
@@ -153,31 +105,24 @@ class MachineStatus(BaseWidgetOutput):
     brewing_start_time: datetime | None = field(
         metadata=field_options(
             alias="brewingStartTime",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+            deserialize=from_epoch_ms,
         ),
         default=None,
     )
 
 
 @dataclass(kw_only=True)
-class MachineGroupStatus(BaseWidgetOutput):
+class MachineStatus(_ModeStatus):
+    """Machine status configuration."""
+
+    widget_type = WidgetType.CM_MACHINE_STATUS
+
+
+@dataclass(kw_only=True)
+class MachineGroupStatus(_ModeStatus):
     """Machine group status configuration."""
 
     widget_type = WidgetType.CM_MACHINE_GROUP_STATUS
-    status: MachineState
-    available_modes: list[MachineMode] = field(
-        metadata=field_options(alias="availableModes")
-    )
-    mode: MachineMode
-    next_status: NextStatus | None = field(metadata=field_options(alias="nextStatus"))
-    brewing_start_time: datetime | None = field(
-        metadata=field_options(
-            alias="brewingStartTime",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
-        ),
-        default=None,
-    )
-
 
 @dataclass(kw_only=True)
 class NextStatus(DataClassJSONMixin):
@@ -187,7 +132,7 @@ class NextStatus(DataClassJSONMixin):
     start_time: datetime = field(
         metadata=field_options(
             alias="startTime",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+            deserialize=from_epoch_ms,
         )
     )
 
@@ -213,7 +158,7 @@ class CoffeeBoiler(BaseWidgetOutput):
     ready_start_time: datetime | None = field(
         metadata=field_options(
             alias="readyStartTime",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+            deserialize=from_epoch_ms,
         ),
         default=None,
     )
@@ -234,7 +179,7 @@ class SteamBoilerLevel(BaseWidgetOutput):
     ready_start_time: datetime | None = field(
         metadata=field_options(
             alias="readyStartTime",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+            deserialize=from_epoch_ms,
         ),
         default=None,
     )
@@ -357,7 +302,7 @@ class BackFlush(BaseWidgetOutput):
     last_cleaning_start_time: datetime | None = field(
         metadata=field_options(
             alias="lastCleaningStartTime",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+            deserialize=from_epoch_ms,
         ),
         default=None,
     )
@@ -631,7 +576,7 @@ class GrinderMachineStatus(BaseWidgetOutput):
     ready_start_time: datetime | None = field(
         metadata=field_options(
             alias="readyStartTime",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+            deserialize=from_epoch_ms,
         ),
         default=None,
     )

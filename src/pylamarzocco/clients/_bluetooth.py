@@ -596,53 +596,34 @@ class LaMarzoccoBluetoothClient:
     @disconnect_on_exception
     async def set_power(self, enabled: bool) -> BluetoothCommandStatus:
         """Power on the machine."""
-        mode = "BrewingMode" if enabled else "StandBy"
-        data = {
-            "name": "MachineChangeMode",
-            "parameter": {
-                "mode": mode,
-            },
-        }
-        await self.__write_bluetooth_json_message(data)
-        return await self._check_command_status()
+        mode = MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
+        return await self.__send_command("MachineChangeMode", {"mode": mode.value})
 
     @disconnect_on_exception
     async def set_steam(self, enabled: bool) -> BluetoothCommandStatus:
         """Enable or disable the steam boiler."""
-        data = {
-            "name": "SettingBoilerEnable",
-            "parameter": {
-                "identifier": "SteamBoiler",
-                "state": enabled,
-            },
-        }
-        await self.__write_bluetooth_json_message(data)
-        return await self._check_command_status()
+        return await self.__send_command(
+            "SettingBoilerEnable",
+            {"identifier": BoilerType.STEAM.value, "state": enabled},
+        )
 
     @disconnect_on_exception
     async def set_smart_standby(
         self, enabled: bool, mode: SmartStandByType, minutes: int
     ) -> BluetoothCommandStatus:
         """Set the smart standby settings."""
-        data = {
-            "name": "SettingSmartStandby",
-            "parameter": {"minutes": minutes, "mode": mode.value, "enabled": enabled},
-        }
-        await self.__write_bluetooth_json_message(data)
-        return await self._check_command_status()
+        return await self.__send_command(
+            "SettingSmartStandby",
+            {"minutes": minutes, "mode": mode.value, "enabled": enabled},
+        )
 
     @disconnect_on_exception
     async def set_temp(self, boiler: BoilerType, temperature: float) -> BluetoothCommandStatus:
         """Set boiler temperature (in Celsius)"""
-        data = {
-            "name": "SettingBoilerTarget",
-            "parameter": {
-                "identifier": boiler.value,
-                "value": temperature,
-            },
-        }
-        await self.__write_bluetooth_json_message(data)
-        return await self._check_command_status()
+        return await self.__send_command(
+            "SettingBoilerTarget",
+            {"identifier": boiler.value, "value": temperature},
+        )
 
     async def _authenticate(self) -> None:
         """Build authentication string and send it to the machine."""
@@ -689,13 +670,6 @@ class LaMarzoccoBluetoothClient:
         # responses are NUL-terminated, ignore anything after it
         return bytes(result).split(b"\x00", 1)[0].decode()
     
-    async def _check_command_status(
-        self,
-        characteristic: str = WRITE_CHARACTERISTIC,
-    ) -> BluetoothCommandStatus:
-        """Check the status of a command sent via Bluetooth."""
-        result = await self._read_bluetooth_message(characteristic)
-        return BluetoothCommandStatus.from_json(result)
 
     async def __write_bluetooth_message(
         self,
@@ -725,17 +699,15 @@ class LaMarzoccoBluetoothClient:
             response=True,
         )
 
-    async def __write_bluetooth_json_message(
-        self,
-        data: dict[str, Any],
-        characteristic: str = WRITE_CHARACTERISTIC,
-    ) -> None:
-        """Write a json message to the machine."""
-
+    async def __send_command(
+        self, name: str, parameter: dict[str, Any]
+    ) -> BluetoothCommandStatus:
+        """Write a json command to the machine and return its status."""
         await self.__write_bluetooth_message(
-            characteristic=characteristic,
-            message=json.dumps(data, separators=(",", ":")),
+            json.dumps({"name": name, "parameter": parameter}, separators=(",", ":"))
         )
+        result = await self._read_bluetooth_message(WRITE_CHARACTERISTIC)
+        return BluetoothCommandStatus.from_json(result)
 
     async def _resolve_characteristic(
         self, characteristic: str

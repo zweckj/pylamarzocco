@@ -12,6 +12,7 @@ from bleak.exc import BleakError
 
 from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import (
+    STEAM_LEVEL_MODELS,
     BluetoothBrewingState,
     BoilerStatus,
     BoilerType,
@@ -94,6 +95,12 @@ DOSE_MODE_DOSES_ATTR = {
     DoseMode.BREW_RATIO_TYPE: "brew_ratio_type",
     DoseMode.PROFILE_TYPE: "profile_type",
 }
+
+
+def _group_dose_list(group_doses: GroupDosesSettings, mode: DoseMode) -> list:
+    """Return the configurable doses of a group for the given dose mode."""
+    attr = DOSE_MODE_DOSES_ATTR.get(mode)
+    return getattr(group_doses.doses, attr, []) if attr else []
 
 
 class LaMarzoccoMachine(LaMarzoccoThing):
@@ -227,10 +234,8 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         self._bluetooth_telemetry = self._bluetooth_telemetry.merge(telemetry)
         if (mode := telemetry.machine_mode) is not None:
             self._update_machine_mode_widgets(mode)
-            if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
-                cast(
-                    MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
-                ).status = BLE_MACHINE_STATE[mode]
+            if machine_status := self._widget(MachineStatus):
+                machine_status.status = BLE_MACHINE_STATE[mode]
             self._dashboard_config_updated()
         if self._telemetry_callback is not None:
             self._telemetry_callback(telemetry)
@@ -284,9 +289,8 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     def _apply_ble_brewing_state(self) -> None:
         """Override the machine status widget with the Bluetooth brewing state."""
         update = self._ble_brewing_update
-        if update is None or WidgetType.CM_MACHINE_STATUS not in self.dashboard.config:
+        if update is None or (widget := self._widget(MachineStatus)) is None:
             return
-        widget = cast(MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS])
 
         # remember the cloud values of a freshly loaded widget
         if (
@@ -420,10 +424,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 self.dashboard.config[WidgetType.CM_COFFEE_BOILER] = coffee_boiler
             elif boiler.id == BoilerType.STEAM:
                 # Models that support steam level (Micra and Mini R)
-                if self.dashboard.model_code in (
-                    ModelCode.LINEA_MICRA,
-                    ModelCode.LINEA_MINI_R,
-                ):
+                if self.dashboard.model_code in STEAM_LEVEL_MODELS:
                     # Initialize or update steam boiler level widget
                     steam_level = cast(
                         SteamBoilerLevel,
@@ -493,16 +494,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     def _update_machine_mode_widgets(self, mode: MachineMode) -> None:
         """Update the machine and group status widgets with the given mode."""
-        if WidgetType.CM_MACHINE_STATUS in self.dashboard.config:
-            machine_status = cast(
-                MachineStatus, self.dashboard.config[WidgetType.CM_MACHINE_STATUS]
-            )
+        if (machine_status := self._widget(MachineStatus)):
             machine_status.mode = mode
-        if WidgetType.CM_MACHINE_GROUP_STATUS in self.dashboard.config:
-            group_status = cast(
-                MachineGroupStatus,
-                self.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS],
-            )
+        if (group_status := self._widget(MachineGroupStatus)):
             group_status.mode = mode
 
     async def set_power(self, enabled: bool) -> bool:
@@ -541,10 +535,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         assert self._cloud_client
         result = await self._cloud_client.set_auto_flush(self.serial_number, enabled)
 
-        if result and WidgetType.CM_AUTO_FLUSH in self.dashboard.config:
-            auto_flush = cast(
-                AutoFlush, self.dashboard.config[WidgetType.CM_AUTO_FLUSH]
-            )
+        if result and (auto_flush := self._widget(AutoFlush)):
             auto_flush.enabled = enabled
 
         return result
@@ -556,10 +547,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         assert self._cloud_client
         result = await self._cloud_client.set_steam_flush(self.serial_number, enabled)
 
-        if result and WidgetType.CM_STEAM_FLUSH in self.dashboard.config:
-            steam_flush = cast(
-                SteamFlush, self.dashboard.config[WidgetType.CM_STEAM_FLUSH]
-            )
+        if result and (steam_flush := self._widget(SteamFlush)):
             steam_flush.enabled = enabled
 
         return result
@@ -571,10 +559,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         assert self._cloud_client
         result = await self._cloud_client.set_rinse_flush(self.serial_number, enabled)
 
-        if result and WidgetType.CM_RINSE_FLUSH in self.dashboard.config:
-            rinse_flush = cast(
-                RinseFlush, self.dashboard.config[WidgetType.CM_RINSE_FLUSH]
-            )
+        if result and (rinse_flush := self._widget(RinseFlush)):
             rinse_flush.enabled = enabled
 
         return result
@@ -588,10 +573,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             self.serial_number, enabled
         )
 
-        if result and WidgetType.CM_HOT_WATER_DOSE in self.dashboard.config:
-            hot_water_dose = cast(
-                HotWaterDose, self.dashboard.config[WidgetType.CM_HOT_WATER_DOSE]
-            )
+        if result and (hot_water_dose := self._widget(HotWaterDose)):
             hot_water_dose.enabled = enabled
 
         return result
@@ -611,11 +593,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             self.serial_number, mode, group_index
         )
 
-        if result and WidgetType.CM_MACHINE_GROUP_STATUS in self.dashboard.config:
-            group_status = cast(
-                MachineGroupStatus,
-                self.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS],
-            )
+        if result and (group_status := self._widget(MachineGroupStatus)):
             group_status.mode = mode
 
         return result
@@ -629,10 +607,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             self.serial_number, enabled, boiler_index
         )
 
-        if result and WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
-            coffee_boiler = cast(
-                CoffeeBoiler, self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
-            )
+        if result and (coffee_boiler := self._widget(CoffeeBoiler)):
             coffee_boiler.enabled = enabled
 
         return result
@@ -646,10 +621,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             self.serial_number, seconds
         )
 
-        if result and WidgetType.CM_RINSE_FLUSH in self.dashboard.config:
-            rinse_flush = cast(
-                RinseFlush, self.dashboard.config[WidgetType.CM_RINSE_FLUSH]
-            )
+        if result and (rinse_flush := self._widget(RinseFlush)):
             rinse_flush.time_seconds = seconds
 
         return result
@@ -663,28 +635,18 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             self.serial_number, dose, dose_index
         )
 
-        if result and WidgetType.CM_HOT_WATER_DOSE in self.dashboard.config:
-            hot_water_dose = cast(
-                HotWaterDose, self.dashboard.config[WidgetType.CM_HOT_WATER_DOSE]
-            )
+        if result and (hot_water_dose := self._widget(HotWaterDose)):
             for dose_setting in hot_water_dose.doses:
                 if dose_setting.dose_index == dose_index:
                     dose_setting.dose = dose
 
         return result
 
-    def _group_doses_config(self) -> GroupDosesSettings | None:
-        """Return the cached group-doses widget, if the dashboard has one."""
-        widget = self.dashboard.config.get(WidgetType.CM_GROUP_DOSES)
-        if widget is None:
-            return None
-        return cast(GroupDosesSettings, widget)
-
     @cloud_only
     @models_supported((ModelCode.STRADA_X, ModelCode.GS3_AV))
     async def set_group_dose_mode(self, mode: DoseMode, group_index: int = 1) -> bool:
         """Set the dose mode of a group."""
-        group_doses = self._group_doses_config()
+        group_doses = self._widget(GroupDosesSettings)
         if (
             group_doses is not None
             and group_doses.available_modes
@@ -701,10 +663,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             self.serial_number, mode, group_index
         )
 
-        if result and WidgetType.CM_GROUP_DOSES in self.dashboard.config:
-            group_doses = cast(
-                GroupDosesSettings, self.dashboard.config[WidgetType.CM_GROUP_DOSES]
-            )
+        if result and (group_doses := self._widget(GroupDosesSettings)):
             group_doses.mode = mode
 
         return result
@@ -719,10 +678,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         group_index: int = 1,
     ) -> bool:
         """Set a group dose value for a given mode and dose index."""
-        group_doses = self._group_doses_config()
+        group_doses = self._widget(GroupDosesSettings)
         if group_doses is not None:
-            attr = DOSE_MODE_DOSES_ATTR.get(mode)
-            dose_list = getattr(group_doses.doses, attr, []) if attr else []
+            dose_list = _group_dose_list(group_doses, mode)
             if not dose_list:
                 raise OperationNotAvailable(
                     f"Dose mode {mode.value} has no configurable doses in the "
@@ -741,9 +699,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
         if result and group_doses is not None:
-            attr = DOSE_MODE_DOSES_ATTR.get(mode)
-            dose_list = getattr(group_doses.doses, attr, []) if attr else []
-            for dose_setting in dose_list:
+            for dose_setting in _group_dose_list(group_doses, mode):
                 if dose_setting.dose_index == dose_index:
                     dose_setting.dose = dose
 
@@ -755,7 +711,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         self, pressure: float, group_index: int = 1
     ) -> bool:
         """Set the brewing pressure of a group."""
-        group_doses = self._group_doses_config()
+        group_doses = self._widget(GroupDosesSettings)
         if group_doses is not None and not group_doses.brewing_pressure_supported:
             raise OperationNotAvailable(
                 "Brewing pressure is not supported in the current dose mode "
@@ -767,10 +723,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             self.serial_number, pressure, group_index
         )
 
-        if result and WidgetType.CM_GROUP_DOSES in self.dashboard.config:
-            group_doses = cast(
-                GroupDosesSettings, self.dashboard.config[WidgetType.CM_GROUP_DOSES]
-            )
+        if result and (group_doses := self._widget(GroupDosesSettings)):
             if group_doses.brewing_pressure is not None:
                 group_doses.brewing_pressure.pressure = pressure
 
@@ -829,22 +782,14 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
         # Update dashboard if command succeeded
         if result:
-            if WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
-                steam_level = cast(
-                    SteamBoilerLevel,
-                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
-                )
+            if (steam_level := self._widget(SteamBoilerLevel)):
                 steam_level.enabled = enabled
-            if WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
-                steam_temp = cast(
-                    SteamBoilerTemperature,
-                    self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
-                )
+            if (steam_temp := self._widget(SteamBoilerTemperature)):
                 steam_temp.enabled = enabled
 
         return result
 
-    @models_supported((ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R))
+    @models_supported(STEAM_LEVEL_MODELS)
     async def set_steam_level(self, level: SteamTargetLevel) -> bool:
         """Set the steam target level."""
 
@@ -859,11 +804,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.CM_STEAM_BOILER_LEVEL in self.dashboard.config:
-            steam_level = cast(
-                SteamBoilerLevel,
-                self.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
-            )
+        if result and (steam_level := self._widget(SteamBoilerLevel)):
             steam_level.target_level = level
 
         return result
@@ -882,10 +823,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.CM_COFFEE_BOILER in self.dashboard.config:
-            coffee_boiler = cast(
-                CoffeeBoiler, self.dashboard.config[WidgetType.CM_COFFEE_BOILER]
-            )
+        if result and (coffee_boiler := self._widget(CoffeeBoiler)):
             coffee_boiler.target_temperature = float(temperature)
 
         return result
@@ -905,11 +843,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.CM_STEAM_BOILER_TEMPERATURE in self.dashboard.config:
-            steam_temp = cast(
-                SteamBoilerTemperature,
-                self.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
-            )
+        if result and (steam_temp := self._widget(SteamBoilerTemperature)):
             steam_temp.target_temperature = temperature
 
         return result
@@ -1007,11 +941,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
         # Update dashboard if command succeeded
-        if result and WidgetType.CM_BREW_BY_WEIGHT_DOSES in self.dashboard.config:
-            brew_by_weight = cast(
-                BrewByWeightDoses,
-                self.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES],
-            )
+        if result and (brew_by_weight := self._widget(BrewByWeightDoses)):
             brew_by_weight.mode = mode
 
         return result
@@ -1034,34 +964,27 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         assert self._cloud_client
 
         # Get current doses from dashboard
-        if WidgetType.CM_BREW_BY_WEIGHT_DOSES not in self.dashboard.config:
+        if (brew_by_weight := self._widget(BrewByWeightDoses)) is None:
             return False
 
-        brew_by_weight = cast(
-            BrewByWeightDoses,
-            self.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES],
-        )
-
-        # Set the dose values, keeping the other one unchanged
+        doses = brew_by_weight.doses
         if dose == DoseMode.DOSE_1:
-            dose_1 = value
-            dose_2 = brew_by_weight.doses.dose_2.dose
+            target = doses.dose_1
         elif dose == DoseMode.DOSE_2:
-            dose_1 = brew_by_weight.doses.dose_1.dose
-            dose_2 = value
+            target = doses.dose_2
         else:
             return False
 
+        # Set the dose values, keeping the other one unchanged
         result = await self._cloud_client.set_brew_by_weight_dose(
-            self.serial_number, dose_1, dose_2
+            self.serial_number,
+            value if dose == DoseMode.DOSE_1 else doses.dose_1.dose,
+            value if dose == DoseMode.DOSE_2 else doses.dose_2.dose,
         )
 
         # Update dashboard if command succeeded
         if result:
-            if dose == DoseMode.DOSE_1:
-                brew_by_weight.doses.dose_1.dose = value
-            else:
-                brew_by_weight.doses.dose_2.dose = value
+            target.dose = value
 
         return result
 
@@ -1109,7 +1032,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 _LOGGER.debug(
                     "Sending command %s over bluetooth with params %s",
                     command,
-                    str(bt_kwargs),
+                    bt_kwargs,
                 )
                 result = await func(**bt_kwargs)
                 # Check if command succeeded
@@ -1134,7 +1057,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             _LOGGER.debug(
                 "Sending command %s over cloud with params %s",
                 command,
-                str(cl_kwargs),
+                cl_kwargs,
             )
             func = getattr(self._cloud_client, cloud_command)
             if await func(**cl_kwargs):

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Any, ClassVar
 
 from aiohttp import ClientWebSocketResponse
 from mashumaro import field_options
@@ -19,6 +21,59 @@ from pylamarzocco.const import (
     ModelName,
     WidgetType,
 )
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def from_epoch_ms(ts: float) -> datetime:
+    """Convert a millisecond epoch timestamp to a UTC datetime."""
+    return datetime.fromtimestamp(ts / 1000, timezone.utc)
+
+
+def filter_valid_widgets(
+    items: list[dict[str, Any] | str], field_name: str
+) -> list[dict[str, Any] | str]:
+    """Filter items with valid WidgetType codes, logging warnings for invalid ones.
+
+    Args:
+        items: List of widget dicts or code strings
+        field_name: Name of the field being filtered (for logging)
+
+    Returns:
+        List of items with valid widget codes
+    """
+    valid_items = []
+    for item in items:
+        # Extract code - either directly if string, or from 'code' key if dict
+        if code := (item if isinstance(item, str) else item.get("code")):
+            try:
+                WidgetType(code)
+            except ValueError:
+                # Log entire JSON if it's a dict, otherwise just the code
+                if isinstance(item, dict):
+                    _LOGGER.warning(
+                        "Unknown widget in field '%s' will be discarded: %s",
+                        field_name,
+                        json.dumps(item),
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Unknown widget code '%s' in field '%s' will be discarded",
+                        code,
+                        field_name,
+                    )
+            else:
+                valid_items.append(item)
+    return valid_items
+
+
+def prepare_widgets(d: dict[str, Any], field_name: str) -> None:
+    """Drop unknown widgets and set the output discriminator on the rest."""
+    valid_widgets = filter_valid_widgets(d.get(field_name, []), field_name)
+    for item in valid_widgets:
+        assert isinstance(item, dict)
+        item["output"]["widget_type"] = item["code"]
+    d[field_name] = valid_widgets
 
 
 @dataclass(kw_only=True)
@@ -53,7 +108,7 @@ class Thing(DataClassJSONMixin):
     connection_date: datetime = field(
         metadata=field_options(
             alias="connectionDate",
-            deserialize=lambda ts: datetime.fromtimestamp(ts / 1000, timezone.utc),
+            deserialize=from_epoch_ms,
         ),
         default=datetime.now(timezone.utc),
     )
@@ -101,6 +156,8 @@ class Widget(BaseWidget):
 @dataclass(kw_only=True)
 class BaseWidgetOutput(DataClassJSONMixin):
     """Widget configuration."""
+
+    widget_type: ClassVar[WidgetType]
 
 
 class WebSocketDetails:

@@ -163,6 +163,10 @@ class ModelCode(StrEnum):
     SWAN_GRINDER = "SWANGRINDER"
 
 
+# models that control the steam boiler by level instead of temperature
+STEAM_LEVEL_MODELS = (ModelCode.LINEA_MICRA, ModelCode.LINEA_MINI_R)
+
+
 class ModelName(StrEnum):
     """Model names."""
 

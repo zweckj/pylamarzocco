@@ -5,12 +5,13 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, Concatenate
+from typing import Any, Concatenate, cast
 
 from pylamarzocco.clients import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
 from pylamarzocco.const import ModelCode
 from pylamarzocco.exceptions import CloudOnlyFunctionality, UnsupportedModel
 from pylamarzocco.models import (
+    BaseWidgetOutput,
     ThingDashboardConfig,
     ThingDashboardWebsocketConfig,
     ThingSettings,
@@ -53,10 +54,7 @@ def models_supported[T: "LaMarzoccoThing", _R, **P](
     ) -> Callable[Concatenate[T, P], Coroutine[Any, Any, _R]]:
         @wraps(func)
         async def wrapper(self: T, *args: P.args, **kwargs: P.kwargs) -> _R:
-            if (
-                not hasattr(self, "dashboard")
-                or self.dashboard.model_code not in supported_models
-            ):
+            if self.dashboard.model_code not in supported_models:
                 supported_names = ", ".join(model.name for model in supported_models)
                 raise UnsupportedModel(
                     f"This functionality is only supported on: {supported_names}."
@@ -174,6 +172,10 @@ class LaMarzoccoThing:
 
     def _dashboard_config_updated(self) -> None:
         """Hook called after the dashboard config was (re)loaded."""
+
+    def _widget[W: BaseWidgetOutput](self, cls: type[W]) -> W | None:
+        """Return the cached dashboard widget of the given type, if present."""
+        return cast(W | None, self.dashboard.config.get(cls.widget_type))
 
     @cloud_only
     async def connect_dashboard_websocket(

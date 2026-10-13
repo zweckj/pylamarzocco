@@ -499,6 +499,12 @@ class LaMarzoccoCloudClient:
     # endregion
     # region commands
 
+    async def __set_enabled(
+        self, serial_number: str, command: str, enabled: bool
+    ) -> bool:
+        """Execute a command that only toggles an enabled flag."""
+        return await self.__execute_command(serial_number, command, {"enabled": enabled})
+
     async def __execute_command(
         self, serial_number: str, command: str, data: dict[str, Any] | None = None
     ) -> bool:
@@ -618,46 +624,31 @@ class LaMarzoccoCloudClient:
         self, serial_number: str, enabled: bool
     ) -> bool:
         """Enable or disable automatic group flushing."""
-        data = {"enabled": enabled}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingAutoFlushEnabled", data
-        )
+        return await self.__set_enabled(serial_number, "CoffeeMachineSettingAutoFlushEnabled", enabled)
 
     async def set_steam_flush(
         self, serial_number: str, enabled: bool
     ) -> bool:
         """Enable or disable automatic steam wand flushing."""
-        data = {"enabled": enabled}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingSteamFlushEnabled", data
-        )
+        return await self.__set_enabled(serial_number, "CoffeeMachineSettingSteamFlushEnabled", enabled)
 
     async def set_rinse_flush(
         self, serial_number: str, enabled: bool
     ) -> bool:
         """Enable or disable automatic rinse flushing."""
-        data = {"enabled": enabled}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingRinseFlushEnabled", data
-        )
+        return await self.__set_enabled(serial_number, "CoffeeMachineSettingRinseFlushEnabled", enabled)
 
     async def set_hot_water_dose_enabled(
         self, serial_number: str, enabled: bool
     ) -> bool:
         """Enable or disable the hot water dose."""
-        data = {"enabled": enabled}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingHotWaterDoseEnabled", data
-        )
+        return await self.__set_enabled(serial_number, "CoffeeMachineSettingHotWaterDoseEnabled", enabled)
 
     async def set_cup_warmer(
         self, serial_number: str, enabled: bool
     ) -> bool:
         """Enable or disable the cup warmer."""
-        data = {"enabled": enabled}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingCupWarmerEnabled", data
-        )
+        return await self.__set_enabled(serial_number, "CoffeeMachineSettingCupWarmerEnabled", enabled)
 
     async def set_group_mode(
         self, serial_number: str, mode: MachineMode, group_index: int = 1
@@ -776,10 +767,7 @@ class LaMarzoccoCloudClient:
         self, serial_number: str, enabled: bool
     ) -> bool:
         """Enable or disable plumb-in mode."""
-        data = {"enabled": enabled}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingPlumbIn", data
-        )
+        return await self.__set_enabled(serial_number, "CoffeeMachineSettingPlumbIn", enabled)
 
     async def start_backflush_cleaning(
         self,

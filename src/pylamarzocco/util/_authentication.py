@@ -23,6 +23,13 @@ def b64(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
 
 
+def _public_key_der(private_key: EllipticCurvePrivateKey) -> bytes:
+    """Return the public key of a private key in DER format."""
+    return private_key.public_key().public_bytes(
+        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+
 @dataclass
 class InstallationKey(DataClassJSONMixin):
     """Holds key material derived from installation ID."""
@@ -49,19 +56,13 @@ class InstallationKey(DataClassJSONMixin):
     @property
     def public_key_b64(self) -> str:
         """Return public key in base64-encoded DER format."""
-        pub_bytes = self.private_key.public_key().public_bytes(
-            serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-        return b64(pub_bytes)
+        return b64(_public_key_der(self.private_key))
 
     @property
     def base_string(self) -> str:
         """Return base string: installation_id.sha256(public_key_der_bytes)"""
-        pub_bytes = self.private_key.public_key().public_bytes(
-            serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
-        )
         pub_hash_b64 = b64(
-            hashlib.sha256(pub_bytes).digest()
+            hashlib.sha256(_public_key_der(self.private_key)).digest()
         )  # Hash raw bytes, not base64 string
         return f"{self.installation_id}.{pub_hash_b64}"
 
@@ -128,9 +129,7 @@ def generate_installation_key(installation_id: str) -> InstallationKey:
 
     private_key = generate_private_key(SECP256R1())
 
-    pub_bytes = private_key.public_key().public_bytes(
-        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
-    )
+    pub_bytes = _public_key_der(private_key)
 
     secret_bytes = derive_secret_bytes(installation_id, pub_bytes)
     return InstallationKey(
