@@ -9,6 +9,10 @@ class AuthFail(LaMarzoccoError):
     """Error to indicate there is invalid auth info."""
 
 
+class PolicyAcceptanceRequired(LaMarzoccoError):
+    """Error to indicate the user must accept the latest policy in the app."""
+
+
 class RequestNotSuccessful(LaMarzoccoError):
     """Error to indicate didn't get a 200 response"""
 

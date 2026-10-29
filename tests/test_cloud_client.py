@@ -29,6 +29,7 @@ from pylamarzocco.const import (
     SteamTargetLevel,
     WeekDay,
 )
+from pylamarzocco.exceptions import AuthFail, PolicyAcceptanceRequired
 from pylamarzocco.models import (
     CommandResponse,
     PrebrewSettingTimes,
@@ -163,6 +164,44 @@ async def test_get_thing_dashboard(
     client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
     result = await client.get_thing_dashboard(serial)
     assert result.to_dict() == snapshot
+
+
+async def test_policy_acceptance_required(
+    mock_aiointercept: aiointercept,
+    serial: str,
+) -> None:
+    """Test that a policy acceptance 403 raises a dedicated exception."""
+
+    mock_aiointercept.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
+        status=403,
+        payload={
+            "success": False,
+            "message": "User must accept latest policy",
+            "code": "USER_MUST_ACCEPT_POLICY",
+        },
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(PolicyAcceptanceRequired):
+        await client.get_thing_dashboard(serial)
+
+
+async def test_forbidden_raises_auth_fail(
+    mock_aiointercept: aiointercept,
+    serial: str,
+) -> None:
+    """Test that any other 403 raises AuthFail."""
+
+    mock_aiointercept.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
+        status=403,
+        payload={"success": False, "message": "Forbidden"},
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(AuthFail):
+        await client.get_thing_dashboard(serial)
 
 
 async def test_get_grinder_dashboard(

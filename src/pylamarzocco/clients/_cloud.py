@@ -40,7 +40,11 @@ from pylamarzocco.const import (
     StompMessageType,
     WidgetType,
 )
-from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
+from pylamarzocco.exceptions import (
+    AuthFail,
+    PolicyAcceptanceRequired,
+    RequestNotSuccessful,
+)
 from pylamarzocco.models import (
     AccessToken,
     CoffeeAndFlushCounter,
@@ -249,6 +253,20 @@ class LaMarzoccoCloudClient:
         if response.status == 401:
             _LOGGER.debug("Authentication failed: %s", await response.text())
             raise AuthFail("Authentication failed.")
+
+        if response.status == 403:
+            text = await response.text()
+            try:
+                code = json.loads(text).get("code")
+            except (ValueError, AttributeError):
+                code = None
+            if code == "USER_MUST_ACCEPT_POLICY":
+                _LOGGER.debug("Policy acceptance required: %s", text)
+                raise PolicyAcceptanceRequired(
+                    "User must accept the latest policy in the La Marzocco app."
+                )
+            _LOGGER.debug("Access forbidden: %s", text)
+            raise AuthFail("Access forbidden.")
 
         raise RequestNotSuccessful(
             f"Request to endpoint {response.url} failed with status code {response.status}.\n"
