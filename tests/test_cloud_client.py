@@ -204,6 +204,21 @@ async def test_forbidden_raises_auth_fail(
         await client.get_thing_dashboard(serial)
 
 
+async def test_accept_privacy_policy(
+    mock_aiointercept: aiointercept,
+) -> None:
+    """Test accepting the privacy policy."""
+
+    url = f"{CUSTOMER_APP_URL}/users/policy"
+    mock_aiointercept.put(url=url, status=200, body="")
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    await client.accept_privacy_policy(profile_policy=True)
+
+    call = mock_aiointercept.requests[(HTTPMethod.PUT, URL(url))][0]
+    assert await call.json() == {"profilePolicy": True, "commercialPolicy": False}
+
+
 async def test_get_grinder_dashboard(
     mock_aiointercept: aiointercept,
     snapshot: SnapshotAssertion,

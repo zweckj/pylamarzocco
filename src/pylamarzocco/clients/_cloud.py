@@ -245,6 +245,9 @@ class LaMarzoccoCloudClient:
 
         # ensure status code indicates success
         if is_success(response):
+            if not (await response.read()).strip():
+                _LOGGER.debug("Request to %s successful (empty response)", url)
+                return {}
             json_response = await response.json()
             _LOGGER.debug("Request to %s successful", url)
             _LOGGER.debug("Response: %s", _mask_bluetooth_token(json_response))
@@ -263,7 +266,8 @@ class LaMarzoccoCloudClient:
             if code == "USER_MUST_ACCEPT_POLICY":
                 _LOGGER.debug("Policy acceptance required: %s", text)
                 raise PolicyAcceptanceRequired(
-                    "User must accept the latest policy in the La Marzocco app."
+                    "User must accept the latest privacy policy, "
+                    "either in the La Marzocco app or via accept_privacy_policy()."
                 )
             _LOGGER.debug("Access forbidden: %s", text)
             raise AuthFail("Access forbidden.")
@@ -272,6 +276,25 @@ class LaMarzoccoCloudClient:
             f"Request to endpoint {response.url} failed with status code {response.status}.\n"
             + f"Full response: {await response.text()}"
         )
+
+    # region user
+    async def accept_privacy_policy(
+        self,
+        profile_policy: bool = False,
+        commercial_policy: bool = False,
+    ) -> None:
+        """Accept the latest privacy policy.
+
+        The optional profiling and commercial consents are sent alongside.
+        """
+        url = f"{CUSTOMER_APP_URL}/users/policy"
+        data = {
+            "profilePolicy": profile_policy,
+            "commercialPolicy": commercial_policy,
+        }
+        await self._rest_api_call(url=url, method=HTTPMethod.PUT, data=data)
+
+    # endregion
 
     # region config
     async def list_things(self) -> list[Thing]:
