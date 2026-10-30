@@ -340,9 +340,8 @@ async def test_auto_disconnect_after_idle(
         mock_bleak_client.disconnect.assert_awaited()
 
 
-async def test_timer_reset_on_new_command(
-    mock_bleak_client: MagicMock, ble_device: BLEDevice
-) -> None:
+@pytest.mark.usefixtures("mock_bleak_client")
+async def test_timer_reset_on_new_command(ble_device: BLEDevice) -> None:
     """Test that disconnect timer is reset when a new command is issued."""
     # Override the timeout for testing
     with patch("pylamarzocco.clients._bluetooth.IDLE_TIMEOUT", 0.2):
@@ -439,9 +438,8 @@ async def test_characteristic_resolution_failure_clears_cache(
     assert not client.is_connected
 
 
-async def test_is_connected_property(
-    mock_bleak_client: MagicMock, ble_device: BLEDevice
-) -> None:
+@pytest.mark.usefixtures("mock_bleak_client")
+async def test_is_connected_property(ble_device: BLEDevice) -> None:
     """Test the is_connected property."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
 
@@ -457,9 +455,8 @@ async def test_is_connected_property(
     assert not client.is_connected
 
 
-async def test_reconnect_after_disconnect(
-    mock_bleak_client: MagicMock, ble_device: BLEDevice
-) -> None:
+@pytest.mark.usefixtures("mock_bleak_client")
+async def test_reconnect_after_disconnect(ble_device: BLEDevice) -> None:
     """Test that client can reconnect after manual disconnect."""
     client = LaMarzoccoBluetoothClient(ble_device, "token")
 
@@ -1096,9 +1093,8 @@ async def test_machine_stop_from_update_callback(
     mock_bleak_client.stop_notify.assert_awaited_once()
 
 
-async def test_stop_shot_counter_notifies_connection_callback(
-    mock_bleak_client: MagicMock, ble_device: BLEDevice
-) -> None:
+@pytest.mark.usefixtures("mock_bleak_client")
+async def test_stop_shot_counter_notifies_connection_callback(ble_device: BLEDevice) -> None:
     """Test stopping a subscribed shot counter reports it as disconnected."""
     connection_callback = MagicMock()
     client = LaMarzoccoBluetoothClient(ble_device, "token")
@@ -1220,9 +1216,8 @@ async def test_command_error_keeps_shot_counter_connection(
     await client.disconnect()
 
 
-async def test_authentication_failed_flag(
-    mock_bleak_client: MagicMock, ble_device: BLEDevice
-) -> None:
+@pytest.mark.usefixtures("mock_bleak_client")
+async def test_authentication_failed_flag(ble_device: BLEDevice) -> None:
     """Test the authentication_failed flag is set and reset."""
     client = LaMarzoccoBluetoothClient(ble_device, "wrong")
     with (
@@ -1347,9 +1342,8 @@ async def test_connection_callback_not_called_on_failed_authentication(
     connection_callback.assert_not_called()
 
 
-async def test_connection_callback_unregister(
-    mock_bleak_client: MagicMock, ble_device: BLEDevice
-) -> None:
+@pytest.mark.usefixtures("mock_bleak_client")
+async def test_connection_callback_unregister(ble_device: BLEDevice) -> None:
     """Test unregistered connection callbacks are no longer called."""
     connection_callback = MagicMock()
     client = LaMarzoccoBluetoothClient(ble_device, "token")

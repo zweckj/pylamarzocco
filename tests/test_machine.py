@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
+from bleak.exc import BleakError
 
 from pylamarzocco import (
     LaMarzoccoBluetoothClient,
@@ -19,6 +20,7 @@ from pylamarzocco.const import (
     MachineMode,
     MachineState,
     ModelCode,
+    PreExtractionMode,
     SmartStandByType,
     SteamTargetLevel,
     WidgetType,
@@ -40,6 +42,8 @@ from pylamarzocco.models import (
     DoseSettings,
     GroupDosesSettings,
     MachineStatus,
+    PrebrewSettingTimes,
+    SecondsInOut,
     ThingDashboardWebsocketConfig,
     Widget,
 )
@@ -1014,3 +1018,310 @@ async def test_bluetooth_machine_mode_falls_back_to_websocket_callback(
     update_callback.assert_called_once()
     config: ThingDashboardWebsocketConfig = update_callback.call_args.args[0]
     assert config.config[WidgetType.CM_MACHINE_STATUS].mode == MachineMode.STANDBY
+
+
+async def test_bluetooth_shot_counter_active(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test the shot counter state is taken from the Bluetooth client."""
+    mock_bluetooth_client.shot_counter_active = True
+    assert mock_machine.bluetooth_shot_counter_active
+    mock_bluetooth_client.shot_counter_active = False
+    assert not mock_machine.bluetooth_shot_counter_active
+    assert not LaMarzoccoMachine("MR123456").bluetooth_shot_counter_active
+
+
+async def test_get_schedule(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test getting the schedule."""
+    schedule = MagicMock()
+    mock_cloud_client.get_thing_schedule.return_value = schedule
+    await mock_machine.get_schedule()
+    mock_cloud_client.get_thing_schedule.assert_called_once_with("MR123456")
+    assert mock_machine.schedule is schedule
+
+
+async def test_get_model_info_from_bluetooth_errors(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test errors while fetching the model info from Bluetooth."""
+    with pytest.raises(BluetoothConnectionFailed):
+        await LaMarzoccoMachine("MR123456").get_model_info_from_bluetooth()
+
+    mock_bluetooth_client.get_machine_capabilities.side_effect = BleakError("boom")
+    with pytest.raises(BleakError):
+        await mock_machine.get_model_info_from_bluetooth()
+
+
+async def test_get_model_info_from_bluetooth_unknown_model(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test an unknown model family keeps the model code."""
+    family = MagicMock()
+    family.name = "UNKNOWN"
+    mock_bluetooth_client.get_machine_capabilities.return_value = MagicMock(
+        family=family
+    )
+    model_code = mock_machine.dashboard.model_code
+    await mock_machine.get_model_info_from_bluetooth()
+    assert mock_machine.dashboard.model_name is family
+    assert mock_machine.dashboard.model_code == model_code
+
+
+async def test_get_dashboard_from_bluetooth_error(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test a Bluetooth error while fetching the dashboard is raised."""
+    mock_bluetooth_client.get_machine_mode.side_effect = BleakError("boom")
+    with pytest.raises(BleakError):
+        await mock_machine.get_dashboard_from_bluetooth()
+
+
+async def test_set_power_updates_group_status(
+    mock_machine: LaMarzoccoMachine,
+) -> None:
+    """Test setting the power updates the group status widget."""
+    group_status = MagicMock()
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_GROUP_STATUS] = group_status
+    assert await mock_machine.set_power(False)
+    assert group_status.mode is MachineMode.STANDBY
+
+
+async def test_set_mode_failed_keeps_widgets(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test a failed set_mode does not touch the dashboard."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    machine_status = MagicMock()
+    machine_status.mode = MachineMode.STANDBY
+    mock_machine.dashboard.config[WidgetType.CM_MACHINE_STATUS] = machine_status
+    mock_cloud_client.set_mode.return_value = False
+    assert not await mock_machine.set_mode(MachineMode.ECO_MODE)
+    assert machine_status.mode is MachineMode.STANDBY
+
+
+@pytest.mark.parametrize(
+    ("method", "args", "widget_type", "attribute", "value"),
+    [
+        ("set_auto_flush", (True,), WidgetType.CM_AUTO_FLUSH, "enabled", True),
+        ("set_steam_flush", (True,), WidgetType.CM_STEAM_FLUSH, "enabled", True),
+        ("set_rinse_flush", (True,), WidgetType.CM_RINSE_FLUSH, "enabled", True),
+        (
+            "set_hot_water_dose_enabled",
+            (True,),
+            WidgetType.CM_HOT_WATER_DOSE,
+            "enabled",
+            True,
+        ),
+        (
+            "set_group_mode",
+            (MachineMode.ECO_MODE,),
+            WidgetType.CM_MACHINE_GROUP_STATUS,
+            "mode",
+            MachineMode.ECO_MODE,
+        ),
+        ("set_coffee_boiler", (True,), WidgetType.CM_COFFEE_BOILER, "enabled", True),
+        (
+            "set_rinse_flush_time",
+            (4.5,),
+            WidgetType.CM_RINSE_FLUSH,
+            "time_seconds",
+            4.5,
+        ),
+    ],
+)
+async def test_strada_x_commands_update_dashboard(
+    mock_machine: LaMarzoccoMachine,
+    method: str,
+    args: tuple,
+    widget_type: WidgetType,
+    attribute: str,
+    value: object,
+) -> None:
+    """Test Strada X commands update the dashboard widget."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    widget = MagicMock()
+    mock_machine.dashboard.config[widget_type] = widget
+    assert await getattr(mock_machine, method)(*args)
+    assert getattr(widget, attribute) == value
+
+
+async def test_set_hot_water_dose_updates_dashboard(
+    mock_machine: LaMarzoccoMachine,
+) -> None:
+    """Test setting the hot water dose updates the matching dose."""
+    mock_machine.dashboard.model_code = ModelCode.STRADA_X
+    dose_a = MagicMock(dose_index=DoseIndex.DOSE_A, dose=10)
+    dose_b = MagicMock(dose_index=DoseIndex.DOSE_B, dose=20)
+    mock_machine.dashboard.config[WidgetType.CM_HOT_WATER_DOSE] = MagicMock(
+        doses=[dose_a, dose_b]
+    )
+    assert await mock_machine.set_hot_water_dose(15, DoseIndex.DOSE_B)
+    assert dose_a.dose == 10
+    assert dose_b.dose == 15
+
+
+async def test_start_backflush(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test starting the backflush."""
+    assert await mock_machine.start_backflush()
+    mock_cloud_client.start_backflush_cleaning.assert_called_once_with("MR123456")
+
+
+async def test_set_pre_extraction_mode(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test setting the pre-extraction mode."""
+    assert await mock_machine.set_pre_extraction_mode(PreExtractionMode.PREBREWING)
+    mock_cloud_client.change_pre_extraction_mode.assert_called_once_with(
+        "MR123456", PreExtractionMode.PREBREWING
+    )
+
+
+async def test_set_pre_extraction_times(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test setting the pre-extraction times."""
+    assert await mock_machine.set_pre_extraction_times(2.0, 3.5)
+    mock_cloud_client.change_pre_extraction_times.assert_called_once_with(
+        "MR123456",
+        PrebrewSettingTimes(times=SecondsInOut(seconds_in=2.0, seconds_out=3.5)),
+    )
+
+
+@pytest.mark.parametrize(
+    ("enabled", "minutes", "expected"),
+    [(True, 90, "01:30"), (False, 90, "Off")],
+)
+async def test_set_smart_standby_auto_standby(
+    mock_machine: LaMarzoccoMachine,
+    mock_bluetooth_client: MagicMock,
+    mock_cloud_client: MagicMock,
+    enabled: bool,
+    minutes: int,
+    expected: str,
+) -> None:
+    """Test smart standby uses auto standby when the schedule supports it."""
+    mock_machine.schedule.auto_stand_by_supported = True
+    assert await mock_machine.set_smart_standby(
+        enabled, minutes, SmartStandByType.POWER_ON
+    )
+    mock_cloud_client.set_auto_standby.assert_called_once_with("MR123456", expected)
+    mock_bluetooth_client.set_smart_standby.assert_not_called()
+
+
+async def test_set_auto_on_off(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test setting auto on off."""
+    assert await mock_machine.set_auto_on_off("schedule")
+    mock_cloud_client.set_auto_on_off.assert_called_once_with("MR123456", "schedule")
+
+
+async def test_wakeup_schedule(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test setting and deleting a wake up schedule."""
+    schedule = MagicMock()
+    assert await mock_machine.set_wakeup_schedule(schedule)
+    mock_cloud_client.set_wakeup_schedule.assert_called_once_with(
+        "MR123456", schedule
+    )
+    assert await mock_machine.delete_wakeup_schedule("schedule-id")
+    mock_cloud_client.delete_wakeup_schedule.assert_called_once_with(
+        "MR123456", "schedule-id"
+    )
+
+
+async def test_set_brew_by_weight_dose_mode_updates_dashboard(
+    mock_machine: LaMarzoccoMachine,
+) -> None:
+    """Test setting the brew by weight dose mode updates the dashboard."""
+    mock_machine.dashboard.model_code = ModelCode.LINEA_MINI_R
+    widget = MagicMock()
+    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = widget
+    assert await mock_machine.set_brew_by_weight_dose_mode(DoseMode.DOSE_2)
+    assert widget.mode is DoseMode.DOSE_2
+
+
+async def test_set_brew_by_weight_dose_unavailable(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test setting a brew by weight dose without widget or for continuous."""
+    mock_machine.dashboard.model_code = ModelCode.LINEA_MINI_R
+    assert not await mock_machine.set_brew_by_weight_dose(DoseMode.DOSE_1, 36.5)
+
+    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = MagicMock()
+    assert not await mock_machine.set_brew_by_weight_dose(DoseMode.CONTINUOUS, 36.5)
+    mock_cloud_client.set_brew_by_weight_dose.assert_not_called()
+
+
+async def test_set_brew_by_weight_dose_2(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test setting the second brew by weight dose."""
+    mock_machine.dashboard.model_code = ModelCode.LINEA_MINI_R
+    widget = MagicMock()
+    widget.doses.dose_1.dose = 32.0
+    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = widget
+    mock_cloud_client.set_brew_by_weight_dose.return_value = False
+    assert not await mock_machine.set_brew_by_weight_dose(DoseMode.DOSE_2, 40.0)
+    mock_cloud_client.set_brew_by_weight_dose.assert_called_once_with(
+        "MR123456", 32.0, 40.0
+    )
+
+
+async def test_bluetooth_failure_without_cloud(
+    mock_bluetooth_client: MagicMock,
+) -> None:
+    """Test a failing Bluetooth command without cloud fallback."""
+    machine = LaMarzoccoMachine("MR123456", bluetooth_client=mock_bluetooth_client)
+    mock_bluetooth_client.set_power.side_effect = BluetoothConnectionFailed("boom")
+    assert not await machine.set_power(True)
+
+
+async def test_get_statistics_widgets(
+    mock_machine: LaMarzoccoMachine,
+    mock_cloud_client: MagicMock,
+) -> None:
+    """Test the extended statistics are stored on the machine."""
+    trend = MagicMock()
+    last_coffee = MagicMock()
+    counter = MagicMock()
+    mock_cloud_client.get_thing_coffee_and_flush_trend.return_value = trend
+    mock_cloud_client.get_thing_last_coffee.return_value = last_coffee
+    mock_cloud_client.get_thing_coffee_and_flush_counter.return_value = counter
+
+    assert await mock_machine.get_coffee_and_flush_trend(7, "Europe/Berlin") is trend
+    mock_cloud_client.get_thing_coffee_and_flush_trend.assert_called_once_with(
+        serial_number="MR123456", days=7, timezone="Europe/Berlin"
+    )
+    assert await mock_machine.get_last_coffee(7) is last_coffee
+    mock_cloud_client.get_thing_last_coffee.assert_called_once_with(
+        serial_number="MR123456", days=7
+    )
+    assert await mock_machine.get_coffee_and_flush_counter() is counter
+    mock_cloud_client.get_thing_coffee_and_flush_counter.assert_called_once_with(
+        serial_number="MR123456"
+    )
+
+    assert mock_machine.statistics.widgets == {
+        WidgetType.COFFEE_AND_FLUSH_TREND: trend,
+        WidgetType.LAST_COFFEE: last_coffee,
+        WidgetType.COFFEE_AND_FLUSH_COUNTER: counter,
+    }

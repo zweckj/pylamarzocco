@@ -8,6 +8,7 @@ from http import HTTPMethod
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from aiohttp import ClientError
 from aiointercept import aiointercept
 from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1, generate_private_key
 from syrupy import SnapshotAssertion
@@ -29,7 +30,11 @@ from pylamarzocco.const import (
     SteamTargetLevel,
     WeekDay,
 )
-from pylamarzocco.exceptions import AuthFail, PolicyAcceptanceRequired
+from pylamarzocco.exceptions import (
+    AuthFail,
+    PolicyAcceptanceRequired,
+    RequestNotSuccessful,
+)
 from pylamarzocco.models import (
     CommandResponse,
     PrebrewSettingTimes,
@@ -1355,3 +1360,253 @@ async def test_set_brew_by_weight_dose(
         }
     }
     assert result is True
+
+
+async def test_register_client(mock_aiointercept: aiointercept) -> None:
+    """Test registering a new client."""
+
+    url = f"{CUSTOMER_APP_URL}/auth/init"
+    mock_aiointercept.post(url=url, status=200)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    await client.async_register_client()
+
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == {"pk": MOCK_SECRET_DATA.public_key_b64}
+    assert call.kwargs["headers"]["X-App-Installation-Id"] == "mock-installation-id"
+
+
+@pytest.mark.parametrize(
+    ("status", "exception"), [(401, AuthFail), (500, RequestNotSuccessful)]
+)
+async def test_register_client_failure(
+    mock_aiointercept: aiointercept,
+    status: int,
+    exception: type[Exception],
+) -> None:
+    """Test a failing client registration."""
+
+    mock_aiointercept.post(url=f"{CUSTOMER_APP_URL}/auth/init", status=status)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(exception):
+        await client.async_register_client()
+
+
+async def test_register_client_connection_error(
+    mock_aiointercept: aiointercept,
+) -> None:
+    """Test a connection error during client registration."""
+
+    mock_aiointercept.post(
+        url=f"{CUSTOMER_APP_URL}/auth/init", exception=ClientError("boom")
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(RequestNotSuccessful):
+        await client.async_register_client()
+
+
+@pytest.mark.parametrize(
+    ("status", "exception"), [(401, AuthFail), (500, RequestNotSuccessful)]
+)
+async def test_access_token_failure(
+    mock_aiointercept: aiointercept,
+    status: int,
+    exception: type[Exception],
+) -> None:
+    """Test a failing sign in."""
+
+    mock_aiointercept.clear()
+    mock_aiointercept.post(url=f"{CUSTOMER_APP_URL}/auth/signin", status=status)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(exception):
+        await client.async_get_access_token()
+
+
+async def test_access_token_connection_error(
+    mock_aiointercept: aiointercept,
+) -> None:
+    """Test a connection error during sign in."""
+
+    mock_aiointercept.clear()
+    mock_aiointercept.post(
+        url=f"{CUSTOMER_APP_URL}/auth/signin", exception=ClientError("boom")
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(RequestNotSuccessful):
+        await client.async_get_access_token()
+
+
+async def test_refresh_token_without_access_token() -> None:
+    """Test refreshing without an access token raises."""
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(ValueError, match="No access token available"):
+        await client._async_refresh_token()  # pylint: disable=protected-access
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "exception"),
+    [
+        (401, "", AuthFail),
+        (403, "not json", AuthFail),
+        (500, "error", RequestNotSuccessful),
+    ],
+)
+async def test_rest_api_call_failure(
+    mock_aiointercept: aiointercept,
+    serial: str,
+    status: int,
+    body: str,
+    exception: type[Exception],
+) -> None:
+    """Test failing REST API calls."""
+
+    mock_aiointercept.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard", status=status, body=body
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(exception):
+        await client.get_thing_dashboard(serial)
+
+
+async def test_rest_api_call_connection_error(
+    mock_aiointercept: aiointercept,
+    serial: str,
+) -> None:
+    """Test a connection error during a REST API call."""
+
+    mock_aiointercept.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/dashboard",
+        exception=ClientError("boom"),
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    with pytest.raises(RequestNotSuccessful):
+        await client.get_thing_dashboard(serial)
+
+
+async def test_get_thing_coffee_and_flush_trend(
+    mock_aiointercept: aiointercept,
+    serial: str,
+) -> None:
+    """Test getting the coffee and flush trend."""
+
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/stats/COFFEE_AND_FLUSH_TREND/1"
+        "?days=7&timezone=Europe/Berlin"
+    )
+    mock_aiointercept.get(
+        url=url,
+        status=200,
+        payload={
+            "output": {
+                "days": 7,
+                "timezone": "Europe/Berlin",
+                "coffees": [{"timestamp": 1700000000000, "value": 3}],
+            }
+        },
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    result = await client.get_thing_coffee_and_flush_trend(
+        serial, days=7, timezone="Europe/Berlin"
+    )
+    assert result.days == 7
+    assert result.timezone == "Europe/Berlin"
+    assert result.coffees[0].value == 3
+
+
+async def test_get_thing_last_coffee(
+    mock_aiointercept: aiointercept,
+    serial: str,
+) -> None:
+    """Test getting the last coffees."""
+
+    mock_aiointercept.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/stats/LAST_COFFEE/1?days=7",
+        status=200,
+        payload={
+            "output": {
+                "lastCoffees": [
+                    {
+                        "time": 1700000000000,
+                        "extractionSeconds": 27.5,
+                        "doseMode": "Dose1",
+                        "doseIndex": "DoseA",
+                    }
+                ]
+            }
+        },
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    result = await client.get_thing_last_coffee(serial, days=7)
+    assert result.last_coffees[0].extraction_seconds == 27.5
+    assert result.last_coffees[0].dose_mode is DoseMode.DOSE_1
+    assert result.last_coffees[0].dose_index is DoseIndex.DOSE_A
+
+
+async def test_get_thing_coffee_and_flush_counter(
+    mock_aiointercept: aiointercept,
+    serial: str,
+) -> None:
+    """Test getting the coffee and flush counter."""
+
+    mock_aiointercept.get(
+        url=f"{CUSTOMER_APP_URL}/things/{serial}/stats/COFFEE_AND_FLUSH_COUNTER/1",
+        status=200,
+        payload={"output": {"totalCoffee": 1234, "totalFlush": 567}},
+    )
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    result = await client.get_thing_coffee_and_flush_counter(serial)
+    assert result.total_coffee == 1234
+    assert result.total_flush == 567
+
+
+@pytest.mark.parametrize(
+    ("method", "args", "command", "expected_body"),
+    [
+        (
+            "set_auto_standby",
+            ("00:30",),
+            "CoffeeMachineSettingAutoStandBy",
+            {"mode": "00:30"},
+        ),
+        (
+            "set_auto_on_off",
+            ("schedule",),
+            "CoffeeMachineSettingAutoOnOff",
+            {"schedule": "schedule"},
+        ),
+        (
+            "delete_wakeup_schedule",
+            ("schedule-id",),
+            "CoffeeMachineDeleteWakeUpSchedule",
+            {"id": "schedule-id"},
+        ),
+    ],
+)
+async def test_schedule_commands(
+    mock_aiointercept: aiointercept,
+    serial: str,
+    method: str,
+    args: tuple,
+    command: str,
+    expected_body: dict,
+) -> None:
+    """Test the schedule related commands."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/{command}"
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+
+    client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA)
+    assert await getattr(client, method)(serial, *args)
+
+    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
+    assert await call.json() == expected_body
