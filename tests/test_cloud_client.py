@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from collections.abc import Generator
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
 from http import HTTPMethod
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 
 import pytest
-from aiohttp import ClientError
+from aiohttp import ClientError, web
 from aiointercept import aiointercept
 from syrupy import SnapshotAssertion
 from yarl import URL
@@ -16,7 +19,6 @@ from yarl import URL
 from pylamarzocco.clients import LaMarzoccoCloudClient
 from pylamarzocco.const import (
     CUSTOMER_APP_URL,
-    CommandStatus,
     DoseIndex,
     DoseMode,
     MachineMode,
@@ -35,12 +37,18 @@ from pylamarzocco.exceptions import (
     RequestNotSuccessful,
 )
 from pylamarzocco.models import (
-    CommandResponse,
     PrebrewSettingTimes,
     SecondsInOut,
     WakeUpScheduleSettings,
 )
-from .conftest import MOCK_SECRET_DATA, load_fixture
+
+from .conftest import (
+    MOCK_SECRET_DATA,
+    accept_stomp_connection,
+    add_websocket_endpoint,
+    dashboard_message,
+    load_fixture,
+)
 
 pytestmark = pytest.mark.usefixtures("mock_access_token")
 
@@ -52,35 +60,62 @@ MOCK_COMMAND_RESPONSE = [
     }
 ]
 
-@pytest.fixture(name="mock_ws_command_response")
-def websocket_command_response() -> CommandResponse:
-    """Mock websocket command response."""
-    return CommandResponse(
-        id="mock-id",
-        status=CommandStatus.SUCCESS,
+
+async def push_until_closed(ws: web.WebSocketResponse, frame: str) -> None:
+    """Push ``frame`` every few milliseconds until the client closes the socket.
+
+    A command result only resolves a command the client is already waiting for,
+    so keep repeating it rather than racing the client's handling of the REST
+    reply.
+    """
+
+    async def push() -> None:
+        while not ws.closed:
+            await ws.send_str(frame)
+            await asyncio.sleep(0.01)
+
+    pusher = asyncio.create_task(push())
+    try:
+        async for _ in ws:
+            pass
+    finally:
+        pusher.cancel()
+        with suppress(asyncio.CancelledError, ConnectionError):
+            await pusher
+
+
+@asynccontextmanager
+async def websocket_pushing(
+    mock_aiointercept: aiointercept,
+    client: LaMarzoccoCloudClient,
+    serial: str,
+    commands: list[dict[str, Any]],
+) -> AsyncIterator[None]:
+    """Keep the client's websocket connected to a server pushing command results.
+
+    The connection task is cancelled, and the server session awaited, on exit.
+    """
+    update = load_fixture("machine", "config_micra.json") | {"commands": commands}
+    frame = dashboard_message(serial, update)
+
+    async def session(ws: web.WebSocketResponse) -> None:
+        await accept_stomp_connection(ws, [])
+        await push_until_closed(ws, frame)
+
+    session_finished = add_websocket_endpoint(mock_aiointercept, session)
+    connected = asyncio.Event()
+    task = asyncio.create_task(
+        client.websocket_connect(serial, connect_callback=connected.set)
     )
-
-
-@pytest.fixture(name="mock_wait_for_ws_command_response")
-def wait_for_ws_command_response(
-    mock_ws_command_response: CommandResponse,
-) -> Generator[AsyncMock]:
-    """Mock the wait for."""
-    with patch(
-        "pylamarzocco.clients._cloud.wait_for",
-        new=AsyncMock(return_value=mock_ws_command_response),
-    ) as mock_wait_for:
-        yield mock_wait_for
-
-
-@pytest.fixture(name="mock_websocket")
-def websocket_mock() -> Generator[MagicMock]:
-    """Return a mocked websocket"""
-    mock_ws = MagicMock()
-    mock_ws.connected = True
-
-    with patch("pylamarzocco.clients._cloud.WebSocketDetails", return_value=mock_ws):
-        yield mock_ws
+    try:
+        async with asyncio.timeout(5):
+            await connected.wait()
+        yield
+    finally:
+        task.cancel()
+        async with asyncio.timeout(5):
+            await task
+            await session_finished.wait()
 
 
 async def test_access_token(
@@ -322,149 +357,48 @@ async def test_get_statistics(
     assert result.to_dict() == snapshot
 
 
-async def test_disconnected_commands_do_not_leak_pending(
+@pytest.mark.parametrize(
+    ("status", "expected"), [("Success", True), ("Error", False)]
+)
+async def test_command_ws_validation(
     mock_aiointercept: aiointercept,
     serial: str,
     client: LaMarzoccoCloudClient,
+    status: str,
+    expected: bool,
 ) -> None:
-    """Fire-and-forget commands (websocket disconnected) must not accumulate
-    in _pending_commands. """
+    """A command's result is the status the websocket pushes for its id."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    commands = [{"id": "mock-id", "status": status, "errorCode": None}]
 
-    for i in range(5):
-        mock_aiointercept.post(
-            url=url,
-            status=200,
-            payload=[{"id": f"cmd-{i}", "status": "Pending", "error_code": None}],
-        )
-
-    assert client.websocket.connected is False
-
-    for _ in range(5):
-        assert await client.set_power(serial, False) is True
-
-    requests = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))]
-    assert len(requests) == 5
-    for call in requests:
-        assert await call.json() == {"mode": "StandBy"}
-
-    assert client._pending_commands == {}
-
-
-@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
-async def test_set_power_with_ws_validation(
-    mock_aiointercept: aiointercept,
-    serial: str,
-    client: LaMarzoccoCloudClient,
-) -> None:
-    """Test setting the power for a thing, validate the command from ws."""
-
-    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
-
-    mock_aiointercept.post(
-        url=url,
-        status=200,
-        payload=MOCK_COMMAND_RESPONSE,
-    )
-
-    result = await client.set_power(serial, False)
+    async with websocket_pushing(mock_aiointercept, client, serial, commands):
+        assert client.websocket.connected is True
+        result = await client.set_power(serial, False)
 
     call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
     assert await call.json() == {"mode": "StandBy"}
-    assert result is True
+    assert result is expected
 
 
-@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
-async def test_set_grinder_mode(
-    mock_aiointercept: aiointercept,
-    serial: str,
-    client: LaMarzoccoCloudClient,
-) -> None:
-    """Test setting the mode (wake/standby) for a grinder."""
-
-    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderChangeMode"
-
-    mock_aiointercept.post(
-        url=url,
-        status=200,
-        payload=MOCK_COMMAND_RESPONSE,
-    )
-
-    result = await client.set_grinder_mode(serial, GrinderMode.GRINDING)
-
-    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
-    assert await call.json() == {"mode": "GrindingMode"}
-    assert result is True
-
-
-@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
-async def test_set_grinder_barista_light(
-    mock_aiointercept: aiointercept,
-    serial: str,
-    client: LaMarzoccoCloudClient,
-) -> None:
-    """Test setting the barista light for a grinder."""
-
-    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/GrinderSettingBaristaLightEnabled"
-
-    mock_aiointercept.post(
-        url=url,
-        status=200,
-        payload=MOCK_COMMAND_RESPONSE,
-    )
-
-    result = await client.set_grinder_barista_light(serial, True)
-
-    call = mock_aiointercept.requests[(HTTPMethod.POST, URL(url))][0]
-    assert await call.json() == {"index": 1, "enabled": True}
-    assert result is True
-
-
-@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
-async def test_failing_response_ws_validation(
-    mock_aiointercept: aiointercept,
-    mock_ws_command_response: CommandResponse,
-    serial: str,
-    client: LaMarzoccoCloudClient,
-) -> None:
-    """Tests failing response from websocket"""
-
-    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
-
-    mock_aiointercept.post(
-        url=url,
-        status=200,
-        payload=MOCK_COMMAND_RESPONSE,
-    )
-
-    mock_ws_command_response.status = CommandStatus.ERROR
-
-    result = await client.set_power(serial, False)
-    assert result is False
-
-
-@pytest.mark.usefixtures("mock_websocket", "mock_wait_for_ws_command_response")
 async def test_pending_command_ws_validation_timeout(
     mock_aiointercept: aiointercept,
-    mock_wait_for_ws_command_response: AsyncMock,
     serial: str,
     client: LaMarzoccoCloudClient,
 ) -> None:
-    """Tests failing response from websocket"""
+    """A command whose result never arrives times out and is not kept pending."""
 
     url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    commands = [{"id": "other-id", "status": "Success", "errorCode": None}]
 
-    mock_aiointercept.post(
-        url=url,
-        status=200,
-        payload=MOCK_COMMAND_RESPONSE,
-    )
+    with patch("pylamarzocco.clients._cloud.PENDING_COMMAND_TIMEOUT", new=0.1):
+        async with websocket_pushing(mock_aiointercept, client, serial, commands):
+            result = await client.set_power(serial, False)
 
-    mock_wait_for_ws_command_response.side_effect = TimeoutError
-
-    result = await client.set_power(serial, False)
     assert result is False
+    assert client._pending_commands == {}  # pylint: disable=protected-access
 
 
 async def test_set_wake_up_schedule(
@@ -474,7 +408,10 @@ async def test_set_wake_up_schedule(
 ) -> None:
     """Test setting the wake up schedule for a thing."""
 
-    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingWakeUpSchedule"
+    url = (
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/"
+        "CoffeeMachineSettingWakeUpSchedule"
+    )
     mock_aiointercept.post(
         url=url,
         status=200,
@@ -882,6 +819,18 @@ async def test_get_thing_coffee_and_flush_counter(
             {"groupIndex": 2, "enabled": True},
         ),
         ("set_plumb_in", (True,), "CoffeeMachineSettingPlumbIn", {"enabled": True}),
+        (
+            "set_grinder_mode",
+            (GrinderMode.GRINDING,),
+            "GrinderChangeMode",
+            {"mode": "GrindingMode"},
+        ),
+        (
+            "set_grinder_barista_light",
+            (True,),
+            "GrinderSettingBaristaLightEnabled",
+            {"index": 1, "enabled": True},
+        ),
         (
             "set_grinder_grind_with",
             (GrinderGrindWithMode.BY_BUTTON,),

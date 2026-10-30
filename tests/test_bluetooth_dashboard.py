@@ -52,11 +52,12 @@ def _capabilities(
 
 @pytest.fixture(name="mock_machine_with_dashboard")
 def mock_lm_machine_with_dashboard(
+    serial: str,
     mock_bluetooth_client: MagicMock,
 ) -> LaMarzoccoMachine:
     """Mock the LaMarzoccoMachine with dashboard populated."""
     machine = LaMarzoccoMachine(
-        serial_number="MR123456",
+        serial_number=serial,
         bluetooth_client=mock_bluetooth_client,
     )
 
@@ -179,14 +180,10 @@ async def test_get_dashboard_from_bluetooth(
     assert no_water.allarm is False  # Tank status is True, so allarm should be False
 
 
-async def test_get_dashboard_no_bluetooth(
-    mock_machine_with_dashboard: LaMarzoccoMachine,
-) -> None:
+async def test_get_dashboard_no_bluetooth(serial: str) -> None:
     """Test filling dashboard without Bluetooth client."""
-    mock_machine_with_dashboard._bluetooth_client = None  # pylint:disable=W0212
-
     with pytest.raises(BluetoothConnectionFailed):
-        await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
+        await LaMarzoccoMachine(serial).get_dashboard_from_bluetooth()
 
 
 async def test_get_model_info_from_bluetooth(

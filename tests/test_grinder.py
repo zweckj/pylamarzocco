@@ -29,21 +29,28 @@ from pylamarzocco.models import (
 )
 
 
+@pytest.fixture(name="grinder_serial")
+def mock_grinder_serial() -> str:
+    """Return the serial number of the mocked grinder."""
+    return "GR123456"
+
+
 @pytest.fixture(name="mock_grinder")
 def mock_lm_grinder(
+    grinder_serial: str,
     mock_cloud_client: MagicMock,
 ) -> LaMarzoccoGrinder:
     """Mock the LaMarzoccoGrinder."""
-    grinder = LaMarzoccoGrinder(
-        serial_number="GR123456",
+    return LaMarzoccoGrinder(
+        serial_number=grinder_serial,
         cloud_client=mock_cloud_client,
     )
-    return grinder
 
 
 async def test_set_power_updates_mode(
     mock_grinder: LaMarzoccoGrinder,
     mock_cloud_client: MagicMock,
+    grinder_serial: str,
 ) -> None:
     """Test the set_power method (wake / standby)."""
     mock_grinder.dashboard.config[WidgetType.G_MACHINE_STATUS] = GrinderMachineStatus(
@@ -54,7 +61,7 @@ async def test_set_power_updates_mode(
 
     assert await mock_grinder.set_power(True)
     mock_cloud_client.set_grinder_mode.assert_called_once_with(
-        "GR123456", GrinderMode.GRINDING
+        grinder_serial, GrinderMode.GRINDING
     )
 
     status = mock_grinder.dashboard.config[WidgetType.G_MACHINE_STATUS]
@@ -65,6 +72,7 @@ async def test_set_power_updates_mode(
 async def test_set_barista_light(
     mock_grinder: LaMarzoccoGrinder,
     mock_cloud_client: MagicMock,
+    grinder_serial: str,
 ) -> None:
     """Test the set_barista_light method."""
     mock_grinder.dashboard.config[WidgetType.G_BARISTA_LIGHT] = GrinderBaristaLight(
@@ -73,7 +81,7 @@ async def test_set_barista_light(
 
     assert await mock_grinder.set_barista_light(True)
     mock_cloud_client.set_grinder_barista_light.assert_called_once_with(
-        "GR123456", True
+        grinder_serial, True
     )
 
     barista_light = mock_grinder.dashboard.config[WidgetType.G_BARISTA_LIGHT]
@@ -84,6 +92,7 @@ async def test_set_barista_light(
 async def test_set_grind_with(
     mock_grinder: LaMarzoccoGrinder,
     mock_cloud_client: MagicMock,
+    grinder_serial: str,
 ) -> None:
     """Test the set_grind_with method."""
     mock_grinder.dashboard.model_code = ModelCode.SWAN_GRINDER
@@ -93,7 +102,7 @@ async def test_set_grind_with(
 
     assert await mock_grinder.set_grind_with(GrinderGrindWithMode.BY_BUTTON)
     mock_cloud_client.set_grinder_grind_with.assert_called_once_with(
-        "GR123456", GrinderGrindWithMode.BY_BUTTON
+        grinder_serial, GrinderGrindWithMode.BY_BUTTON
     )
 
     grind_with = mock_grinder.dashboard.config[WidgetType.G_GRIND_WITH]
@@ -116,6 +125,7 @@ async def test_set_grind_with_unsupported_model(
 async def test_set_dose(
     mock_grinder: LaMarzoccoGrinder,
     mock_cloud_client: MagicMock,
+    grinder_serial: str,
 ) -> None:
     """Test the set_dose method, including the speed level."""
     mock_grinder.dashboard.config[WidgetType.G_DOSES] = GrinderDoses(
@@ -157,7 +167,7 @@ async def test_set_dose(
         speed_level=GrinderSpeedLevelType.HIGH,
     )
     mock_cloud_client.set_grinder_dose.assert_called_once_with(
-        "GR123456",
+        grinder_serial,
         DoseIndex.DOSE_A,
         12.0,
         GrinderDoseMode.REV,
@@ -178,6 +188,7 @@ async def test_set_dose(
 async def test_set_dose_defaults_to_current_mode(
     mock_grinder: LaMarzoccoGrinder,
     mock_cloud_client: MagicMock,
+    grinder_serial: str,
 ) -> None:
     """Test set_dose uses the grinder's current dose mode when none is given."""
     mock_grinder.dashboard.config[WidgetType.G_DOSES] = GrinderDoses(
@@ -197,7 +208,7 @@ async def test_set_dose_defaults_to_current_mode(
 
     assert await mock_grinder.set_dose(DoseIndex.DOSE_A, 2.0)
     mock_cloud_client.set_grinder_dose.assert_called_once_with(
-        "GR123456",
+        grinder_serial,
         DoseIndex.DOSE_A,
         2.0,
         GrinderDoseMode.TIME,
@@ -212,6 +223,7 @@ async def test_set_dose_defaults_to_current_mode(
 async def test_set_more_dose(
     mock_grinder: LaMarzoccoGrinder,
     mock_cloud_client: MagicMock,
+    grinder_serial: str,
 ) -> None:
     """Test the set_more_dose method."""
     mock_grinder.dashboard.model_code = ModelCode.SWAN_GRINDER
@@ -224,7 +236,7 @@ async def test_set_more_dose(
 
     assert await mock_grinder.set_more_dose(2.5)
     mock_cloud_client.set_grinder_more_dose.assert_called_once_with(
-        "GR123456", 2.5
+        grinder_serial, 2.5
     )
 
     more_dose = mock_grinder.dashboard.config[WidgetType.G_MORE_DOSE]

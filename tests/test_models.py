@@ -18,8 +18,8 @@ from pylamarzocco.models import (
     ThingDashboardWebsocketConfig,
     ThingSchedulingSettings,
     ThingSettings,
+    ThingStatistics,
 )
-from pylamarzocco.models._statistics import ThingStatistics
 
 from .conftest import load_fixture
 
