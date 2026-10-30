@@ -18,13 +18,13 @@ from pylamarzocco.models import (
     ThingDashboardWebsocketConfig,
     ThingSchedulingSettings,
     ThingSettings,
+    ThingStatistics,
 )
-from pylamarzocco.models._statistics import ThingStatistics
 
 from .conftest import load_fixture
 
 
-async def test_device_config(snapshot: SnapshotAssertion) -> None:
+def test_device_config(snapshot: SnapshotAssertion) -> None:
     """Test the config model serialization."""
 
     fixture = load_fixture("machine", "config_micra.json")
@@ -32,7 +32,7 @@ async def test_device_config(snapshot: SnapshotAssertion) -> None:
     assert device.to_dict() == snapshot
 
 
-async def test_strada_settings_with_file_firmware() -> None:
+def test_strada_settings_with_file_firmware() -> None:
     """Strada X settings parse with the additional 'File' firmware type."""
 
     fixture = load_fixture("machine", "settings_strada.json")
@@ -43,7 +43,7 @@ async def test_strada_settings_with_file_firmware() -> None:
     assert file_fw.change_log is None
 
 
-async def test_strada_schedule_eco_mode_and_auto_on_off() -> None:
+def test_strada_schedule_eco_mode_and_auto_on_off() -> None:
     """Strada X schedule parses null smartWakeUpSleep and the eco mode objects."""
 
     fixture = load_fixture("machine", "schedule_strada.json")
@@ -62,7 +62,7 @@ async def test_strada_schedule_eco_mode_and_auto_on_off() -> None:
     assert schedule.eco_mode.timeout_minutes == 120
 
 
-async def test_schedule_auto_on_off_string() -> None:
+def test_schedule_auto_on_off_string() -> None:
     """Schedule with a string autoOnOff (e.g. Linea Micra) still parses."""
 
     fixture = load_fixture("machine", "schedule.json")
@@ -70,7 +70,7 @@ async def test_schedule_auto_on_off_string() -> None:
     assert schedule.auto_on_off == "00:30"
 
 
-async def test_strada_dashboard_group_doses() -> None:
+def test_strada_dashboard_group_doses() -> None:
     """Strada X dashboard parses MassType/BrewRatioType doses and pressure object."""
 
     fixture = load_fixture("machine", "dashboard_strada.json")
@@ -98,7 +98,7 @@ async def test_strada_dashboard_group_doses() -> None:
     assert rinse_flush.time_seconds == 3.0
 
 
-async def test_strada_dashboard_profile_mode() -> None:
+def test_strada_dashboard_profile_mode() -> None:
     """Strada X dashboard parses the ProfileType mode with graph data."""
 
     fixture = load_fixture("machine", "dashboard_strada_profile.json")
@@ -121,7 +121,7 @@ async def test_strada_dashboard_profile_mode() -> None:
     assert dashboard.to_dict()
 
 
-async def test_removed_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:
+def test_removed_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:
     """Test that removed widgets with unknown codes are filtered out and logged."""
     config_data = {
         "connected": True,
@@ -149,7 +149,7 @@ async def test_removed_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixtu
     assert "UnknownFutureWidget" in caplog.text
 
 
-async def test_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:
+def test_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:
     """Test that active widgets with unknown codes are filtered out and logged."""
     config_data = {
         "connected": True,
@@ -191,7 +191,7 @@ async def test_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> N
     assert '"index": 1' in caplog.text
 
 
-async def test_widget_code_strings_filtering(caplog: pytest.LogCaptureFixture) -> None:
+def test_widget_code_strings_filtering(caplog: pytest.LogCaptureFixture) -> None:
     """Test that widget code strings (not dicts) are filtered properly."""
     stats_data = {
         "serialNumber": "test-serial",
@@ -225,7 +225,7 @@ async def test_widget_code_strings_filtering(caplog: pytest.LogCaptureFixture) -
     assert "FutureWidget" in caplog.text
 
 
-async def test_mixed_valid_invalid_widgets(caplog: pytest.LogCaptureFixture) -> None:
+def test_mixed_valid_invalid_widgets(caplog: pytest.LogCaptureFixture) -> None:
     """Test handling of mix of valid and invalid widgets."""
     config_data = {
         "connected": True,
@@ -258,7 +258,7 @@ async def test_mixed_valid_invalid_widgets(caplog: pytest.LogCaptureFixture) -> 
     assert '"index": 4' in caplog.text
 
 
-async def test_empty_widget_lists() -> None:
+def test_empty_widget_lists() -> None:
     """Test that empty widget lists are handled correctly."""
     config_data = {
         "connected": True,
@@ -275,7 +275,7 @@ async def test_empty_widget_lists() -> None:
     assert len(config.widgets) == 0
 
 
-async def test_all_widgets_invalid(caplog: pytest.LogCaptureFixture) -> None:
+def test_all_widgets_invalid(caplog: pytest.LogCaptureFixture) -> None:
     """Test that when all widgets are invalid, result is empty list."""
     config_data = {
         "connected": True,
@@ -306,7 +306,7 @@ async def test_all_widgets_invalid(caplog: pytest.LogCaptureFixture) -> None:
     ("value", "expected"),
     [(True, True), (False, False), (None, False)],
 )
-async def test_shot_counter_supported(value: bool | None, expected: bool) -> None:
+def test_shot_counter_supported(value: bool | None, expected: bool) -> None:
     """Test the shotCounterSupported flag, including null."""
     dashboard = ThingDashboardConfig.from_dict(
         {"serialNumber": "MR123456", "shotCounterSupported": value}

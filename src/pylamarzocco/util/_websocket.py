@@ -20,7 +20,7 @@ def encode_stomp_ws_message(
 
 def decode_stomp_ws_message(
     msg: str,
-) -> tuple[StompMessageType, dict[str, str], str | None]:
+) -> tuple[StompMessageType, dict[str, str], str]:
     """Decode STOMP WebSocket message."""
     header, data = msg.split("\n\n", 1)
     headers: dict[str, str] = {}

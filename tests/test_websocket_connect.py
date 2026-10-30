@@ -3,91 +3,39 @@
 from __future__ import annotations
 
 import asyncio
-import json
-from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from aiohttp import ClientSession, ClientTimeout, WSMsgType, web
+from aiohttp import (
+    ClientSession,
+    ClientTimeout,
+    ClientWebSocketResponse,
+    WSMessage,
+    WSMsgType,
+    web,
+)
 from aiointercept import CallbackResult, aiointercept
-from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1, generate_private_key
 from yarl import URL
 
 from pylamarzocco.clients import LaMarzoccoCloudClient
-from pylamarzocco.const import BASE_URL, StompMessageType
+from pylamarzocco.const import StompMessageType
 from pylamarzocco.models import ThingDashboardWebsocketConfig
-from pylamarzocco.util import (
-    InstallationKey,
-    decode_stomp_ws_message,
-    encode_stomp_ws_message,
+from pylamarzocco.util import decode_stomp_ws_message, encode_stomp_ws_message
+
+from .conftest import (
+    HANDSHAKE_KEY,
+    MOCK_SECRET_DATA,
+    WEBSOCKET_URL,
+    StompFrame,
+    accept_stomp_connection,
+    add_websocket_endpoint,
+    dashboard_message,
+    load_fixture,
+    receive_frame,
 )
 
-from .conftest import load_fixture
-
-# aiointercept only restores the https scheme of intercepted requests, so the
-# client's wss:// endpoint has to be registered under https://.
-WEBSOCKET_URL = f"https://{BASE_URL}/ws/connect"
-HANDSHAKE_KEY = ("GET", URL(WEBSOCKET_URL))
-
-MOCK_SECRET_DATA = InstallationKey(
-    secret=bytes(32),
-    private_key=generate_private_key(SECP256R1()),
-    installation_id="mock-installation-id",
-)
-
-StompFrame = tuple[StompMessageType, dict[str, str], str | None]
-
-
-@pytest.fixture(name="client")
-async def fixture_client() -> AsyncGenerator[LaMarzoccoCloudClient]:
-    """Return a cloud client whose session is closed after the test."""
-    async with ClientSession() as session:
-        yield LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, session)
-
-
-def add_websocket_endpoint(
-    mock: aiointercept,
-    session: Callable[[web.WebSocketResponse], Awaitable[None]],
-) -> asyncio.Event:
-    """Serve one websocket connection from aiointercept's server.
-
-    aiointercept can only build plain HTTP responses, so swap the handler it
-    registers for one that upgrades the connection and runs ``session``. The
-    server runs on its own thread, so the returned event signals when the
-    session has ended.
-    """
-    loop = asyncio.get_running_loop()
-    session_finished = asyncio.Event()
-
-    async def handler(request: web.Request) -> web.WebSocketResponse:
-        ws = web.WebSocketResponse()
-        try:
-            await ws.prepare(request)
-            await session(ws)
-        finally:
-            loop.call_soon_threadsafe(session_finished.set)
-        return ws
-
-    mock_response = mock.get(WEBSOCKET_URL)
-    mock_response._handler = handler  # pylint: disable=protected-access
-    return session_finished
-
-
-async def receive_frame(ws: web.WebSocketResponse) -> StompFrame:
-    """Receive and decode the next STOMP frame sent by the client."""
-    return decode_stomp_ws_message(await ws.receive_str())
-
-
-async def accept_stomp_connection(
-    ws: web.WebSocketResponse, frames: list[StompFrame]
-) -> None:
-    """Answer the client's CONNECT and record it together with its SUBSCRIBE."""
-    frames.append(await receive_frame(ws))
-    await ws.send_str(
-        encode_stomp_ws_message(StompMessageType.CONNECTED, {"version": "1.2"})
-    )
-    frames.append(await receive_frame(ws))
+pytestmark = pytest.mark.usefixtures("mock_access_token")
 
 
 @pytest.mark.parametrize(
@@ -152,20 +100,24 @@ async def test_websocket_handshake_timeout_reconnects(
 async def test_websocket_session_survives_errors_and_reconnects(
     mock_aiointercept: aiointercept, client: LaMarzoccoCloudClient, serial: str
 ) -> None:
-    """In-session errors are not fatal and a server close triggers a reconnect."""
+    """In-session errors are not fatal and a server close triggers a reconnect.
+
+    STOMP errors, frames other than MESSAGE, unparsable frames and failing
+    notification callbacks are skipped without ending the session.
+    """
     frames: list[StompFrame] = []
     update = load_fixture("machine", "config_micra.json")
-    update_message = encode_stomp_ws_message(
-        StompMessageType.MESSAGE,
-        {"destination": f"/ws/sn/{serial}/dashboard"},
-        json.dumps(update),
-    )
+    update_message = dashboard_message(serial, update)
 
     async def session(ws: web.WebSocketResponse) -> None:
         await accept_stomp_connection(ws, frames)
         await ws.send_str(
             encode_stomp_ws_message(StompMessageType.ERROR, {"message": "Hiccup"})
         )
+        await ws.send_str(
+            encode_stomp_ws_message(StompMessageType.CONNECTED, {"version": "1.2"})
+        )
+        await ws.send_str("not a STOMP frame")
         await ws.send_str(update_message)
         await ws.send_str(update_message)
         await ws.close()
@@ -231,12 +183,52 @@ async def test_websocket_protocol_error_reconnects(
         )
         await client.websocket.disconnect()
 
-    assert (
-        "Websocket disconnected with error: Invalid UTF-8 text message" in caplog.text
-    )
+    assert "Invalid UTF-8 text message" in caplog.text
     connect_callback.assert_called_once()
     assert len(mock_aiointercept.requests[HANDSHAKE_KEY]) == 2
     assert disconnect_callback.call_count == 2
+    assert client.websocket.connected is False
+
+
+@pytest.mark.parametrize("close_type", [WSMsgType.CLOSING, WSMsgType.CLOSED])
+async def test_websocket_close_message_reconnects(
+    mock_aiointercept: aiointercept, serial: str, close_type: WSMsgType
+) -> None:
+    """A CLOSING or CLOSED message ends the session and triggers a reconnect.
+
+    aiohttp's iterator ends on close messages before the client sees them, so
+    use a websocket class that hands the server's close to the client as
+    ``close_type`` and records whether the client keeps reading afterwards.
+    """
+    reads_after_close = 0
+
+    class CloseSurfacingWebSocket(ClientWebSocketResponse):
+        """Websocket response that surfaces the close message to its iterator."""
+
+        async def __anext__(self) -> WSMessage:
+            nonlocal reads_after_close
+            if self.closed:
+                reads_after_close += 1
+                raise StopAsyncIteration
+            msg = await self.receive()
+            if msg.type is WSMsgType.CLOSE:
+                return WSMessage(close_type, None, None)
+            return msg
+
+    async def session(ws: web.WebSocketResponse) -> None:
+        await accept_stomp_connection(ws, [])
+        await ws.close()
+
+    add_websocket_endpoint(mock_aiointercept, session)
+    mock_aiointercept.get(WEBSOCKET_URL, status=401)
+
+    async with ClientSession(ws_response_class=CloseSurfacingWebSocket) as http:
+        client = LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, http)
+        async with asyncio.timeout(5):
+            await client.websocket_connect(serial)
+
+    assert reads_after_close == 0
+    assert len(mock_aiointercept.requests[HANDSHAKE_KEY]) == 2
     assert client.websocket.connected is False
 
 
