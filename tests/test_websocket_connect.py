@@ -4,46 +4,30 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, WSMsgType, web
 from aiointercept import CallbackResult, aiointercept
-from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1, generate_private_key
 from yarl import URL
 
 from pylamarzocco.clients import LaMarzoccoCloudClient
 from pylamarzocco.const import BASE_URL, StompMessageType
 from pylamarzocco.models import ThingDashboardWebsocketConfig
-from pylamarzocco.util import (
-    InstallationKey,
-    decode_stomp_ws_message,
-    encode_stomp_ws_message,
-)
+from pylamarzocco.util import decode_stomp_ws_message, encode_stomp_ws_message
 
-from .conftest import load_fixture
+from .conftest import MOCK_SECRET_DATA, load_fixture
+
+pytestmark = pytest.mark.usefixtures("mock_access_token")
 
 # aiointercept only restores the https scheme of intercepted requests, so the
 # client's wss:// endpoint has to be registered under https://.
 WEBSOCKET_URL = f"https://{BASE_URL}/ws/connect"
 HANDSHAKE_KEY = ("GET", URL(WEBSOCKET_URL))
 
-MOCK_SECRET_DATA = InstallationKey(
-    secret=bytes(32),
-    private_key=generate_private_key(SECP256R1()),
-    installation_id="mock-installation-id",
-)
-
 StompFrame = tuple[StompMessageType, dict[str, str], str | None]
-
-
-@pytest.fixture(name="client")
-async def fixture_client() -> AsyncGenerator[LaMarzoccoCloudClient]:
-    """Return a cloud client whose session is closed after the test."""
-    async with ClientSession() as session:
-        yield LaMarzoccoCloudClient("test", "test", MOCK_SECRET_DATA, session)
 
 
 def add_websocket_endpoint(

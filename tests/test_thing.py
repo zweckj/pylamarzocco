@@ -4,42 +4,25 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoCloudClient
+from pylamarzocco import LaMarzoccoBluetoothClient
 from pylamarzocco.const import MachineMode, MachineState, WidgetType
 from pylamarzocco.devices._thing import LaMarzoccoThing
 from pylamarzocco.exceptions import CloudOnlyFunctionality
 from pylamarzocco.models import (
-    MachineStatus,
     ThingDashboardConfig,
-    ThingDashboardWebsocketConfig,
     ThingSettings,
     ThingStatistics,
     UpdateDetails,
     WebSocketDetails,
-    Widget,
 )
 
-
-@pytest.fixture(name="mock_cloud_client")
-def mock_lm_cloud_client() -> MagicMock:
-    """Mock the LaMarzoccoCloudClient."""
-    return MagicMock(spec=LaMarzoccoCloudClient)
+from .conftest import machine_status, websocket_config
 
 
 @pytest.fixture(name="mock_thing")
 def mock_lm_thing(mock_cloud_client: MagicMock) -> LaMarzoccoThing:
     """Mock a thing with a cloud client."""
     return LaMarzoccoThing(serial_number="MR123456", cloud_client=mock_cloud_client)
-
-
-def _machine_status() -> MachineStatus:
-    return MachineStatus(
-        status=MachineState.STANDBY,
-        available_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
-        mode=MachineMode.STANDBY,
-        next_status=None,
-        brewing_start_time=None,
-    )
 
 
 async def test_cloud_only_without_cloud_client() -> None:
@@ -87,37 +70,28 @@ async def test_ensure_token_valid(
     mock_cloud_client.async_get_access_token.assert_called_once()
 
 
-async def test_get_dashboard(
-    mock_thing: LaMarzoccoThing, mock_cloud_client: MagicMock
+@pytest.mark.parametrize(
+    ("method", "cloud_method", "attribute", "model"),
+    [
+        ("get_dashboard", "get_thing_dashboard", "dashboard", ThingDashboardConfig),
+        ("get_settings", "get_thing_settings", "settings", ThingSettings),
+        ("get_statistics", "get_thing_statistics", "statistics", ThingStatistics),
+    ],
+)
+async def test_get_thing_data(
+    mock_thing: LaMarzoccoThing,
+    mock_cloud_client: MagicMock,
+    method: str,
+    cloud_method: str,
+    attribute: str,
+    model: type,
 ) -> None:
-    """Test getting the dashboard."""
-    dashboard = ThingDashboardConfig(serial_number="MR123456")
-    mock_cloud_client.get_thing_dashboard.return_value = dashboard
-    await mock_thing.get_dashboard()
-    mock_cloud_client.get_thing_dashboard.assert_called_once_with("MR123456")
-    assert mock_thing.dashboard is dashboard
-
-
-async def test_get_settings(
-    mock_thing: LaMarzoccoThing, mock_cloud_client: MagicMock
-) -> None:
-    """Test getting the settings."""
-    settings = ThingSettings(serial_number="MR123456")
-    mock_cloud_client.get_thing_settings.return_value = settings
-    await mock_thing.get_settings()
-    mock_cloud_client.get_thing_settings.assert_called_once_with("MR123456")
-    assert mock_thing.settings is settings
-
-
-async def test_get_statistics(
-    mock_thing: LaMarzoccoThing, mock_cloud_client: MagicMock
-) -> None:
-    """Test getting the statistics."""
-    statistics = ThingStatistics(serial_number="MR123456")
-    mock_cloud_client.get_thing_statistics.return_value = statistics
-    await mock_thing.get_statistics()
-    mock_cloud_client.get_thing_statistics.assert_called_once_with("MR123456")
-    assert mock_thing.statistics is statistics
+    """Test fetching the dashboard, settings and statistics."""
+    data = model(serial_number="MR123456")
+    getattr(mock_cloud_client, cloud_method).return_value = data
+    await getattr(mock_thing, method)()
+    getattr(mock_cloud_client, cloud_method).assert_called_once_with("MR123456")
+    assert getattr(mock_thing, attribute) is data
 
 
 async def test_get_firmware(
@@ -159,24 +133,15 @@ async def test_connect_dashboard_websocket(
     assert kwargs["auto_reconnect"] is False
 
     # an update with widgets replaces the dashboard config
-    status = _machine_status()
-    config = ThingDashboardWebsocketConfig(
-        widgets=[Widget(code=WidgetType.CM_MACHINE_STATUS, index=1, output=status)],
-        config={WidgetType.CM_MACHINE_STATUS: status},
-        connected=True,
-        connection_date=0,
-        uuid="uuid",
-        commands=[],
-    )
+    status = machine_status(MachineState.STANDBY, mode=MachineMode.STANDBY)
+    config = websocket_config(status)
     kwargs["notification_callback"](config)
     assert mock_thing.dashboard.config == {WidgetType.CM_MACHINE_STATUS: status}
     update_callback.assert_called_once_with(config)
 
     # an update without widgets leaves the dashboard untouched
     update_callback.reset_mock()
-    empty_config = ThingDashboardWebsocketConfig(
-        widgets=[], config={}, connected=True, connection_date=0, uuid="uuid", commands=[]
-    )
+    empty_config = websocket_config(None)
     kwargs["notification_callback"](empty_config)
     assert mock_thing.dashboard.config == {WidgetType.CM_MACHINE_STATUS: status}
     update_callback.assert_called_once_with(empty_config)

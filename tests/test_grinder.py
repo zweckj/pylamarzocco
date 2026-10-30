@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pylamarzocco import LaMarzoccoCloudClient, LaMarzoccoGrinder
+from pylamarzocco import LaMarzoccoGrinder
 from pylamarzocco.const import (
     DoseIndex,
     GrinderDoseMode,
@@ -27,13 +27,6 @@ from pylamarzocco.models import (
     GrinderSpeedLevel,
     GrinderSpeedLevelSetting,
 )
-
-
-@pytest.fixture(name="mock_cloud_client")
-def mock_lm_cloud_client() -> MagicMock:
-    """Mock the LaMarzoccoCloudClient."""
-    client = MagicMock(spec=LaMarzoccoCloudClient)
-    return client
 
 
 @pytest.fixture(name="mock_grinder")

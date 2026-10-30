@@ -1,13 +1,13 @@
 """Test Bluetooth dashboard functionality."""
 
 from datetime import datetime, timezone
-from typing import cast
-from unittest.mock import AsyncMock, MagicMock
+from typing import Any, cast
+from unittest.mock import MagicMock
 
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from pylamarzocco import LaMarzoccoBluetoothClient, LaMarzoccoMachine
+from pylamarzocco import LaMarzoccoMachine
 from pylamarzocco.const import (
     BoilerStatus,
     BoilerType,
@@ -31,12 +31,23 @@ from pylamarzocco.models import (
 )
 
 
-@pytest.fixture(name="mock_bluetooth_client")
-def mock_lm_bluetooth_client() -> MagicMock:
-    """Mock the LaMarzoccoBluetoothClient."""
-    client = MagicMock(spec=LaMarzoccoBluetoothClient)
-    client.get_plumbed_in = AsyncMock(return_value=False)
-    return client
+def _capabilities(
+    family: ModelName, **overrides: Any
+) -> BluetoothMachineCapabilities:
+    """Return machine capabilities of a single group machine."""
+    return BluetoothMachineCapabilities(
+        **{
+            "family": family,
+            "groups_number": 1,
+            "coffee_boilers_number": 1,
+            "has_cup_warmer": False,
+            "steam_boilers_number": 1,
+            "tea_doses_number": 0,
+            "machine_modes": [MachineMode.BREWING_MODE, MachineMode.STANDBY],
+            "scheduling_type": "weekly",
+            **overrides,
+        }
+    )
 
 
 @pytest.fixture(name="mock_machine_with_dashboard")
@@ -102,38 +113,25 @@ async def test_get_dashboard_from_bluetooth(
 ) -> None:
     """Test filling dashboard from Bluetooth."""
     # Set up mock responses
-    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
-        return_value=BluetoothMachineCapabilities(
-            family=ModelName.LINEA_MICRA,
-            groups_number=1,
-            coffee_boilers_number=1,
-            has_cup_warmer=False,
-            steam_boilers_number=1,
-            tea_doses_number=0,
-            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
-            scheduling_type="weekly",
-        )
+    mock_bluetooth_client.get_machine_capabilities.return_value = _capabilities(
+        ModelName.LINEA_MICRA,
     )
-    mock_bluetooth_client.get_machine_mode = AsyncMock(
-        return_value=MachineMode.BREWING_MODE
-    )
-    mock_bluetooth_client.get_boilers = AsyncMock(
-        return_value=[
-            BluetoothBoilerDetails(
-                id=BoilerType.COFFEE,
-                is_enabled=True,
-                target=95,
-                current=94,
-            ),
-            BluetoothBoilerDetails(
-                id=BoilerType.STEAM,
-                is_enabled=False,
-                target=128,
-                current=50,
-            ),
-        ]
-    )
-    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE,
+            is_enabled=True,
+            target=95,
+            current=94,
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM,
+            is_enabled=False,
+            target=128,
+            current=50,
+        ),
+    ]
+    mock_bluetooth_client.get_tank_status.return_value = True
 
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
@@ -197,17 +195,11 @@ async def test_get_model_info_from_bluetooth(
 ) -> None:
     """Test fetching model information from Bluetooth."""
     # Set up mock responses
-    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
-        return_value=BluetoothMachineCapabilities(
-            family=ModelName.GS3,
-            groups_number=3,
-            coffee_boilers_number=2,
-            has_cup_warmer=True,
-            steam_boilers_number=1,
-            tea_doses_number=0,
-            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
-            scheduling_type="weekly",
-        )
+    mock_bluetooth_client.get_machine_capabilities.return_value = _capabilities(
+        ModelName.GS3,
+        groups_number=3,
+        coffee_boilers_number=2,
+        has_cup_warmer=True,
     )
 
     # Call the method to fetch model info
@@ -231,38 +223,26 @@ async def test_get_dashboard_initializes_missing_widgets(
     mock_machine_with_dashboard.dashboard.config.clear()
 
     # Set up mock responses
-    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
-        return_value=BluetoothMachineCapabilities(
-            family=ModelName.LINEA_MINI_R,
-            groups_number=1,
-            coffee_boilers_number=1,
-            has_cup_warmer=True,
-            steam_boilers_number=1,
-            tea_doses_number=0,
-            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
-            scheduling_type="weekly",
-        )
+    mock_bluetooth_client.get_machine_capabilities.return_value = _capabilities(
+        ModelName.LINEA_MINI_R,
+        has_cup_warmer=True,
     )
-    mock_bluetooth_client.get_machine_mode = AsyncMock(
-        return_value=MachineMode.BREWING_MODE
-    )
-    mock_bluetooth_client.get_boilers = AsyncMock(
-        return_value=[
-            BluetoothBoilerDetails(
-                id=BoilerType.COFFEE,
-                is_enabled=True,
-                target=92,
-                current=91,
-            ),
-            BluetoothBoilerDetails(
-                id=BoilerType.STEAM,
-                is_enabled=True,
-                target=130,
-                current=125,
-            ),
-        ]
-    )
-    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE,
+            is_enabled=True,
+            target=92,
+            current=91,
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM,
+            is_enabled=True,
+            target=130,
+            current=125,
+        ),
+    ]
+    mock_bluetooth_client.get_tank_status.return_value = True
 
     # First fetch model info explicitly
     await mock_machine_with_dashboard.get_model_info_from_bluetooth()
@@ -298,38 +278,28 @@ async def test_get_dashboard_without_steam_level_support(
     mock_machine_with_dashboard.dashboard.config.clear()
 
     # Set up mock responses for GS3 (does not support steam level)
-    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
-        return_value=BluetoothMachineCapabilities(
-            family=ModelName.GS3,
-            groups_number=3,
-            coffee_boilers_number=2,
-            has_cup_warmer=True,
-            steam_boilers_number=1,
-            tea_doses_number=0,
-            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
-            scheduling_type="weekly",
-        )
+    mock_bluetooth_client.get_machine_capabilities.return_value = _capabilities(
+        ModelName.GS3,
+        groups_number=3,
+        coffee_boilers_number=2,
+        has_cup_warmer=True,
     )
-    mock_bluetooth_client.get_machine_mode = AsyncMock(
-        return_value=MachineMode.BREWING_MODE
-    )
-    mock_bluetooth_client.get_boilers = AsyncMock(
-        return_value=[
-            BluetoothBoilerDetails(
-                id=BoilerType.COFFEE,
-                is_enabled=True,
-                target=94,
-                current=93,
-            ),
-            BluetoothBoilerDetails(
-                id=BoilerType.STEAM,
-                is_enabled=True,
-                target=128,
-                current=120,
-            ),
-        ]
-    )
-    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE,
+            is_enabled=True,
+            target=94,
+            current=93,
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM,
+            is_enabled=True,
+            target=128,
+            current=120,
+        ),
+    ]
+    mock_bluetooth_client.get_tank_status.return_value = True
 
     # First fetch model info explicitly
     await mock_machine_with_dashboard.get_model_info_from_bluetooth()
@@ -373,38 +343,25 @@ async def test_get_dashboard_mini_original_temperature_only(
     mock_machine_with_dashboard.dashboard.config.clear()
 
     # Set up mock responses for original Linea Mini
-    mock_bluetooth_client.get_machine_capabilities = AsyncMock(
-        return_value=BluetoothMachineCapabilities(
-            family=ModelName.LINEA_MINI,
-            groups_number=1,
-            coffee_boilers_number=1,
-            has_cup_warmer=False,
-            steam_boilers_number=1,
-            tea_doses_number=0,
-            machine_modes=[MachineMode.BREWING_MODE, MachineMode.STANDBY],
-            scheduling_type="weekly",
-        )
+    mock_bluetooth_client.get_machine_capabilities.return_value = _capabilities(
+        ModelName.LINEA_MINI,
     )
-    mock_bluetooth_client.get_machine_mode = AsyncMock(
-        return_value=MachineMode.BREWING_MODE
-    )
-    mock_bluetooth_client.get_boilers = AsyncMock(
-        return_value=[
-            BluetoothBoilerDetails(
-                id=BoilerType.COFFEE,
-                is_enabled=True,
-                target=93,
-                current=92,
-            ),
-            BluetoothBoilerDetails(
-                id=BoilerType.STEAM,
-                is_enabled=True,
-                target=127,
-                current=115,
-            ),
-        ]
-    )
-    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE,
+            is_enabled=True,
+            target=93,
+            current=92,
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM,
+            is_enabled=True,
+            target=127,
+            current=115,
+        ),
+    ]
+    mock_bluetooth_client.get_tank_status.return_value = True
 
     # First fetch model info explicitly
     await mock_machine_with_dashboard.get_model_info_from_bluetooth()
@@ -445,11 +402,6 @@ async def test_set_power_updates_dashboard(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that set_power updates dashboard on success."""
-    mock_bluetooth_client.set_power = AsyncMock(
-        return_value=BluetoothCommandStatus(
-            id="ble", message="power on", status="success"
-        )
-    )
 
     result = await mock_machine_with_dashboard.set_power(True)
 
@@ -474,12 +426,6 @@ async def test_set_power_off_updates_dashboard(
     )
     machine_status_temp.mode = MachineMode.BREWING_MODE
 
-    mock_bluetooth_client.set_power = AsyncMock(
-        return_value=BluetoothCommandStatus(
-            id="ble", message="power on", status="success"
-        )
-    )
-
     result = await mock_machine_with_dashboard.set_power(False)
 
     assert result is True
@@ -495,11 +441,6 @@ async def test_set_steam_updates_dashboard(
     mock_bluetooth_client: MagicMock,
 ) -> None:
     """Test that set_steam updates dashboard on success."""
-    mock_bluetooth_client.set_steam = AsyncMock(
-        return_value=BluetoothCommandStatus(
-            id="ble", message="boiler enable success", status="success"
-        )
-    )
 
     result = await mock_machine_with_dashboard.set_steam(False)
 
@@ -517,11 +458,6 @@ async def test_set_coffee_temp_updates_dashboard(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that set_coffee_target_temperature updates dashboard on success."""
-    mock_bluetooth_client.set_temp = AsyncMock(
-        return_value=BluetoothCommandStatus(
-            id="ble", message="Setting Temperature Success", status="success"
-        )
-    )
 
     result = await mock_machine_with_dashboard.set_coffee_target_temperature(96.5)
 
@@ -539,11 +475,6 @@ async def test_set_steam_level_updates_dashboard(
     mock_bluetooth_client: MagicMock,
 ) -> None:
     """Test that set_steam_level updates dashboard on success."""
-    mock_bluetooth_client.set_temp = AsyncMock(
-        return_value=BluetoothCommandStatus(
-            id="ble", message="Setting Temperature Success", status="success"
-        )
-    )
 
     # Call set_steam_level which uses set_temp for steam boiler
     result = await mock_machine_with_dashboard.set_steam_level(SteamTargetLevel.LEVEL_3)
@@ -564,11 +495,6 @@ async def test_set_steam_temp_updates_dashboard(
 ) -> None:
     """Test that set_steam_target_temperature updates dashboard on success."""
     mock_machine_with_dashboard.dashboard.model_code = ModelCode.GS3
-    mock_bluetooth_client.set_temp = AsyncMock(
-        return_value=BluetoothCommandStatus(
-            id="ble", message="Setting Temperature Success", status="success"
-        )
-    )
 
     result = await mock_machine_with_dashboard.set_steam_target_temperature(122.5)
 
@@ -591,8 +517,8 @@ async def test_failed_command_does_not_update_dashboard(
     )
     original_mode = machine_status_orig.mode
 
-    mock_bluetooth_client.set_power = AsyncMock(
-        return_value=BluetoothCommandStatus(id="ble", message="Failed", status="error")
+    mock_bluetooth_client.set_power.return_value = BluetoothCommandStatus(
+        id="ble", message="Failed", status="error"
     )
 
     result = await mock_machine_with_dashboard.set_power(True)
@@ -618,8 +544,8 @@ async def test_bluetooth_exception_does_not_update_dashboard(
     )
     original_temp = coffee_boiler_orig.target_temperature
 
-    mock_bluetooth_client.set_temp = AsyncMock(
-        side_effect=BluetoothConnectionFailed("Connection lost")
+    mock_bluetooth_client.set_temp.side_effect = BluetoothConnectionFailed(
+        "Connection lost"
     )
 
     # This will fail and return False (no cloud client)
@@ -690,19 +616,17 @@ async def test_get_dashboard_from_bluetooth_statuses(
     expected: tuple[MachineState, BoilerStatus, BoilerStatus, bool],
 ) -> None:
     """Test statuses are derived from mode and water status."""
-    mock_bluetooth_client.get_machine_mode = AsyncMock(return_value=mode)
-    mock_bluetooth_client.get_plumbed_in = AsyncMock(return_value=plumbed_in)
-    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=tank_ok)
-    mock_bluetooth_client.get_boilers = AsyncMock(
-        return_value=[
-            BluetoothBoilerDetails(
-                id=BoilerType.COFFEE, is_enabled=True, target=93, current=92
-            ),
-            BluetoothBoilerDetails(
-                id=BoilerType.STEAM, is_enabled=steam_enabled, target=128, current=120
-            ),
-        ]
-    )
+    mock_bluetooth_client.get_machine_mode.return_value = mode
+    mock_bluetooth_client.get_plumbed_in.return_value = plumbed_in
+    mock_bluetooth_client.get_tank_status.return_value = tank_ok
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.COFFEE, is_enabled=True, target=93, current=92
+        ),
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM, is_enabled=steam_enabled, target=128, current=120
+        ),
+    ]
 
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
@@ -733,17 +657,13 @@ async def test_get_dashboard_from_bluetooth_steam_level(
     level: SteamTargetLevel,
 ) -> None:
     """Test the steam level is derived from the steam boiler target."""
-    mock_bluetooth_client.get_machine_mode = AsyncMock(
-        return_value=MachineMode.BREWING_MODE
-    )
-    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=True)
-    mock_bluetooth_client.get_boilers = AsyncMock(
-        return_value=[
-            BluetoothBoilerDetails(
-                id=BoilerType.STEAM, is_enabled=True, target=target, current=120
-            ),
-        ]
-    )
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
+    mock_bluetooth_client.get_tank_status.return_value = True
+    mock_bluetooth_client.get_boilers.return_value = [
+        BluetoothBoilerDetails(
+            id=BoilerType.STEAM, is_enabled=True, target=target, current=120
+        ),
+    ]
 
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
@@ -759,12 +679,10 @@ async def test_get_dashboard_from_bluetooth_plumb_in_unsupported(
     mock_bluetooth_client: MagicMock,
 ) -> None:
     """Test an unparsable plumb-in response falls back to the tank status."""
-    mock_bluetooth_client.get_machine_mode = AsyncMock(
-        return_value=MachineMode.BREWING_MODE
-    )
-    mock_bluetooth_client.get_plumbed_in = AsyncMock(side_effect=ValueError("bad"))
-    mock_bluetooth_client.get_tank_status = AsyncMock(return_value=False)
-    mock_bluetooth_client.get_boilers = AsyncMock(return_value=[])
+    mock_bluetooth_client.get_machine_mode.return_value = MachineMode.BREWING_MODE
+    mock_bluetooth_client.get_plumbed_in.side_effect = ValueError("bad")
+    mock_bluetooth_client.get_tank_status.return_value = False
+    mock_bluetooth_client.get_boilers.return_value = []
 
     await mock_machine_with_dashboard.get_dashboard_from_bluetooth()
 
