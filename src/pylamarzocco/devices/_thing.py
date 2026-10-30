@@ -14,6 +14,7 @@ from pylamarzocco.models import (
     BaseWidgetOutput,
     ThingDashboardConfig,
     ThingDashboardWebsocketConfig,
+    ThingSchedulingSettings,
     ThingSettings,
     ThingStatistics,
     UpdateDetails,
@@ -86,6 +87,7 @@ class LaMarzoccoThing:
         self.dashboard = ThingDashboardConfig(serial_number=serial_number)
         self.settings = ThingSettings(serial_number=serial_number)
         self.statistics = ThingStatistics(serial_number=serial_number)
+        self.schedule = ThingSchedulingSettings(serial_number=serial_number)
 
     @property
     def websocket(self) -> WebSocketDetails:
@@ -153,6 +155,12 @@ class LaMarzoccoThing:
         )
 
     @cloud_only
+    async def get_schedule(self) -> None:
+        """Get the schedule for a thing."""
+        assert self._cloud_client
+        self.schedule = await self._cloud_client.get_thing_schedule(self.serial_number)
+
+    @cloud_only
     async def get_firmware(self) -> UpdateDetails:
         """Get the firmware details for a thing."""
         assert self._cloud_client
@@ -214,4 +222,5 @@ class LaMarzoccoThing:
             "dashboard": self.dashboard.to_dict() if self.dashboard else None,
             "settings": self.settings.to_dict() if self.settings else None,
             "statistics": self.statistics.to_dict() if self.statistics else None,
+            "schedule": self.schedule.to_dict(),
         }

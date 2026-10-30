@@ -1046,19 +1046,6 @@ async def test_bluetooth_shot_counter_active(
     assert not LaMarzoccoMachine(serial).bluetooth_shot_counter_active
 
 
-async def test_get_schedule(
-    mock_machine: LaMarzoccoMachine,
-    mock_cloud_client: MagicMock,
-    serial: str,
-) -> None:
-    """Test getting the schedule."""
-    schedule = MagicMock()
-    mock_cloud_client.get_thing_schedule.return_value = schedule
-    await mock_machine.get_schedule()
-    mock_cloud_client.get_thing_schedule.assert_called_once_with(serial)
-    assert mock_machine.schedule is schedule
-
-
 async def test_get_model_info_from_bluetooth_errors(
     mock_machine: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,

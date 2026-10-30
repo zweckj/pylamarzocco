@@ -48,7 +48,6 @@ from pylamarzocco.models import (
     SteamBoilerTemperature,
     SteamFlush,
     ThingDashboardWebsocketConfig,
-    ThingSchedulingSettings,
     WakeUpScheduleSettings,
 )
 
@@ -114,7 +113,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
     ) -> None:
         """Set up machine."""
         super().__init__(serial_number, cloud_client, bluetooth_client)
-        self.schedule = ThingSchedulingSettings(serial_number=serial_number)
         self._ble_brewing_update: BluetoothShotCounterUpdate | None = None
         self._last_shot_time: float | None = None
         self._shot_counter_callback: (
@@ -323,12 +321,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
                 # refreshed in place by Bluetooth, which doesn't report the start time
                 self._cloud_machine_status = (widget, widget.status, brewing_start_time)
         self._apply_ble_brewing_state()
-
-    @cloud_only
-    async def get_schedule(self) -> None:
-        """Get the schedule for this machine."""
-        assert self._cloud_client
-        self.schedule = await self._cloud_client.get_thing_schedule(self.serial_number)
 
     async def get_model_info_from_bluetooth(self) -> None:
         """Fetch and update model information from Bluetooth.
@@ -987,14 +979,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             target.dose = value
 
         return result
-
-    @override
-    def to_dict(self) -> dict[Any, Any]:
-        """Return self in dict represenation."""
-        return {
-            **super().to_dict(),
-            "schedule": self.schedule.to_dict() if self.schedule else None,
-        }
 
     async def __bluetooth_command_with_cloud_fallback(
         self,

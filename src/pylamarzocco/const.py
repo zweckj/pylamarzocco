@@ -42,6 +42,15 @@ class GrinderMode(StrEnum):
     POWERED_ON = "PoweredOn"
 
 
+class GrinderStatus(StrEnum):
+    """Grinder statuses."""
+
+    POWERED_ON = "PoweredOn"
+    STANDBY = "StandBy"
+    OFF = "Off"
+    DRYING = "Drying"
+
+
 class GrinderSpeedLevelType(StrEnum):
     """Grinder speed levels."""
 
