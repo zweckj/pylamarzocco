@@ -21,7 +21,7 @@ from aiohttp import (
     WSMessage,
     WSMsgType,
 )
-from aiohttp.client_exceptions import ClientError, InvalidURL
+from aiohttp.client_exceptions import ClientError
 
 from pylamarzocco.const import (
     BASE_URL,
@@ -414,9 +414,6 @@ class LaMarzoccoCloudClient:
                         _LOGGER.debug("WebSocket cancellation requested")
                         await self.websocket.disconnect()
                         raise
-            except InvalidURL:
-                _LOGGER.error("Invalid URL for websocket.")
-                auto_reconnect = False
             except TimeoutError:
                 _LOGGER.debug("Websocket disconnected: Connection timed out")
             except ClientError as err:
@@ -519,13 +516,11 @@ class LaMarzoccoCloudClient:
 
     def __parse_websocket_message(
         self,
-        message: str | None,
+        message: str,
         notification_callback: Callable[[ThingDashboardWebsocketConfig], Any]
         | None = None,
     ) -> None:
         """Parse the websocket message."""
-        if message is None:
-            return
         config = ThingDashboardWebsocketConfig.from_json(message)
 
         # notify if there is the result for a pending command
