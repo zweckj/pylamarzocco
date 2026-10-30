@@ -4,7 +4,7 @@ import json
 
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.const import StompMessageType
+from pylamarzocco.const import CommandStatus, StompMessageType
 from pylamarzocco.models import ThingDashboardWebsocketConfig
 from pylamarzocco.util import decode_stomp_ws_message, encode_stomp_ws_message
 
@@ -32,3 +32,14 @@ async def test_encode_stomp_ws_message(snapshot: SnapshotAssertion) -> None:
     assert msg_type is StompMessageType.MESSAGE
     assert headers_decoded == headers
     assert ThingDashboardWebsocketConfig.from_json(body) == device_config
+
+
+async def test_websocket_config_parses_failed_command() -> None:
+    """A dashboard update carrying a Failed command result parses."""
+
+    fixture = load_fixture("machine", "config_micra.json") | {
+        "commands": [{"id": "mock-id", "status": "Failed", "errorCode": None}]
+    }
+    config = ThingDashboardWebsocketConfig.from_dict(fixture)
+
+    assert config.commands[0].status is CommandStatus.FAILED
