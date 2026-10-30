@@ -14,13 +14,6 @@ from pylamarzocco.const import SmartStandByType, WeekDay
 from ._general import Thing
 
 
-def _deserialize_auto_on_off(value: Any) -> str | AutoOnOff | None:
-    """Deserialize autoOnOff which can be a string, null or an object."""
-    if isinstance(value, dict):
-        return AutoOnOff.from_dict(value)
-    return value
-
-
 def _deserialize_smart_wake_up_sleep(value: Any) -> SmartWakeUpSleepSettings:
     """Deserialize smartWakeUpSleep which can be null or an object."""
     if isinstance(value, dict):
@@ -126,6 +119,25 @@ class EcoMode(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
+class AutoStandBy(DataClassJSONMixin):
+    """Auto standby settings, as reported for grinders."""
+
+    enabled: bool = False
+    stand_by_minutes: int | None = field(
+        metadata=field_options(alias="standByMinutes"), default=None
+    )
+    stand_by_minutes_min: int = field(
+        metadata=field_options(alias="standByMinutesMin"), default=0
+    )
+    stand_by_minutes_max: int = field(
+        metadata=field_options(alias="standByMinutesMax"), default=0
+    )
+    stand_by_minutes_step: int = field(
+        metadata=field_options(alias="standByMinutesStep"), default=1
+    )
+
+
+@dataclass(kw_only=True)
 class AutoOnOff(DataClassJSONMixin):
     """Auto on/off settings."""
 
@@ -170,7 +182,8 @@ class ThingSchedulingSettings(Thing):
         ),
         default_factory=SmartWakeUpSleepSettings,
     )
-    auto_stand_by: str | None = field(
+    # a string for machines, an object for grinders
+    auto_stand_by: AutoStandBy | str | None = field(
         metadata=field_options(alias="autoStandBy"),
         default=None,
     )
@@ -178,10 +191,8 @@ class ThingSchedulingSettings(Thing):
         metadata=field_options(alias="autoStandBySupported"),
         default=False,
     )
-    auto_on_off: str | AutoOnOff | None = field(
-        metadata=field_options(
-            alias="autoOnOff", deserialize=_deserialize_auto_on_off
-        ),
+    auto_on_off: AutoOnOff | str | None = field(
+        metadata=field_options(alias="autoOnOff"),
         default=None,
     )
     auto_on_off_supported: bool = field(

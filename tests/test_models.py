@@ -5,11 +5,17 @@ import logging
 import pytest
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.const import DoseMode, FirmwareType, WidgetType
+from pylamarzocco.const import DoseMode, FirmwareType, GrinderStatus, WidgetType
 from pylamarzocco.models import (
     AutoOnOff,
+    AutoStandBy,
     BrewingPressureSettings,
     EcoMode,
+    GrinderHopperOpened,
+    GrinderMachineStatus,
+    GrinderMirrorDoses,
+    GrinderSpeed,
+    GrinderSpeedAuto,
     GroupDosesSettings,
     HotWaterDose,
     ProfileSettings,
@@ -68,6 +74,80 @@ def test_schedule_auto_on_off_string() -> None:
     fixture = load_fixture("machine", "schedule.json")
     schedule = ThingSchedulingSettings.from_dict(fixture)
     assert schedule.auto_on_off == "00:30"
+
+
+def test_grinder_schedule_auto_stand_by_object() -> None:
+    """Grinders report autoStandBy as an object with the standby minutes."""
+
+    fixture = load_fixture("machine", "schedule_micra_new.json") | {
+        "autoStandBySupported": True,
+        # shape of the app's AutoStandByResponse
+        "autoStandBy": {
+            "standByMinutes": 15,
+            "standByMinutesMin": 1,
+            "standByMinutesMax": 60,
+            "standByMinutesStep": 1,
+            "enabled": True,
+        },
+    }
+    schedule = ThingSchedulingSettings.from_dict(fixture)
+
+    assert schedule.auto_stand_by == AutoStandBy(
+        enabled=True,
+        stand_by_minutes=15,
+        stand_by_minutes_min=1,
+        stand_by_minutes_max=60,
+        stand_by_minutes_step=1,
+    )
+
+
+def test_swan_dashboard_auto_speed() -> None:
+    """Swan dashboard with auto speed, mirror doses, hopper alarm and drying."""
+
+    fixture = load_fixture("grinder", "dashboard_swan.json")
+    # extend the dashboard with the widget shapes of the app's DTOs
+    outputs = {widget["code"]: widget["output"] for widget in fixture["widgets"]}
+    outputs["GMachineStatus"]["status"] = "Drying"
+    outputs["GSpeed"]["doses"]["DoseA"] |= {"autoEnabled": True, "groupIndex": 1}
+    outputs["GSpeed"] |= {
+        "speedAutoSupported": True,
+        "speedAuto": {
+            "doseMode": "MassType",
+            "availableDoseModes": ["MassType", "PulsesType"],
+            "extractionSeconds": 28,
+            "doseMass": 36,
+            "dosePulses": None,
+            "rateLock": False,
+        },
+    }
+    fixture["widgets"] += [
+        {"code": "GMirrorDoses", "index": 1, "output": {"enabled": True}},
+        {"code": "GHopperOpened", "index": 1, "output": {"allarm": False}},
+    ]
+    dashboard = ThingDashboardConfig.from_dict(fixture)
+
+    status = dashboard.config[WidgetType.G_MACHINE_STATUS]
+    assert isinstance(status, GrinderMachineStatus)
+    assert status.status is GrinderStatus.DRYING
+
+    speed = dashboard.config[WidgetType.G_SPEED]
+    assert isinstance(speed, GrinderSpeed)
+    assert speed.doses["DoseA"].auto_enabled is True
+    assert speed.doses["DoseA"].group_index == 1
+    assert speed.speed_auto == GrinderSpeedAuto(
+        dose_mode=DoseMode.MASS_TYPE,
+        available_dose_modes=[DoseMode.MASS_TYPE, DoseMode.PULSES_TYPE],
+        extraction_seconds=28,
+        dose_mass=36,
+    )
+
+    mirror_doses = dashboard.config[WidgetType.G_MIRROR_DOSES]
+    assert isinstance(mirror_doses, GrinderMirrorDoses)
+    assert mirror_doses.enabled is True
+
+    hopper = dashboard.config[WidgetType.G_HOPPER_OPENED]
+    assert isinstance(hopper, GrinderHopperOpened)
+    assert hopper.allarm is False
 
 
 def test_strada_dashboard_group_doses() -> None:

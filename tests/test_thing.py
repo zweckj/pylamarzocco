@@ -10,6 +10,7 @@ from pylamarzocco.devices import LaMarzoccoThing
 from pylamarzocco.exceptions import CloudOnlyFunctionality
 from pylamarzocco.models import (
     ThingDashboardConfig,
+    ThingSchedulingSettings,
     ThingSettings,
     ThingStatistics,
     UpdateDetails,
@@ -77,6 +78,7 @@ async def test_ensure_token_valid(
         ("get_dashboard", "get_thing_dashboard", "dashboard", ThingDashboardConfig),
         ("get_settings", "get_thing_settings", "settings", ThingSettings),
         ("get_statistics", "get_thing_statistics", "statistics", ThingStatistics),
+        ("get_schedule", "get_thing_schedule", "schedule", ThingSchedulingSettings),
     ],
 )
 async def test_get_thing_data(
@@ -88,7 +90,7 @@ async def test_get_thing_data(
     attribute: str,
     model: type,
 ) -> None:
-    """Test fetching the dashboard, settings and statistics."""
+    """Test fetching the dashboard, settings, statistics and schedule."""
     data = model(serial_number=serial)
     getattr(mock_cloud_client, cloud_method).return_value = data
     await getattr(mock_thing, method)()
@@ -156,3 +158,4 @@ async def test_to_dict(mock_thing: LaMarzoccoThing, serial: str) -> None:
     assert result["dashboard"] == mock_thing.dashboard.to_dict()
     assert result["settings"] == mock_thing.settings.to_dict()
     assert result["statistics"] == mock_thing.statistics.to_dict()
+    assert result["schedule"] == mock_thing.schedule.to_dict()

@@ -905,12 +905,10 @@ class LaMarzoccoCloudClient:
         self,
         serial_number: str,
         enabled: bool,
-        index: int = 1,
     ) -> bool:
         """Enable or disable the barista light of a grinder."""
-        data = {"index": index, "enabled": enabled}
-        return await self.__execute_command(
-            serial_number, "GrinderSettingBaristaLightEnabled", data
+        return await self.__set_enabled(
+            serial_number, "GrinderSettingBaristaLightEnabled", enabled
         )
 
     async def set_grinder_grind_with(
@@ -919,7 +917,7 @@ class LaMarzoccoCloudClient:
         mode: GrinderGrindWithMode,
     ) -> bool:
         """Set the grind-with mode of a grinder."""
-        data = {"index": 1, "mode": str(mode)}
+        data = {"mode": str(mode)}
         return await self.__execute_command(
             serial_number, "GrinderSettingGrindWithMode", data
         )
@@ -930,17 +928,9 @@ class LaMarzoccoCloudClient:
         dose_index: DoseIndex,
         dose: float,
         mode: GrinderDoseMode,
-        speed_level: GrinderSpeedLevelType | None = None,
     ) -> bool:
-        """Set the dose, and optionally the speed level, of a grinder dose."""
-        data: dict[str, Any] = {
-            "index": 1,
-            "mode": str(mode),
-            "doseIndex": str(dose_index),
-            "dose": dose,
-        }
-        if speed_level is not None:
-            data["speedLevel"] = str(speed_level)
+        """Set a grinder dose."""
+        data = {"mode": str(mode), "doseIndex": str(dose_index), "dose": dose}
         return await self.__execute_command(
             serial_number, "GrinderSettingDose", data
         )
@@ -951,9 +941,94 @@ class LaMarzoccoCloudClient:
         revolutions: float,
     ) -> bool:
         """Set the additional ("more dose") revolutions of a grinder."""
-        data = {"index": 1, "revolutions": revolutions}
+        data = {"revolutions": revolutions}
         return await self.__execute_command(
             serial_number, "GrinderSettingMoreDose", data
+        )
+
+    async def set_grinder_single_dose_mode(
+        self,
+        serial_number: str,
+        enabled: bool,
+    ) -> bool:
+        """Enable or disable the single dose mode of a grinder."""
+        return await self.__set_enabled(
+            serial_number, "GrinderSettingSingleDoseModeEnabled", enabled
+        )
+
+    async def set_grinder_mirror_doses(
+        self,
+        serial_number: str,
+        enabled: bool,
+    ) -> bool:
+        """Enable or disable mirroring the doses of a grinder."""
+        return await self.__set_enabled(
+            serial_number, "GrinderSettingMirrorDosesEnabled", enabled
+        )
+
+    async def set_grinder_speed(
+        self,
+        serial_number: str,
+        dose_index: DoseIndex,
+        speed_level: GrinderSpeedLevelType,
+    ) -> bool:
+        """Set the speed level of a grinder dose."""
+        data = {"doseIndex": str(dose_index), "speedLevel": str(speed_level)}
+        return await self.__execute_command(
+            serial_number, "GrinderSettingSpeedForDose", data
+        )
+
+    async def set_grinder_auto_speed_enabled(
+        self,
+        serial_number: str,
+        dose_index: DoseIndex,
+        enabled: bool,
+        group_index: int = 1,
+    ) -> bool:
+        """Enable or disable the automatic speed of a grinder dose.
+
+        The automatic speed follows the extraction of the given group of the
+        coffee machine in the same coffee station.
+        """
+        data = {
+            "doseIndex": str(dose_index),
+            "groupIndex": group_index,
+            "enabled": enabled,
+        }
+        return await self.__execute_command(
+            serial_number, "GrinderSettingAutoSpeedDoseEnabled", data
+        )
+
+    async def set_grinder_auto_speed_reference(
+        self,
+        serial_number: str,
+        dose_mode: DoseMode,
+        extraction_seconds: float | None = None,
+        dose_mass: float | None = None,
+        dose_pulses: float | None = None,
+        rate_lock: bool = False,
+    ) -> bool:
+        """Set the reference extraction the automatic grinder speed adapts to."""
+        data = {
+            "doseMode": str(dose_mode),
+            "extractionSeconds": extraction_seconds,
+            "doseMass": dose_mass,
+            "dosePulses": dose_pulses,
+            "rateLock": rate_lock,
+        }
+        return await self.__execute_command(
+            serial_number, "GrinderSettingAutoSpeedDose", data
+        )
+
+    async def set_grinder_auto_standby(
+        self,
+        serial_number: str,
+        minutes: int,
+    ) -> bool:
+        """Set the minutes of inactivity after which a grinder goes to standby."""
+        data = {"standByMinutes": minutes}
+        return await self.__execute_command(
+            serial_number, "GrinderSettingAutoStandBy", data
         )
 
     async def change_brew_by_weight_dose_mode(

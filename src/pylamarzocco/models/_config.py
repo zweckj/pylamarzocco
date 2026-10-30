@@ -21,6 +21,7 @@ from pylamarzocco.const import (
     GrinderGrindWithMode,
     GrinderMode,
     GrinderSpeedLevelType,
+    GrinderStatus,
     MachineMode,
     MachineState,
     PreExtractionMode,
@@ -568,7 +569,7 @@ class GrinderMachineStatus(BaseWidgetOutput):
     """Grinder machine status configuration."""
 
     widget_type = WidgetType.G_MACHINE_STATUS
-    status: GrinderMode
+    status: GrinderStatus
     available_modes: list[GrinderMode] = field(
         metadata=field_options(alias="availableModes")
     )
@@ -666,6 +667,53 @@ class GrinderSpeedLevel(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
+class GrinderSpeedAuto(DataClassJSONMixin):
+    """Reference extraction the grinder adapts its speed to."""
+
+    dose_mode: DoseMode = field(metadata=field_options(alias="doseMode"))
+    available_dose_modes: list[DoseMode] = field(
+        metadata=field_options(alias="availableDoseModes"), default_factory=list
+    )
+    extraction_seconds: float | None = field(
+        metadata=field_options(alias="extractionSeconds"), default=None
+    )
+    extraction_seconds_min: float | None = field(
+        metadata=field_options(alias="extractionSecondsMin"), default=None
+    )
+    extraction_seconds_max: float | None = field(
+        metadata=field_options(alias="extractionSecondsMax"), default=None
+    )
+    extraction_seconds_step: float | None = field(
+        metadata=field_options(alias="extractionSecondsStep"), default=None
+    )
+    dose_mass: float | None = field(
+        metadata=field_options(alias="doseMass"), default=None
+    )
+    dose_mass_min: float | None = field(
+        metadata=field_options(alias="doseMassMin"), default=None
+    )
+    dose_mass_max: float | None = field(
+        metadata=field_options(alias="doseMassMax"), default=None
+    )
+    dose_mass_step: float | None = field(
+        metadata=field_options(alias="doseMassStep"), default=None
+    )
+    dose_pulses: float | None = field(
+        metadata=field_options(alias="dosePulses"), default=None
+    )
+    dose_pulses_min: float | None = field(
+        metadata=field_options(alias="dosePulsesMin"), default=None
+    )
+    dose_pulses_max: float | None = field(
+        metadata=field_options(alias="dosePulsesMax"), default=None
+    )
+    dose_pulses_step: float | None = field(
+        metadata=field_options(alias="dosePulsesStep"), default=None
+    )
+    rate_lock: bool = field(metadata=field_options(alias="rateLock"), default=False)
+
+
+@dataclass(kw_only=True)
 class GrinderSpeed(BaseWidgetOutput):
     """Grinder speed configuration."""
 
@@ -673,7 +721,25 @@ class GrinderSpeed(BaseWidgetOutput):
     doses: dict[str, GrinderSpeedLevel]
     groups_number: int = field(metadata=field_options(alias="groupsNumber"))
     speed_auto_supported: bool = field(metadata=field_options(alias="speedAutoSupported"))
-    speed_auto: str | None = field(metadata=field_options(alias="speedAuto"), default=None)
+    speed_auto: GrinderSpeedAuto | None = field(
+        metadata=field_options(alias="speedAuto"), default=None
+    )
+
+
+@dataclass(kw_only=True)
+class GrinderMirrorDoses(BaseWidgetOutput):
+    """Grinder mirror doses configuration."""
+
+    widget_type = WidgetType.G_MIRROR_DOSES
+    enabled: bool
+
+
+@dataclass(kw_only=True)
+class GrinderHopperOpened(BaseWidgetOutput):
+    """Grinder hopper opened alarm."""
+
+    widget_type = WidgetType.G_HOPPER_OPENED
+    allarm: bool
 
 
 @dataclass(kw_only=True)
