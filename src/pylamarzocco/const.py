@@ -127,6 +127,7 @@ class CommandStatus(StrEnum):
 
     SUCCESS = "Success"
     ERROR = "Error"
+    FAILED = "Failed"
     TIMEOUT = "Timeout"
     PENDING = "Pending"
     IN_PROGRESS = "InProgress"

@@ -382,6 +382,24 @@ async def test_command_ws_validation(
     assert result is expected
 
 
+async def test_failed_command_returns_without_waiting_for_timeout(
+    mock_aiointercept: aiointercept,
+    serial: str,
+    client: LaMarzoccoCloudClient,
+) -> None:
+    """A refused command reports False from its Failed status, not from the timeout."""
+
+    url = f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineChangeMode"
+    mock_aiointercept.post(url=url, status=200, payload=MOCK_COMMAND_RESPONSE)
+    commands = [{"id": "mock-id", "status": "Failed", "errorCode": None}]
+
+    async with websocket_pushing(mock_aiointercept, client, serial, commands):
+        async with asyncio.timeout(1):
+            result = await client.set_power(serial, False)
+
+    assert result is False
+
+
 async def test_pending_command_ws_validation_timeout(
     mock_aiointercept: aiointercept,
     serial: str,
