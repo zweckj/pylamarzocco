@@ -15,6 +15,11 @@ class MachineMode(StrEnum):
     ECO_MODE = "EcoMode"
     STANDBY = "StandBy"
 
+    @classmethod
+    def from_power(cls, enabled: bool) -> MachineMode:
+        """Return the mode for turning the machine on or off."""
+        return cls.BREWING_MODE if enabled else cls.STANDBY
+
 
 class MachineState(StrEnum):
     """Machine statuses."""

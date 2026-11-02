@@ -14,6 +14,7 @@ from typing import Any
 
 from aiohttp import (
     ClientConnectionError,
+    ClientResponse,
     ClientSession,
     ClientTimeout,
     ClientWebSocketResponse,
@@ -126,30 +127,14 @@ class LaMarzoccoCloudClient:
         body = {
             "pk": self._installation_key.public_key_b64,
         }
-        try:
-            response = await self._client.post(
-                url=f"{CUSTOMER_APP_URL}/auth/init",
-                headers=headers,
-                json=body,
-            )
-        except ClientError as ex:
-            raise RequestNotSuccessful(
-                "Error during HTTP request."
-                + f"Request auth to endpoint failed with error: {ex}"
-            ) from ex
-
-        if is_success(response):
-            _LOGGER.info("Registration successful.")
-            return
-
-        if response.status == 401:
-            _LOGGER.debug("Authentication failed: %s", await response.text())
-            raise AuthFail("Invalid username or password")
-
-        raise RequestNotSuccessful(
-            f"Request to auth endpoint failed with status code {response.status}"
-            + f"response: {await response.text()}"
+        await self._request(
+            HTTPMethod.POST,
+            f"{CUSTOMER_APP_URL}/auth/init",
+            headers=headers,
+            data=body,
+            auth_fail_message="Invalid username or password",
         )
+        _LOGGER.info("Registration successful.")
 
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
@@ -189,29 +174,14 @@ class LaMarzoccoCloudClient:
 
     async def __async_get_token(self, url: str, data: dict[str, Any]) -> AccessToken:
         """Wrapper for a token request."""
-        try:
-            response = await self._client.post(
-                url=url,
-                headers=generate_extra_request_headers(self._installation_key),
-                json=data,
-            )
-        except ClientError as ex:
-            raise RequestNotSuccessful(
-                "Error during HTTP request."
-                + f"Request auth to endpoint failed with error: {ex}"
-            ) from ex
-        if is_success(response):
-            json_response = await response.json()
-            return AccessToken.from_dict(json_response)
-
-        if response.status == 401:
-            _LOGGER.debug("Authentication failed: %s", await response.text())
-            raise AuthFail("Invalid username or password")
-
-        raise RequestNotSuccessful(
-            f"Request t auth endpoint failed with status code {response.status}"
-            + f"response: {await response.text()}"
+        response = await self._request(
+            HTTPMethod.POST,
+            url,
+            headers=generate_extra_request_headers(self._installation_key),
+            data=data,
+            auth_fail_message="Invalid username or password",
         )
+        return AccessToken.from_dict(await response.json())
 
     # endregion
 
@@ -230,6 +200,27 @@ class LaMarzoccoCloudClient:
             "Authorization": f"Bearer {access_token}",
         }
 
+        response = await self._request(
+            method, url, headers=headers, data=data, timeout=timeout
+        )
+        if not (await response.read()).strip():
+            _LOGGER.debug("Request to %s successful (empty response)", url)
+            return {}
+        json_response = await response.json()
+        _LOGGER.debug("Request to %s successful", url)
+        _LOGGER.debug("Response: %s", _mask_bluetooth_token(json_response))
+        return json_response
+
+    async def _request(
+        self,
+        method: HTTPMethod,
+        url: str,
+        headers: dict[str, str],
+        data: dict[str, Any] | None = None,
+        timeout: int = 10,
+        auth_fail_message: str = "Authentication failed.",
+    ) -> ClientResponse:
+        """Send a request and map unsuccessful responses to exceptions."""
         try:
             response = await self._client.request(
                 method=method,
@@ -243,19 +234,12 @@ class LaMarzoccoCloudClient:
                 f"Error during HTTP request. Request to endpoint {url} failed with error: {ex}"
             ) from ex
 
-        # ensure status code indicates success
         if is_success(response):
-            if not (await response.read()).strip():
-                _LOGGER.debug("Request to %s successful (empty response)", url)
-                return {}
-            json_response = await response.json()
-            _LOGGER.debug("Request to %s successful", url)
-            _LOGGER.debug("Response: %s", _mask_bluetooth_token(json_response))
-            return json_response
+            return response
 
         if response.status == 401:
             _LOGGER.debug("Authentication failed: %s", await response.text())
-            raise AuthFail("Authentication failed.")
+            raise AuthFail(auth_fail_message)
 
         if response.status == 403:
             text = await response.text()
@@ -564,11 +548,9 @@ class LaMarzoccoCloudClient:
             pending_result = await wait_for(future, PENDING_COMMAND_TIMEOUT)
         except TimeoutError:
             _LOGGER.debug("Timed out waiting for websocket condition")
-            self._pending_commands.pop(cr.id, None)
             return False
-
-        # Clean up the future if it's still in the dictionary
-        self._pending_commands.pop(cr.id, None)
+        finally:
+            self._pending_commands.pop(cr.id, None)
 
         if pending_result.status is CommandStatus.SUCCESS:
             return True
@@ -597,8 +579,7 @@ class LaMarzoccoCloudClient:
         enabled: bool,
     ) -> bool:
         """Turn power of machine on or off"""
-        mode = MachineMode.BREWING_MODE if enabled else MachineMode.STANDBY
-        return await self.set_mode(serial_number, mode)
+        return await self.set_mode(serial_number, MachineMode.from_power(enabled))
 
     async def set_steam(
         self,
@@ -636,25 +617,37 @@ class LaMarzoccoCloudClient:
         self, serial_number: str, target_temperature: float, boiler_index: int = 1
     ) -> bool:
         """Set the target temperature for the coffee boiler."""
-        data = {
-            "boilerIndex": boiler_index,
-            "targetTemperature": round(target_temperature, 1),
-        }
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingCoffeeBoilerTargetTemperature", data
+        return await self.__set_target_temperature(
+            serial_number,
+            "CoffeeMachineSettingCoffeeBoilerTargetTemperature",
+            target_temperature,
+            boiler_index,
         )
 
     async def set_steam_target_temperature(
         self, serial_number: str, target_temperature: float, boiler_index: int = 1
     ) -> bool:
         """Set the target temperature for the steam boiler."""
+        return await self.__set_target_temperature(
+            serial_number,
+            "CoffeeMachineSettingSteamBoilerTargetTemperature",
+            target_temperature,
+            boiler_index,
+        )
+
+    async def __set_target_temperature(
+        self,
+        serial_number: str,
+        command: str,
+        target_temperature: float,
+        boiler_index: int,
+    ) -> bool:
+        """Set the target temperature of a boiler."""
         data = {
             "boilerIndex": boiler_index,
             "targetTemperature": round(target_temperature, 1),
         }
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingSteamBoilerTargetTemperature", data
-        )
+        return await self.__execute_command(serial_number, command, data)
 
     async def set_auto_flush(
         self, serial_number: str, enabled: bool
@@ -810,10 +803,8 @@ class LaMarzoccoCloudClient:
         serial_number: str,
     ) -> bool:
         """Start backflush cleaning"""
-
-        data = {"enabled": True}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineBackFlushStartCleaning", data
+        return await self.__set_enabled(
+            serial_number, "CoffeeMachineBackFlushStartCleaning", True
         )
 
     async def change_pre_extraction_mode(
