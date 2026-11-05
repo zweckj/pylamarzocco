@@ -199,11 +199,15 @@ class ModelName(StrEnum):
     def from_string(cls, name: str) -> ModelName:
         """Convert a string to a ModelName enum."""
         mapping = {
+            # Bluetooth machineCapabilities family of the GS3 AV
+            "GS3": "GS3 AV",
             "GS3MP": "GS3 MP",
             "GS3AV": "GS3 AV",
             "LINEAMINI2023": "Linea Mini R",
             "LINEAMICRA": "Linea Micra",
             "LINEAMINI": "Linea Mini",
+            # Bluetooth machineCapabilities family of the original Linea Mini
+            "LINEA": "Linea Mini",
             "MICRA": "Linea Micra",
             "STRADAX": "Strada X",
             "PICOGRINDER": "Pico",
