@@ -5,7 +5,13 @@ import logging
 import pytest
 from syrupy import SnapshotAssertion
 
-from pylamarzocco.const import DoseMode, FirmwareType, GrinderStatus, WidgetType
+from pylamarzocco.const import (
+    DoseMode,
+    FirmwareType,
+    GrinderStatus,
+    ModelName,
+    WidgetType,
+)
 from pylamarzocco.models import (
     AutoOnOff,
     AutoStandBy,
@@ -396,3 +402,17 @@ def test_shot_counter_supported(value: bool | None, expected: bool) -> None:
         ThingDashboardConfig.from_dict({"serialNumber": "MR123456"}).shot_counter_supported
         is False
     )
+
+
+@pytest.mark.parametrize(
+    ("family", "model_name"),
+    [
+        ("LINEA", ModelName.LINEA_MINI),
+        ("LINEAMINI2023", ModelName.LINEA_MINI_R),
+        ("MICRA", ModelName.LINEA_MICRA),
+        ("GS3", ModelName.GS3_AV),
+    ],
+)
+def test_model_name_from_bluetooth_family(family: str, model_name: ModelName) -> None:
+    """Test mapping the Bluetooth machine capability families to model names."""
+    assert ModelName.from_string(family) is model_name
