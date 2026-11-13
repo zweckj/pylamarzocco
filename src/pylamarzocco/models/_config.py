@@ -410,6 +410,40 @@ class PrebrewSettingTimes(DataClassJSONMixin):
 
 
 @dataclass(kw_only=True)
+class PourOverRecipeStep(DataClassJSONMixin):
+    """A pour-over recipe step (also used for the blooming phase)."""
+
+    out: float
+    pause: int
+
+    @override
+    def __pre_serialize__(self) -> PourOverRecipeStep:
+        self.out = round(self.out, 1)
+        return self
+
+
+@dataclass(kw_only=True)
+class PourOverRecipe(DataClassJSONMixin):
+    """Recipe of a Modbar pour-over tap."""
+
+    recipe_id: int = field(metadata=field_options(alias="id"))
+    index: int
+    in_recipe_dose: float = field(metadata=field_options(alias="in"))
+    blooming: PourOverRecipeStep
+    steps: list[PourOverRecipeStep] = field(default_factory=list)
+
+    @override
+    def __pre_serialize__(self) -> PourOverRecipe:
+        self.in_recipe_dose = round(self.in_recipe_dose, 1)
+        return self
+
+    class Config(BaseConfig):
+        """Config for Mashumaro serialization."""
+
+        serialize_by_alias = True
+
+
+@dataclass(kw_only=True)
 class GroupDosesSettings(BaseWidgetOutput):
     """Group doses configuration."""
 
