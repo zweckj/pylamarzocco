@@ -255,9 +255,7 @@ class FakeBleakClient:
         if char_specifier != AUTH_CHAR:
             return bytearray(self.values[char_specifier])
         self._auth_reads += 1
-        confirmed = (
-            self._authenticated and self._auth_reads >= self.auth_confirm_reads
-        )
+        confirmed = self._authenticated and self._auth_reads >= self.auth_confirm_reads
         return bytearray(b"\x01" if confirmed else b"\x00")
 
     def _start_notify(
@@ -339,7 +337,9 @@ async def test_ble_get_machine_capability(
     bleak_client: FakeBleakClient, ble_device: BLEDevice
 ) -> None:
     """Test getting machine capability."""
-    bleak_client.values[READ_CHAR] = b'[{"family":"MICRA","groupsNumber":1,"coffeeBoilersNumber":1,"hasCupWarmer":false,"steamBoilersNumber":1,"teaDosesNumber":0,"machineModes":["BrewingMode","StandBy"],"schedulingType":"smartWakeUpSleep"}]'
+    bleak_client.values[READ_CHAR] = (
+        b'[{"family":"MICRA","groupsNumber":1,"coffeeBoilersNumber":1,"hasCupWarmer":false,"steamBoilersNumber":1,"teaDosesNumber":0,"machineModes":["BrewingMode","StandBy"],"schedulingType":"smartWakeUpSleep"}]'
+    )
 
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     response = await client.get_machine_capabilities()
@@ -362,7 +362,9 @@ async def test_ble_get_boiler_details(
     bleak_client: FakeBleakClient, ble_device: BLEDevice
 ) -> None:
     """Test getting boiler details."""
-    bleak_client.values[READ_CHAR] = b'[{"id":"SteamBoiler","isEnabled":true,"target":131,"current":45},{"id":"CoffeeBoiler1","isEnabled":true,"target":94,"current":65}]'
+    bleak_client.values[READ_CHAR] = (
+        b'[{"id":"SteamBoiler","isEnabled":true,"target":131,"current":45},{"id":"CoffeeBoiler1","isEnabled":true,"target":94,"current":65}]'
+    )
 
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     response = await client.get_boilers()
@@ -389,9 +391,7 @@ async def test_ble_get_smart_standby_details(
     bleak_client: FakeBleakClient, ble_device: BLEDevice
 ) -> None:
     """Test getting smart standby details."""
-    bleak_client.values[READ_CHAR] = (
-        b'{"mode":"PowerOn","minutes":42,"enabled":"true"}'
-    )
+    bleak_client.values[READ_CHAR] = b'{"mode":"PowerOn","minutes":42,"enabled":"true"}'
 
     client = LaMarzoccoBluetoothClient(ble_device, "token")
     response = await client.get_smart_standby_settings()
@@ -774,7 +774,10 @@ BACKFLUSHING = BluetoothBrewingState.BACKFLUSHING
                 (b"[]", None),
                 (b"\xff\xfe", None),
                 (b'{"SteamBoilerUpdateTemperature":130}', None),
-                (b'{"SomethingNew":1,"BrewingUpdateGroup1Time":3.5}', (BREWING, 3.5, None)),
+                (
+                    b'{"SomethingNew":1,"BrewingUpdateGroup1Time":3.5}',
+                    (BREWING, 3.5, None),
+                ),
                 (_tick(4.5) + b"\x00", (BREWING, 4.5, None)),
             ],
             id="malformed",
@@ -784,7 +787,9 @@ BACKFLUSHING = BluetoothBrewingState.BACKFLUSHING
 async def test_shot_counter_state_machine(
     bleak_client: FakeBleakClient,
     ble_device: BLEDevice,
-    steps: list[tuple[bytes, tuple[BluetoothBrewingState, float | None, float | None] | None]],
+    steps: list[
+        tuple[bytes, tuple[BluetoothBrewingState, float | None, float | None] | None]
+    ],
 ) -> None:
     """Test the shot counter state machine, other messages never repeat a state."""
     callback = MagicMock()
@@ -1137,9 +1142,7 @@ async def test_stop_shot_counter_reentrant(
         if not connected:
             # like Home Assistant, in a task that runs eagerly up to its first await
             stops.append(
-                asyncio.Task(
-                    getattr(client, stop)(), loop=loop, eager_start=True
-                )
+                asyncio.Task(getattr(client, stop)(), loop=loop, eager_start=True)
             )
 
     await client.start_shot_counter(MagicMock(), connection_callback)
@@ -1274,9 +1277,7 @@ async def test_requests_are_atomic(
     bleak_client.values[READ_CHAR] = b"[]"
     client = LaMarzoccoBluetoothClient(ble_device, "token")
 
-    await asyncio.gather(
-        client.get_boilers(), client.set_temp(BoilerType.COFFEE, 93)
-    )
+    await asyncio.gather(client.get_boilers(), client.set_temp(BoilerType.COFFEE, 93))
 
     # every request write is directly followed by its read
     assert len(events) == 6

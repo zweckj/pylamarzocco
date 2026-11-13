@@ -272,7 +272,9 @@ async def test_get_grinder_dashboard(
 
 
 async def test_get_thing_settings(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the settings for a thing."""
@@ -288,7 +290,9 @@ async def test_get_thing_settings(
 
 
 async def test_get_thing_schedule(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the schedule for a thing."""
@@ -304,7 +308,8 @@ async def test_get_thing_schedule(
 
 
 async def test_list_things(
-    mock_aiointercept: aiointercept, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the list of things."""
@@ -320,7 +325,9 @@ async def test_list_things(
 
 
 async def test_debug_log_masks_bluetooth_token(
-    mock_aiointercept: aiointercept, serial: str, caplog: pytest.LogCaptureFixture,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    caplog: pytest.LogCaptureFixture,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test the Bluetooth token never ends up in the debug log."""
@@ -342,7 +349,9 @@ async def test_debug_log_masks_bluetooth_token(
 
 
 async def test_get_statistics(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the list of things."""
@@ -357,9 +366,7 @@ async def test_get_statistics(
     assert result.to_dict() == snapshot
 
 
-@pytest.mark.parametrize(
-    ("status", "expected"), [("Success", True), ("Error", False)]
-)
+@pytest.mark.parametrize(("status", "expected"), [("Success", True), ("Error", False)])
 async def test_command_ws_validation(
     mock_aiointercept: aiointercept,
     serial: str,
@@ -427,8 +434,7 @@ async def test_set_wake_up_schedule(
     """Test setting the wake up schedule for a thing."""
 
     url = (
-        f"{CUSTOMER_APP_URL}/things/{serial}/command/"
-        "CoffeeMachineSettingWakeUpSchedule"
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingWakeUpSchedule"
     )
     mock_aiointercept.post(
         url=url,
@@ -483,7 +489,9 @@ async def test_set_wake_up_schedule(
 
 
 async def test_get_update_details(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the update details for a thing."""
@@ -505,7 +513,9 @@ async def test_get_update_details(
 
 
 async def test_start_update(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the update details for a thing."""

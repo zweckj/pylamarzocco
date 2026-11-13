@@ -1,6 +1,5 @@
 """Authentication related utilities."""
 
-
 import base64
 import hashlib
 import time
@@ -65,6 +64,7 @@ class InstallationKey(DataClassJSONMixin):
             hashlib.sha256(_public_key_der(self.private_key)).digest()
         )  # Hash raw bytes, not base64 string
         return f"{self.installation_id}.{pub_hash_b64}"
+
 
 def generate_request_proof(base_string: str, secret32: bytes) -> str:
     """La Marzocco's custom proof generation algorithm (Y5.e equivalent)"""

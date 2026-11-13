@@ -1,4 +1,5 @@
 """Init for util"""
+
 from ._authentication import (
     InstallationKey,
     generate_extra_request_headers,

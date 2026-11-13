@@ -111,17 +111,13 @@ class _BrewingTracker:
         return update
 
 
-def disconnect_on_exception[
-    T: "LaMarzoccoBluetoothClient", _R, **P
-](
+def disconnect_on_exception[T: "LaMarzoccoBluetoothClient", _R, **P](
     func: Callable[Concatenate[T, P], Coroutine[Any, Any, _R]],
 ) -> Callable[Concatenate[T, P], Coroutine[Any, Any, _R]]:
     """Decorator for request/response calls: serialize them, disconnect on error."""
 
     @wraps(func)
-    async def wrapper(
-        self: T, *args: P.args, **kwargs: P.kwargs
-    ) -> _R:
+    async def wrapper(self: T, *args: P.args, **kwargs: P.kwargs) -> _R:
         try:
             # keep write -> read pairs atomic so responses can't interleave
             async with self._request_lock:
@@ -146,7 +142,7 @@ class LaMarzoccoBluetoothClient:
         ble_device_callback: Callable[[], BLEDevice] | None = None,
     ) -> None:
         """Initializes a new bluetooth client instance.
-        
+
         Args:
             ble_device: The BLE device to connect to
             ble_token: Authentication token for the device
@@ -237,7 +233,7 @@ class LaMarzoccoBluetoothClient:
                 # Reset the disconnect timer
                 self._reset_disconnect_timer()
                 return
-            
+
             _logger.debug("Connecting to Bluetooth device %s", self._address)
             # a new connection never has active notifications
             self._shot_counter_subscribed = False
@@ -263,7 +259,9 @@ class LaMarzoccoBluetoothClient:
                         await client.disconnect()
                 raise
             else:
-                _logger.debug("Successfully connected to Bluetooth device %s", self._address)
+                _logger.debug(
+                    "Successfully connected to Bluetooth device %s", self._address
+                )
                 # Start the disconnect timer
                 self._reset_disconnect_timer()
                 self._set_connected(True)
@@ -287,7 +285,9 @@ class LaMarzoccoBluetoothClient:
             # Timer was reset, this is normal
             pass
         else:
-            _logger.debug("Auto-disconnect timer expired, disconnecting from %s", self._address)
+            _logger.debug(
+                "Auto-disconnect timer expired, disconnecting from %s", self._address
+            )
             await self._drop_connection()
 
     async def _disconnect_internal(self) -> None:
@@ -618,7 +618,9 @@ class LaMarzoccoBluetoothClient:
         )
 
     @disconnect_on_exception
-    async def set_temp(self, boiler: BoilerType, temperature: float) -> BluetoothCommandStatus:
+    async def set_temp(
+        self, boiler: BoilerType, temperature: float
+    ) -> BluetoothCommandStatus:
         """Set boiler temperature (in Celsius)"""
         return await self.__send_command(
             "SettingBoilerTarget",
@@ -629,7 +631,7 @@ class LaMarzoccoBluetoothClient:
         """Build authentication string and send it to the machine."""
         if self._client is None:
             raise BluetoothConnectionFailed("Client is not connected")
-            
+
         auth_characteristic = await self._resolve_characteristic(AUTH_CHARACTERISTIC)
 
         try:
@@ -661,7 +663,7 @@ class LaMarzoccoBluetoothClient:
     ) -> str:
         """Read a bluetooth message."""
         await self._ensure_connected()
-        
+
         if self._client is None:
             raise BluetoothConnectionFailed("Client is not connected")
 
@@ -669,7 +671,6 @@ class LaMarzoccoBluetoothClient:
         result = await self._client.read_gatt_char(read_characteristic)
         # responses are NUL-terminated, ignore anything after it
         return bytes(result).split(b"\x00", 1)[0].decode()
-    
 
     async def __write_bluetooth_message(
         self,
@@ -678,7 +679,7 @@ class LaMarzoccoBluetoothClient:
     ) -> None:
         """Connect to machine and write a message."""
         await self._ensure_connected()
-        
+
         if self._client is None:
             raise BluetoothConnectionFailed("Client is not connected")
 
@@ -715,7 +716,7 @@ class LaMarzoccoBluetoothClient:
         """Resolve characteristic UUID from machine services."""
         if self._client is None:
             raise BluetoothConnectionFailed("Client is not connected")
-            
+
         resolved_characteristic = self._client.services.get_characteristic(
             characteristic
         )

@@ -125,6 +125,7 @@ class MachineGroupStatus(_ModeStatus):
 
     widget_type = WidgetType.CM_MACHINE_GROUP_STATUS
 
+
 @dataclass(kw_only=True)
 class NextStatus(DataClassJSONMixin):
     """Next status configuration."""
@@ -720,7 +721,9 @@ class GrinderSpeed(BaseWidgetOutput):
     widget_type = WidgetType.G_SPEED
     doses: dict[str, GrinderSpeedLevel]
     groups_number: int = field(metadata=field_options(alias="groupsNumber"))
-    speed_auto_supported: bool = field(metadata=field_options(alias="speedAutoSupported"))
+    speed_auto_supported: bool = field(
+        metadata=field_options(alias="speedAutoSupported")
+    )
     speed_auto: GrinderSpeedAuto | None = field(
         metadata=field_options(alias="speedAuto"), default=None
     )

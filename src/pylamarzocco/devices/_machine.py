@@ -118,9 +118,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         self._shot_counter_callback: (
             Callable[[BluetoothShotCounterUpdate | None], Any] | None
         ) = None
-        self._telemetry_callback: (
-            Callable[[BluetoothMachineTelemetry], Any] | None
-        ) = None
+        self._telemetry_callback: Callable[[BluetoothMachineTelemetry], Any] | None = (
+            None
+        )
         self._bluetooth_telemetry = BluetoothMachineTelemetry()
         self._stopping_shot_counter = False
         # cloud values of the machine status widget, before BLE overrides
@@ -486,9 +486,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     def _update_machine_mode_widgets(self, mode: MachineMode) -> None:
         """Update the machine and group status widgets with the given mode."""
-        if (machine_status := self._widget(MachineStatus)):
+        if machine_status := self._widget(MachineStatus):
             machine_status.mode = mode
-        if (group_status := self._widget(MachineGroupStatus)):
+        if group_status := self._widget(MachineGroupStatus):
             group_status.mode = mode
 
     async def set_power(self, enabled: bool) -> bool:
@@ -646,8 +646,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         ):
             available = [m.value for m in group_doses.available_modes]
             raise OperationNotAvailable(
-                f"Dose mode {mode.value} is not available; "
-                f"available modes: {available}"
+                f"Dose mode {mode.value} is not available; available modes: {available}"
             )
 
         assert self._cloud_client
@@ -699,9 +698,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     @cloud_only
     @models_supported((ModelCode.STRADA_X,))
-    async def set_brewing_pressure(
-        self, pressure: float, group_index: int = 1
-    ) -> bool:
+    async def set_brewing_pressure(self, pressure: float, group_index: int = 1) -> bool:
         """Set the brewing pressure of a group."""
         group_doses = self._widget(GroupDosesSettings)
         if group_doses is not None and not group_doses.brewing_pressure_supported:
@@ -734,9 +731,7 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
     @cloud_only
     @models_supported((ModelCode.STRADA_X, ModelCode.GS3_AV))
-    async def set_continuous_dose(
-        self, seconds: float, group_index: int = 1
-    ) -> bool:
+    async def set_continuous_dose(self, seconds: float, group_index: int = 1) -> bool:
         """Set the continuous (rinse) dose duration of a group."""
         assert self._cloud_client
         return await self._cloud_client.set_continuous_dose(
@@ -774,9 +769,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
         # Update dashboard if command succeeded
         if result:
-            if (steam_level := self._widget(SteamBoilerLevel)):
+            if steam_level := self._widget(SteamBoilerLevel):
                 steam_level.enabled = enabled
-            if (steam_temp := self._widget(SteamBoilerTemperature)):
+            if steam_temp := self._widget(SteamBoilerTemperature):
                 steam_temp.enabled = enabled
 
         return result
@@ -820,7 +815,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
 
         return result
 
-    @models_supported((ModelCode.GS3, ModelCode.GS3_AV, ModelCode.GS3_MP, ModelCode.STRADA_X))
+    @models_supported(
+        (ModelCode.GS3, ModelCode.GS3_AV, ModelCode.GS3_MP, ModelCode.STRADA_X)
+    )
     async def set_steam_target_temperature(self, temperature: float) -> bool:
         """Set the steam target temperature."""
 
@@ -875,7 +872,9 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             assert self._cloud_client
             # Format as HH:MM or Off based on enabled state
             auto_mode = f"{minutes // 60:02d}:{minutes % 60:02d}" if enabled else "Off"
-            return await self._cloud_client.set_auto_standby(self.serial_number, auto_mode)
+            return await self._cloud_client.set_auto_standby(
+                self.serial_number, auto_mode
+            )
 
         return await self.__bluetooth_command_with_cloud_fallback(
             command="set_smart_standby",
