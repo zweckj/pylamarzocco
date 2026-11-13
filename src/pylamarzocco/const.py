@@ -257,6 +257,12 @@ class DoseIndex(StrEnum):
     DOSE_D = "DoseD"
 
 
+class ScaleType(StrEnum):
+    """Scale types that can be calibrated."""
+
+    ACAIA_LUNAR = "ScaleAcaiaLunar"
+
+
 class SmartStandByType(StrEnum):
     """Smart Standby types."""
 

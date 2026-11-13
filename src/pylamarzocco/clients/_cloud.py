@@ -36,9 +36,11 @@ from pylamarzocco.const import (
     GrinderMode,
     GrinderSpeedLevelType,
     PreExtractionMode,
+    ScaleType,
     SmartStandByType,
     SteamTargetLevel,
     StompMessageType,
+    WeekDay,
     WidgetType,
 )
 from pylamarzocco.exceptions import (
@@ -52,6 +54,7 @@ from pylamarzocco.models import (
     CoffeeAndFlushTrend,
     CommandResponse,
     LastCoffeeList,
+    PourOverRecipe,
     PrebrewSettingTimes,
     RefreshTokenRequest,
     SigninTokenRequest,
@@ -832,6 +835,101 @@ class LaMarzoccoCloudClient:
             serial_number, "CoffeeMachinePreBrewingSettingTimes", times.to_dict()
         )
 
+    async def change_pre_infusion_mode(
+        self,
+        serial_number: str,
+        mode: PreExtractionMode,
+        group_index: int = 1,
+    ) -> bool:
+        """Change the pre-infusion mode of a group (CMPreInfusion widget)."""
+        data = {"groupIndex": group_index, "mode": mode.value}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachinePreInfusionChangeMode", data
+        )
+
+    async def change_pre_infusion_times(
+        self,
+        serial_number: str,
+        seconds_in: float,
+        seconds_out: float,
+        dose_index: DoseIndex = DoseIndex.BY_GROUP,
+        group_index: int = 1,
+    ) -> bool:
+        """Change the pre-infusion times of a group (CMPreInfusion widget)."""
+        data = {
+            "groupIndex": group_index,
+            "doseIndex": dose_index.value,
+            "times": {"In": round(seconds_in, 1), "Out": round(seconds_out, 1)},
+        }
+        return await self.__execute_command(
+            serial_number, "CoffeeMachinePreInfusionSettingTimes", data
+        )
+
+    async def set_pre_infusion_enabled(self, serial_number: str, enabled: bool) -> bool:
+        """Enable or disable pre-infusion (CMPreInfusionEnable widget)."""
+        return await self.__set_enabled(
+            serial_number, "CoffeeMachinePreInfusionEnable", enabled
+        )
+
+    async def set_time_zone(self, serial_number: str, zone: str) -> bool:
+        """Set the time zone of the machine (e.g. "Europe/Rome")."""
+        data = {"zone": zone}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingTimeZone", data
+        )
+
+    async def set_auto_steam_dose(
+        self,
+        serial_number: str,
+        dose: float,
+        dose_index: DoseIndex,
+        steam_index: int = 1,
+    ) -> bool:
+        """Set an automatic steam dose."""
+        data = {
+            "steamIndex": steam_index,
+            "doseIndex": dose_index.value,
+            "dose": round(dose, 1),
+        }
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingAutoSteamDose", data
+        )
+
+    async def set_baby_milk(
+        self, serial_number: str, enabled: bool, steam_index: int = 1
+    ) -> bool:
+        """Enable or disable the baby milk function."""
+        data = {"steamIndex": steam_index, "enabled": enabled}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineBabyMilkSettingEnabled", data
+        )
+
+    async def set_baby_milk_target_temperature(
+        self, serial_number: str, target_temperature: float, steam_index: int = 1
+    ) -> bool:
+        """Set the target temperature of the baby milk function."""
+        data = {
+            "steamIndex": steam_index,
+            "targetTemperature": round(target_temperature, 1),
+        }
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineBabyMilkSettingTargetTemperature", data
+        )
+
+    async def calibrate_scale(
+        self,
+        serial_number: str,
+        scale_name: ScaleType = ScaleType.ACAIA_LUNAR,
+        force: bool | None = None,
+    ) -> bool:
+        """Calibrate the scale paired with the machine."""
+        data: dict[str, Any] = {"scaleName": scale_name.value}
+        if force is not None:
+            data["force"] = force
+        return await self.__execute_command(
+            serial_number, "ThingScaleSettingPosition", data
+        )
+
     async def set_smart_standby(
         self, serial_number: str, enabled: bool, minutes: int, after: SmartStandByType
     ) -> bool:
@@ -842,18 +940,24 @@ class LaMarzoccoCloudClient:
             serial_number, "CoffeeMachineSettingSmartStandBy", data
         )
 
-    async def set_auto_standby(self, serial_number: str, mode: str) -> bool:
-        """Set auto standby"""
+    async def set_auto_on_off(
+        self,
+        serial_number: str,
+        on_time_minutes: int,
+        off_time_minutes: int,
+        close_day: WeekDay | None = None,
+    ) -> bool:
+        """Set the auto on/off times (minutes after midnight).
 
-        data = {"mode": mode}
-        return await self.__execute_command(
-            serial_number, "CoffeeMachineSettingAutoStandBy", data
-        )
-
-    async def set_auto_on_off(self, serial_number: str, schedule: str) -> bool:
-        """Set auto on off"""
-
-        data = {"schedule": schedule}
+        Args:
+            close_day: Optional day on which the machine stays off.
+        """
+        data: dict[str, Any] = {
+            "onTimeMinutes": on_time_minutes,
+            "offTimeMinutes": off_time_minutes,
+        }
+        if close_day is not None:
+            data["closeDay"] = close_day.value
         return await self.__execute_command(
             serial_number, "CoffeeMachineSettingAutoOnOff", data
         )
@@ -877,6 +981,62 @@ class LaMarzoccoCloudClient:
         """Set smart wakeup schedule"""
         return await self.__execute_command(
             serial_number, "CoffeeMachineSettingWakeUpSchedule", schedule.to_dict()
+        )
+
+    async def set_auto_on_off_enabled(self, serial_number: str, enabled: bool) -> bool:
+        """Enable or disable auto on/off."""
+        return await self.__set_enabled(
+            serial_number, "CoffeeMachineSettingAutoOnOffEnabled", enabled
+        )
+
+    async def set_early_start(self, serial_number: str, enabled: bool) -> bool:
+        """Enable or disable early start (smart scheduling)."""
+        return await self.__set_enabled(
+            serial_number, "CoffeeMachineSettingEarlyStart", enabled
+        )
+
+    async def set_eco_mode_timeout(self, serial_number: str, minutes: int) -> bool:
+        """Set the minutes of inactivity after which the machine enters eco mode."""
+        data = {"timeoutMinutes": minutes}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingEcoModeTimeout", data
+        )
+
+    async def set_eco_mode_offset(self, serial_number: str, offset: float) -> bool:
+        """Set the boiler temperature offset applied in eco mode."""
+        data = {"offset": round(offset, 1)}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingEcoModeOffset", data
+        )
+
+    async def set_weekly_schedule_enabled(
+        self, serial_number: str, enabled: bool
+    ) -> bool:
+        """Enable or disable the weekly schedule."""
+        return await self.__set_enabled(
+            serial_number, "CoffeeMachineSettingWeeklyEnabled", enabled
+        )
+
+    async def set_weekly_schedule_day(
+        self,
+        serial_number: str,
+        day: WeekDay,
+        enabled: bool,
+        on_time_minutes: int,
+        off_time_minutes: int,
+    ) -> bool:
+        """Set the weekly schedule of a single day.
+
+        Times are given in minutes after midnight.
+        """
+        data = {
+            "day": day.value,
+            "enabled": enabled,
+            "onTimeMinutes": on_time_minutes,
+            "offTimeMinutes": off_time_minutes,
+        }
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingWeeklyDay", data
         )
 
     async def set_grinder_mode(
@@ -1042,6 +1202,48 @@ class LaMarzoccoCloudClient:
         }
         return await self.__execute_command(
             serial_number, "CoffeeMachineBrewByWeightSettingDoses", data
+        )
+
+    async def set_module_mode(self, serial_number: str, mode: MachineMode) -> bool:
+        """Set the mode of the Modbar pour-over module."""
+        data = {"mode": mode.value}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineModuleChangeMode", data
+        )
+
+    async def set_tap_mode(
+        self, serial_number: str, mode: MachineMode, tap_index: int = 1
+    ) -> bool:
+        """Set the mode of a Modbar pour-over tap."""
+        data = {"tapIndex": tap_index, "mode": mode.value}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineTapChangeMode", data
+        )
+
+    async def set_module_target_temperature(
+        self, serial_number: str, target_temperature: float
+    ) -> bool:
+        """Set the target temperature of the Modbar pour-over module."""
+        data = {"targetTemperature": round(target_temperature, 1)}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingModuleTargetTemperature", data
+        )
+
+    async def set_tap_target_temperature_offset(
+        self, serial_number: str, offset: float, tap_index: int = 1
+    ) -> bool:
+        """Set the target temperature offset of a Modbar pour-over tap."""
+        data = {"tapIndex": tap_index, "targetOffsetTemperature": round(offset, 1)}
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineSettingTapTargetTemperature", data
+        )
+
+    async def change_pour_over_recipe(
+        self, serial_number: str, recipe: PourOverRecipe
+    ) -> bool:
+        """Change a recipe of the Modbar pour-over machine."""
+        return await self.__execute_command(
+            serial_number, "CoffeeMachineChangeRecipe", recipe.to_dict()
         )
 
     async def update_firmware(

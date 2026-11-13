@@ -22,8 +22,10 @@ from pylamarzocco.const import (
     MachineState,
     ModelCode,
     PreExtractionMode,
+    ScaleType,
     SmartStandByType,
     SteamTargetLevel,
+    WeekDay,
     WidgetType,
 )
 from pylamarzocco.exceptions import BluetoothConnectionFailed, OperationNotAvailable
@@ -41,6 +43,7 @@ from pylamarzocco.models import (
     MachineGroupStatus,
     MachineStatus,
     NoWater,
+    PourOverRecipe,
     PrebrewSettingTimes,
     RinseFlush,
     SecondsInOut,
@@ -868,14 +871,6 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         self, enabled: bool, minutes: int, mode: SmartStandByType
     ) -> bool:
         """Set the smart standby mode."""
-        if getattr(self.schedule, "auto_stand_by_supported", False):
-            assert self._cloud_client
-            # Format as HH:MM or Off based on enabled state
-            auto_mode = f"{minutes // 60:02d}:{minutes % 60:02d}" if enabled else "Off"
-            return await self._cloud_client.set_auto_standby(
-                self.serial_number, auto_mode
-            )
-
         return await self.__bluetooth_command_with_cloud_fallback(
             command="set_smart_standby",
             bluetooth_kwargs={
@@ -891,10 +886,21 @@ class LaMarzoccoMachine(LaMarzoccoThing):
         )
 
     @cloud_only
-    async def set_auto_on_off(self, schedule: str) -> bool:
-        """Set auto on off."""
+    async def set_auto_on_off(
+        self,
+        on_time_minutes: int,
+        off_time_minutes: int,
+        close_day: WeekDay | None = None,
+    ) -> bool:
+        """Set the auto on/off times (minutes after midnight).
+
+        Args:
+            close_day: Optional day on which the machine stays off.
+        """
         assert self._cloud_client
-        return await self._cloud_client.set_auto_on_off(self.serial_number, schedule)
+        return await self._cloud_client.set_auto_on_off(
+            self.serial_number, on_time_minutes, off_time_minutes, close_day
+        )
 
     @cloud_only
     async def delete_wakeup_schedule(
@@ -978,6 +984,174 @@ class LaMarzoccoMachine(LaMarzoccoThing):
             target.dose = value
 
         return result
+
+    @cloud_only
+    async def set_pre_infusion_mode(
+        self, mode: PreExtractionMode, group_index: int = 1
+    ) -> bool:
+        """Set the pre-infusion mode of a group (CMPreInfusion widget)."""
+        assert self._cloud_client
+        return await self._cloud_client.change_pre_infusion_mode(
+            self.serial_number, mode, group_index
+        )
+
+    @cloud_only
+    async def set_pre_infusion_times(
+        self,
+        seconds_in: float,
+        seconds_out: float,
+        dose_index: DoseIndex = DoseIndex.BY_GROUP,
+        group_index: int = 1,
+    ) -> bool:
+        """Set the pre-infusion times of a group (CMPreInfusion widget)."""
+        assert self._cloud_client
+        return await self._cloud_client.change_pre_infusion_times(
+            self.serial_number, seconds_in, seconds_out, dose_index, group_index
+        )
+
+    @cloud_only
+    async def set_pre_infusion_enabled(self, enabled: bool) -> bool:
+        """Enable or disable pre-infusion (CMPreInfusionEnable widget)."""
+        assert self._cloud_client
+        return await self._cloud_client.set_pre_infusion_enabled(
+            self.serial_number, enabled
+        )
+
+    @cloud_only
+    async def set_time_zone(self, zone: str) -> bool:
+        """Set the time zone of the machine (e.g. "Europe/Rome")."""
+        assert self._cloud_client
+        return await self._cloud_client.set_time_zone(self.serial_number, zone)
+
+    @cloud_only
+    async def set_auto_steam_dose(
+        self, dose: float, dose_index: DoseIndex, steam_index: int = 1
+    ) -> bool:
+        """Set an automatic steam dose."""
+        assert self._cloud_client
+        return await self._cloud_client.set_auto_steam_dose(
+            self.serial_number, dose, dose_index, steam_index
+        )
+
+    @cloud_only
+    async def set_baby_milk(self, enabled: bool, steam_index: int = 1) -> bool:
+        """Enable or disable the baby milk function."""
+        assert self._cloud_client
+        return await self._cloud_client.set_baby_milk(
+            self.serial_number, enabled, steam_index
+        )
+
+    @cloud_only
+    async def set_baby_milk_target_temperature(
+        self, temperature: float, steam_index: int = 1
+    ) -> bool:
+        """Set the target temperature of the baby milk function."""
+        assert self._cloud_client
+        return await self._cloud_client.set_baby_milk_target_temperature(
+            self.serial_number, temperature, steam_index
+        )
+
+    @cloud_only
+    async def calibrate_scale(
+        self,
+        scale_name: ScaleType = ScaleType.ACAIA_LUNAR,
+        force: bool | None = None,
+    ) -> bool:
+        """Calibrate the scale paired with the machine."""
+        assert self._cloud_client
+        return await self._cloud_client.calibrate_scale(
+            self.serial_number, scale_name, force
+        )
+
+    @cloud_only
+    async def set_auto_on_off_enabled(self, enabled: bool) -> bool:
+        """Enable or disable auto on/off."""
+        assert self._cloud_client
+        return await self._cloud_client.set_auto_on_off_enabled(
+            self.serial_number, enabled
+        )
+
+    @cloud_only
+    async def set_early_start(self, enabled: bool) -> bool:
+        """Enable or disable early start (smart scheduling)."""
+        assert self._cloud_client
+        return await self._cloud_client.set_early_start(self.serial_number, enabled)
+
+    @cloud_only
+    async def set_eco_mode_timeout(self, minutes: int) -> bool:
+        """Set the minutes of inactivity after which the machine enters eco mode."""
+        assert self._cloud_client
+        return await self._cloud_client.set_eco_mode_timeout(
+            self.serial_number, minutes
+        )
+
+    @cloud_only
+    async def set_eco_mode_offset(self, offset: float) -> bool:
+        """Set the boiler temperature offset applied in eco mode."""
+        assert self._cloud_client
+        return await self._cloud_client.set_eco_mode_offset(self.serial_number, offset)
+
+    @cloud_only
+    async def set_weekly_schedule_enabled(self, enabled: bool) -> bool:
+        """Enable or disable the weekly schedule."""
+        assert self._cloud_client
+        return await self._cloud_client.set_weekly_schedule_enabled(
+            self.serial_number, enabled
+        )
+
+    @cloud_only
+    async def set_weekly_schedule_day(
+        self,
+        day: WeekDay,
+        enabled: bool,
+        on_time_minutes: int,
+        off_time_minutes: int,
+    ) -> bool:
+        """Set the weekly schedule of a single day (minutes after midnight)."""
+        assert self._cloud_client
+        return await self._cloud_client.set_weekly_schedule_day(
+            self.serial_number, day, enabled, on_time_minutes, off_time_minutes
+        )
+
+    @cloud_only
+    async def set_module_mode(self, mode: MachineMode) -> bool:
+        """Set the mode of the Modbar pour-over module."""
+        assert self._cloud_client
+        return await self._cloud_client.set_module_mode(self.serial_number, mode)
+
+    @cloud_only
+    async def set_tap_mode(self, mode: MachineMode, tap_index: int = 1) -> bool:
+        """Set the mode of a Modbar pour-over tap."""
+        assert self._cloud_client
+        return await self._cloud_client.set_tap_mode(
+            self.serial_number, mode, tap_index
+        )
+
+    @cloud_only
+    async def set_module_target_temperature(self, temperature: float) -> bool:
+        """Set the target temperature of the Modbar pour-over module."""
+        assert self._cloud_client
+        return await self._cloud_client.set_module_target_temperature(
+            self.serial_number, temperature
+        )
+
+    @cloud_only
+    async def set_tap_target_temperature_offset(
+        self, offset: float, tap_index: int = 1
+    ) -> bool:
+        """Set the target temperature offset of a Modbar pour-over tap."""
+        assert self._cloud_client
+        return await self._cloud_client.set_tap_target_temperature_offset(
+            self.serial_number, offset, tap_index
+        )
+
+    @cloud_only
+    async def change_pour_over_recipe(self, recipe: PourOverRecipe) -> bool:
+        """Change a recipe of the Modbar pour-over machine."""
+        assert self._cloud_client
+        return await self._cloud_client.change_pour_over_recipe(
+            self.serial_number, recipe
+        )
 
     async def __bluetooth_command_with_cloud_fallback(
         self,
