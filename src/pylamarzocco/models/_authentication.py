@@ -7,7 +7,8 @@ from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.mixins.json import DataClassJSONMixin
 
-TOKEN_EXPIRATION = 60 * 60 # 1 hour
+TOKEN_EXPIRATION = 60 * 60  # 1 hour
+
 
 @dataclass(kw_only=True, frozen=True)
 class AccessToken(DataClassJSONMixin):
@@ -17,6 +18,7 @@ class AccessToken(DataClassJSONMixin):
     refresh_token: str = field(metadata=field_options(alias="refreshToken"))
     expires_at: float = field(default_factory=lambda: time() + TOKEN_EXPIRATION)
 
+
 @dataclass(kw_only=True, frozen=True)
 class SigninTokenRequest(DataClassJSONMixin):
     """Token request model."""
@@ -24,12 +26,15 @@ class SigninTokenRequest(DataClassJSONMixin):
     username: str
     password: str
 
+
 @dataclass(kw_only=True, frozen=True)
 class RefreshTokenRequest(DataClassJSONMixin):
     """Token request model."""
 
     username: str
     refresh_token: str = field(metadata=field_options(alias="refreshToken"))
+
     class Config(BaseConfig):
         """Config for Mashumaro serialization."""
+
         serialize_by_alias = True

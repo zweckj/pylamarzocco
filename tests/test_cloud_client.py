@@ -27,6 +27,7 @@ from pylamarzocco.const import (
     GrinderMode,
     GrinderSpeedLevelType,
     PreExtractionMode,
+    ScaleType,
     SmartStandByType,
     SteamTargetLevel,
     WeekDay,
@@ -37,6 +38,8 @@ from pylamarzocco.exceptions import (
     RequestNotSuccessful,
 )
 from pylamarzocco.models import (
+    PourOverRecipe,
+    PourOverRecipeStep,
     PrebrewSettingTimes,
     SecondsInOut,
     WakeUpScheduleSettings,
@@ -272,7 +275,9 @@ async def test_get_grinder_dashboard(
 
 
 async def test_get_thing_settings(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the settings for a thing."""
@@ -288,7 +293,9 @@ async def test_get_thing_settings(
 
 
 async def test_get_thing_schedule(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the schedule for a thing."""
@@ -304,7 +311,8 @@ async def test_get_thing_schedule(
 
 
 async def test_list_things(
-    mock_aiointercept: aiointercept, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the list of things."""
@@ -320,7 +328,9 @@ async def test_list_things(
 
 
 async def test_debug_log_masks_bluetooth_token(
-    mock_aiointercept: aiointercept, serial: str, caplog: pytest.LogCaptureFixture,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    caplog: pytest.LogCaptureFixture,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test the Bluetooth token never ends up in the debug log."""
@@ -342,7 +352,9 @@ async def test_debug_log_masks_bluetooth_token(
 
 
 async def test_get_statistics(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the list of things."""
@@ -357,9 +369,7 @@ async def test_get_statistics(
     assert result.to_dict() == snapshot
 
 
-@pytest.mark.parametrize(
-    ("status", "expected"), [("Success", True), ("Error", False)]
-)
+@pytest.mark.parametrize(("status", "expected"), [("Success", True), ("Error", False)])
 async def test_command_ws_validation(
     mock_aiointercept: aiointercept,
     serial: str,
@@ -427,8 +437,7 @@ async def test_set_wake_up_schedule(
     """Test setting the wake up schedule for a thing."""
 
     url = (
-        f"{CUSTOMER_APP_URL}/things/{serial}/command/"
-        "CoffeeMachineSettingWakeUpSchedule"
+        f"{CUSTOMER_APP_URL}/things/{serial}/command/CoffeeMachineSettingWakeUpSchedule"
     )
     mock_aiointercept.post(
         url=url,
@@ -483,7 +492,9 @@ async def test_set_wake_up_schedule(
 
 
 async def test_get_update_details(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the update details for a thing."""
@@ -505,7 +516,9 @@ async def test_get_update_details(
 
 
 async def test_start_update(
-    mock_aiointercept: aiointercept, serial: str, snapshot: SnapshotAssertion,
+    mock_aiointercept: aiointercept,
+    serial: str,
+    snapshot: SnapshotAssertion,
     client: LaMarzoccoCloudClient,
 ) -> None:
     """Test getting the update details for a thing."""
@@ -980,22 +993,170 @@ async def test_get_thing_coffee_and_flush_counter(
             {"doses": {"Dose1": 32.6, "Dose2": 45.7}},
         ),
         (
-            "set_auto_standby",
-            ("00:30",),
-            "CoffeeMachineSettingAutoStandBy",
-            {"mode": "00:30"},
+            "set_auto_on_off",
+            (420, 1080),
+            "CoffeeMachineSettingAutoOnOff",
+            {"onTimeMinutes": 420, "offTimeMinutes": 1080},
         ),
         (
             "set_auto_on_off",
-            ("schedule",),
+            (420, 1080, WeekDay.SUNDAY),
             "CoffeeMachineSettingAutoOnOff",
-            {"schedule": "schedule"},
+            {"onTimeMinutes": 420, "offTimeMinutes": 1080, "closeDay": "Sunday"},
         ),
         (
             "delete_wakeup_schedule",
             ("schedule-id",),
             "CoffeeMachineDeleteWakeUpSchedule",
             {"id": "schedule-id"},
+        ),
+        (
+            "change_pre_infusion_mode",
+            (PreExtractionMode.PREINFUSION,),
+            "CoffeeMachinePreInfusionChangeMode",
+            {"groupIndex": 1, "mode": "PreInfusion"},
+        ),
+        (
+            "change_pre_infusion_times",
+            (2.04, 3.06),
+            "CoffeeMachinePreInfusionSettingTimes",
+            {"groupIndex": 1, "doseIndex": "ByGroup", "times": {"In": 2.0, "Out": 3.1}},
+        ),
+        (
+            "change_pre_infusion_times",
+            (1.0, 2.0, DoseIndex.DOSE_C, 2),
+            "CoffeeMachinePreInfusionSettingTimes",
+            {"groupIndex": 2, "doseIndex": "DoseC", "times": {"In": 1.0, "Out": 2.0}},
+        ),
+        (
+            "set_pre_infusion_enabled",
+            (True,),
+            "CoffeeMachinePreInfusionEnable",
+            {"enabled": True},
+        ),
+        (
+            "set_time_zone",
+            ("Europe/Rome",),
+            "CoffeeMachineSettingTimeZone",
+            {"zone": "Europe/Rome"},
+        ),
+        (
+            "set_auto_steam_dose",
+            (12.34, DoseIndex.DOSE_B),
+            "CoffeeMachineSettingAutoSteamDose",
+            {"steamIndex": 1, "doseIndex": "DoseB", "dose": 12.3},
+        ),
+        (
+            "set_baby_milk",
+            (True,),
+            "CoffeeMachineBabyMilkSettingEnabled",
+            {"steamIndex": 1, "enabled": True},
+        ),
+        (
+            "set_baby_milk_target_temperature",
+            (37.04,),
+            "CoffeeMachineBabyMilkSettingTargetTemperature",
+            {"steamIndex": 1, "targetTemperature": 37.0},
+        ),
+        (
+            "calibrate_scale",
+            (),
+            "ThingScaleSettingPosition",
+            {"scaleName": "ScaleAcaiaLunar"},
+        ),
+        (
+            "calibrate_scale",
+            (ScaleType.ACAIA_LUNAR, True),
+            "ThingScaleSettingPosition",
+            {"scaleName": "ScaleAcaiaLunar", "force": True},
+        ),
+        (
+            "set_auto_on_off_enabled",
+            (False,),
+            "CoffeeMachineSettingAutoOnOffEnabled",
+            {"enabled": False},
+        ),
+        (
+            "set_early_start",
+            (True,),
+            "CoffeeMachineSettingEarlyStart",
+            {"enabled": True},
+        ),
+        (
+            "set_eco_mode_timeout",
+            (30,),
+            "CoffeeMachineSettingEcoModeTimeout",
+            {"timeoutMinutes": 30},
+        ),
+        (
+            "set_eco_mode_offset",
+            (-10.04,),
+            "CoffeeMachineSettingEcoModeOffset",
+            {"offset": -10.0},
+        ),
+        (
+            "set_weekly_schedule_enabled",
+            (True,),
+            "CoffeeMachineSettingWeeklyEnabled",
+            {"enabled": True},
+        ),
+        (
+            "set_weekly_schedule_day",
+            (WeekDay.TUESDAY, True, 420, 1080),
+            "CoffeeMachineSettingWeeklyDay",
+            {
+                "day": "Tuesday",
+                "enabled": True,
+                "onTimeMinutes": 420,
+                "offTimeMinutes": 1080,
+            },
+        ),
+        (
+            "set_module_mode",
+            (MachineMode.ECO_MODE,),
+            "CoffeeMachineModuleChangeMode",
+            {"mode": "EcoMode"},
+        ),
+        (
+            "set_tap_mode",
+            (MachineMode.STANDBY, 2),
+            "CoffeeMachineTapChangeMode",
+            {"tapIndex": 2, "mode": "StandBy"},
+        ),
+        (
+            "set_module_target_temperature",
+            (92.56,),
+            "CoffeeMachineSettingModuleTargetTemperature",
+            {"targetTemperature": 92.6},
+        ),
+        (
+            "set_tap_target_temperature_offset",
+            (-1.54,),
+            "CoffeeMachineSettingTapTargetTemperature",
+            {"tapIndex": 1, "targetOffsetTemperature": -1.5},
+        ),
+        (
+            "change_pour_over_recipe",
+            (
+                PourOverRecipe(
+                    recipe_id=3,
+                    index=1,
+                    in_recipe_dose=15.04,
+                    blooming=PourOverRecipeStep(out=40.04, pause=30),
+                    steps=[
+                        PourOverRecipeStep(out=100.0, pause=10),
+                        PourOverRecipeStep(out=110.06, pause=0),
+                    ],
+                ),
+            ),
+            "CoffeeMachineChangeRecipe",
+            {
+                "id": 3,
+                "index": 1,
+                "in": 15.0,
+                "blooming": {"out": 40.0, "pause": 30},
+                "steps": [{"out": 100.0, "pause": 10}, {"out": 110.1, "pause": 0}],
+            },
         ),
     ],
 )

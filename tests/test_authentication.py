@@ -59,9 +59,7 @@ def test_generate_extra_request_headers() -> None:
     headers = generate_extra_request_headers(key)
 
     assert headers["X-App-Installation-Id"] == "mock-installation-id"
-    proof_input = (
-        f"mock-installation-id.{headers['X-Nonce']}.{headers['X-Timestamp']}"
-    )
+    proof_input = f"mock-installation-id.{headers['X-Nonce']}.{headers['X-Timestamp']}"
     proof = generate_request_proof(proof_input, key.secret)
     # raises InvalidSignature if the signature does not match
     key.private_key.public_key().verify(

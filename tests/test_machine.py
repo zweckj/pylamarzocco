@@ -21,8 +21,10 @@ from pylamarzocco.const import (
     MachineState,
     ModelCode,
     PreExtractionMode,
+    ScaleType,
     SmartStandByType,
     SteamTargetLevel,
+    WeekDay,
     WidgetType,
 )
 from pylamarzocco.devices._machine import BLE_BREWING_STATE_TIMEOUT
@@ -41,6 +43,8 @@ from pylamarzocco.models import (
     GroupDosesSettings,
     HotWaterDose,
     MachineGroupStatus,
+    PourOverRecipe,
+    PourOverRecipeStep,
     PrebrewSettingTimes,
     SecondsInOut,
     ThingDashboardConfig,
@@ -55,6 +59,14 @@ DASHBOARD_FIXTURES = {
     ModelCode.STRADA_X: "dashboard_stradax.json",
     ModelCode.LINEA_MINI: "dashboard_mini.json",
 }
+
+POUR_OVER_RECIPE = PourOverRecipe(
+    recipe_id=1,
+    index=1,
+    in_recipe_dose=15.0,
+    blooming=PourOverRecipeStep(out=40.0, pause=30),
+    steps=[PourOverRecipeStep(out=200.0, pause=0)],
+)
 
 WAKEUP_SCHEDULE = WakeUpScheduleSettings(
     on_time_minutes=420, off_time_minutes=480, steam_boiler=True
@@ -221,9 +233,9 @@ async def test_bluetooth_command_with_cloud_fallback(
     if model_code is not None:
         mock_machine.dashboard.model_code = model_code
     if ble_fails:
-        getattr(mock_bluetooth_client, ble_method).side_effect = (
-            BluetoothConnectionFailed("Bluetooth error")
-        )
+        getattr(
+            mock_bluetooth_client, ble_method
+        ).side_effect = BluetoothConnectionFailed("Bluetooth error")
     getattr(mock_cloud_client, cloud_method).return_value = True
 
     assert await getattr(mock_machine, method)(*args)
@@ -353,9 +365,53 @@ CLOUD_COMMANDS = [
             ("set_mirror_group1", (True, 3), ModelCode.STRADA_X, (True, 3)),
             ("set_cup_warmer", (True,), None, (True,)),
             ("set_plumb_in", (True,), None, (True,)),
-            ("set_auto_on_off", ("schedule",), None, ("schedule",)),
+            ("set_auto_on_off", (420, 1080), None, (420, 1080, None)),
+            (
+                "set_auto_on_off",
+                (420, 1080, WeekDay.SUNDAY),
+                None,
+                (420, 1080, WeekDay.SUNDAY),
+            ),
             ("set_wakeup_schedule", (WAKEUP_SCHEDULE,), None, (WAKEUP_SCHEDULE,)),
             ("delete_wakeup_schedule", ("schedule-id",), None, ("schedule-id",)),
+            ("set_pre_infusion_enabled", (True,), None, (True,)),
+            ("set_time_zone", ("Europe/Rome",), None, ("Europe/Rome",)),
+            (
+                "set_auto_steam_dose",
+                (12.0, DoseIndex.DOSE_A),
+                None,
+                (12.0, DoseIndex.DOSE_A, 1),
+            ),
+            ("set_baby_milk", (True,), None, (True, 1)),
+            ("set_baby_milk_target_temperature", (37.0,), None, (37.0, 1)),
+            ("calibrate_scale", (), None, (ScaleType.ACAIA_LUNAR, None)),
+            (
+                "calibrate_scale",
+                (ScaleType.ACAIA_LUNAR, True),
+                None,
+                (ScaleType.ACAIA_LUNAR, True),
+            ),
+            ("set_auto_on_off_enabled", (True,), None, (True,)),
+            ("set_early_start", (True,), None, (True,)),
+            ("set_eco_mode_timeout", (30,), None, (30,)),
+            ("set_eco_mode_offset", (-10.0,), None, (-10.0,)),
+            ("set_weekly_schedule_enabled", (True,), None, (True,)),
+            (
+                "set_weekly_schedule_day",
+                (WeekDay.MONDAY, True, 420, 1080),
+                None,
+                (WeekDay.MONDAY, True, 420, 1080),
+            ),
+            (
+                "set_module_mode",
+                (MachineMode.BREWING_MODE,),
+                None,
+                (MachineMode.BREWING_MODE,),
+            ),
+            ("set_tap_mode", (MachineMode.STANDBY,), None, (MachineMode.STANDBY, 1)),
+            ("set_module_target_temperature", (92.0,), None, (92.0,)),
+            ("set_tap_target_temperature_offset", (-1.5, 2), None, (-1.5, 2)),
+            ("change_pour_over_recipe", (POUR_OVER_RECIPE,), None, (POUR_OVER_RECIPE,)),
         )
     ),
     ("start_backflush", (), None, "start_backflush_cleaning", (), None, None, None),
@@ -365,6 +421,36 @@ CLOUD_COMMANDS = [
         None,
         "change_pre_extraction_mode",
         (PreExtractionMode.PREBREWING,),
+        None,
+        None,
+        None,
+    ),
+    (
+        "set_pre_infusion_mode",
+        (PreExtractionMode.PREINFUSION,),
+        None,
+        "change_pre_infusion_mode",
+        (PreExtractionMode.PREINFUSION, 1),
+        None,
+        None,
+        None,
+    ),
+    (
+        "set_pre_infusion_times",
+        (2.0, 3.5),
+        None,
+        "change_pre_infusion_times",
+        (2.0, 3.5, DoseIndex.BY_GROUP, 1),
+        None,
+        None,
+        None,
+    ),
+    (
+        "set_pre_infusion_times",
+        (2.0, 3.5, DoseIndex.DOSE_A, 2),
+        None,
+        "change_pre_infusion_times",
+        (2.0, 3.5, DoseIndex.DOSE_A, 2),
         None,
         None,
         None,
@@ -536,8 +622,8 @@ async def test_set_brew_by_weight_dose_unavailable(
     mock_machine.dashboard.model_code = ModelCode.LINEA_MINI_R
     assert not await mock_machine.set_brew_by_weight_dose(DoseMode.DOSE_1, 36.5)
 
-    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = (
-        _fixture_widget(ModelCode.LINEA_MINI, WidgetType.CM_BREW_BY_WEIGHT_DOSES)
+    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = _fixture_widget(
+        ModelCode.LINEA_MINI, WidgetType.CM_BREW_BY_WEIGHT_DOSES
     )
     assert not await mock_machine.set_brew_by_weight_dose(DoseMode.CONTINUOUS, 36.5)
     mock_cloud_client.set_brew_by_weight_dose.assert_not_called()
@@ -697,9 +783,7 @@ async def test_set_group_dose_active_passes(
     )
     _set_group_doses(mock_machine, group_doses)
 
-    assert await mock_machine.set_group_dose(
-        DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0
-    )
+    assert await mock_machine.set_group_dose(DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0)
     mock_cloud_client.set_group_dose.assert_called_once_with(
         serial, DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0, 1
     )
@@ -1130,26 +1214,20 @@ async def test_set_hot_water_dose_updates_dashboard(
     ]
 
 
-@pytest.mark.parametrize(
-    ("enabled", "minutes", "expected"),
-    [(True, 90, "01:30"), (False, 90, "Off")],
-)
-async def test_set_smart_standby_auto_standby(
+async def test_set_smart_standby_with_auto_standby_support(
     mock_machine: LaMarzoccoMachine,
     mock_bluetooth_client: MagicMock,
-    mock_cloud_client: MagicMock,
-    serial: str,
-    enabled: bool,
-    minutes: int,
-    expected: str,
 ) -> None:
-    """Test smart standby uses auto standby when the schedule supports it."""
+    """Test smart standby is used even when the schedule reports auto standby.
+
+    The app sets the auto standby of a machine through the smart standby
+    command, there is no separate auto standby command for machines.
+    """
     mock_machine.schedule.auto_stand_by_supported = True
-    assert await mock_machine.set_smart_standby(
-        enabled, minutes, SmartStandByType.POWER_ON
+    assert await mock_machine.set_smart_standby(True, 90, SmartStandByType.POWER_ON)
+    mock_bluetooth_client.set_smart_standby.assert_called_once_with(
+        enabled=True, mode=SmartStandByType.POWER_ON, minutes=90
     )
-    mock_cloud_client.set_auto_standby.assert_called_once_with(serial, expected)
-    mock_bluetooth_client.set_smart_standby.assert_not_called()
 
 
 async def test_bluetooth_failure_without_cloud(

@@ -125,6 +125,7 @@ class MachineGroupStatus(_ModeStatus):
 
     widget_type = WidgetType.CM_MACHINE_GROUP_STATUS
 
+
 @dataclass(kw_only=True)
 class NextStatus(DataClassJSONMixin):
     """Next status configuration."""
@@ -400,6 +401,40 @@ class PrebrewSettingTimes(DataClassJSONMixin):
     def __pre_serialize__(self) -> PrebrewSettingTimes:
         self.times.seconds_in = round(self.times.seconds_in, 1)
         self.times.seconds_out = round(self.times.seconds_out, 1)
+        return self
+
+    class Config(BaseConfig):
+        """Config for Mashumaro serialization."""
+
+        serialize_by_alias = True
+
+
+@dataclass(kw_only=True)
+class PourOverRecipeStep(DataClassJSONMixin):
+    """A pour-over recipe step (also used for the blooming phase)."""
+
+    out: float
+    pause: int
+
+    @override
+    def __pre_serialize__(self) -> PourOverRecipeStep:
+        self.out = round(self.out, 1)
+        return self
+
+
+@dataclass(kw_only=True)
+class PourOverRecipe(DataClassJSONMixin):
+    """Recipe of a Modbar pour-over tap."""
+
+    recipe_id: int = field(metadata=field_options(alias="id"))
+    index: int
+    in_recipe_dose: float = field(metadata=field_options(alias="in"))
+    blooming: PourOverRecipeStep
+    steps: list[PourOverRecipeStep] = field(default_factory=list)
+
+    @override
+    def __pre_serialize__(self) -> PourOverRecipe:
+        self.in_recipe_dose = round(self.in_recipe_dose, 1)
         return self
 
     class Config(BaseConfig):
@@ -720,7 +755,9 @@ class GrinderSpeed(BaseWidgetOutput):
     widget_type = WidgetType.G_SPEED
     doses: dict[str, GrinderSpeedLevel]
     groups_number: int = field(metadata=field_options(alias="groupsNumber"))
-    speed_auto_supported: bool = field(metadata=field_options(alias="speedAutoSupported"))
+    speed_auto_supported: bool = field(
+        metadata=field_options(alias="speedAutoSupported")
+    )
     speed_auto: GrinderSpeedAuto | None = field(
         metadata=field_options(alias="speedAuto"), default=None
     )
