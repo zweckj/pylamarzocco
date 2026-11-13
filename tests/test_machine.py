@@ -221,9 +221,9 @@ async def test_bluetooth_command_with_cloud_fallback(
     if model_code is not None:
         mock_machine.dashboard.model_code = model_code
     if ble_fails:
-        getattr(mock_bluetooth_client, ble_method).side_effect = (
-            BluetoothConnectionFailed("Bluetooth error")
-        )
+        getattr(
+            mock_bluetooth_client, ble_method
+        ).side_effect = BluetoothConnectionFailed("Bluetooth error")
     getattr(mock_cloud_client, cloud_method).return_value = True
 
     assert await getattr(mock_machine, method)(*args)
@@ -536,8 +536,8 @@ async def test_set_brew_by_weight_dose_unavailable(
     mock_machine.dashboard.model_code = ModelCode.LINEA_MINI_R
     assert not await mock_machine.set_brew_by_weight_dose(DoseMode.DOSE_1, 36.5)
 
-    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = (
-        _fixture_widget(ModelCode.LINEA_MINI, WidgetType.CM_BREW_BY_WEIGHT_DOSES)
+    mock_machine.dashboard.config[WidgetType.CM_BREW_BY_WEIGHT_DOSES] = _fixture_widget(
+        ModelCode.LINEA_MINI, WidgetType.CM_BREW_BY_WEIGHT_DOSES
     )
     assert not await mock_machine.set_brew_by_weight_dose(DoseMode.CONTINUOUS, 36.5)
     mock_cloud_client.set_brew_by_weight_dose.assert_not_called()
@@ -697,9 +697,7 @@ async def test_set_group_dose_active_passes(
     )
     _set_group_doses(mock_machine, group_doses)
 
-    assert await mock_machine.set_group_dose(
-        DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0
-    )
+    assert await mock_machine.set_group_dose(DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0)
     mock_cloud_client.set_group_dose.assert_called_once_with(
         serial, DoseMode.MASS_TYPE, DoseIndex.DOSE_A, 18.0, 1
     )

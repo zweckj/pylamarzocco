@@ -31,9 +31,7 @@ from pylamarzocco.models import (
 )
 
 
-def _capabilities(
-    family: ModelName, **overrides: Any
-) -> BluetoothMachineCapabilities:
+def _capabilities(family: ModelName, **overrides: Any) -> BluetoothMachineCapabilities:
     """Return machine capabilities of a single group machine."""
     return BluetoothMachineCapabilities(
         **{
@@ -62,7 +60,9 @@ def mock_lm_machine_with_dashboard(
     )
 
     # Mock the connection_date to a fixed value for snapshot tests
-    machine.dashboard.connection_date = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    machine.dashboard.connection_date = datetime(
+        2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc
+    )
 
     # Set up dashboard config with widgets
     machine.dashboard.config = {
@@ -479,11 +479,10 @@ async def test_set_steam_level_updates_dashboard(
     assert result is True
     steam_level = cast(
         SteamBoilerLevel,
-        mock_machine_with_dashboard.dashboard.config[
-            WidgetType.CM_STEAM_BOILER_LEVEL
-        ],
+        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_LEVEL],
     )
     assert steam_level.target_level == SteamTargetLevel.LEVEL_3
+
 
 async def test_set_steam_temp_updates_dashboard(
     mock_machine_with_dashboard: LaMarzoccoMachine,
@@ -498,10 +497,13 @@ async def test_set_steam_temp_updates_dashboard(
     assert result is True
     steam_boiler = cast(
         SteamBoilerTemperature,
-        mock_machine_with_dashboard.dashboard.config[WidgetType.CM_STEAM_BOILER_TEMPERATURE],
+        mock_machine_with_dashboard.dashboard.config[
+            WidgetType.CM_STEAM_BOILER_TEMPERATURE
+        ],
     )
     assert steam_boiler.target_temperature == 122.5
     assert steam_boiler.to_dict() == snapshot
+
 
 async def test_failed_command_does_not_update_dashboard(
     mock_machine_with_dashboard: LaMarzoccoMachine,
@@ -572,7 +574,12 @@ async def test_bluetooth_exception_does_not_update_dashboard(
             False,
             True,
             True,
-            (MachineState.ECO_MODE, BoilerStatus.ECO_MODE, BoilerStatus.ECO_MODE, False),
+            (
+                MachineState.ECO_MODE,
+                BoilerStatus.ECO_MODE,
+                BoilerStatus.ECO_MODE,
+                False,
+            ),
         ),
         (
             MachineMode.STANDBY,

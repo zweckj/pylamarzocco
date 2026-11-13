@@ -61,7 +61,7 @@ class ThingStatistics(Thing):
         d["allWidgetCodes"] = filter_valid_widgets(
             d.get("allWidgetCodes", []), "allWidgetCodes"
         )
-        
+
         return d
 
     @classmethod

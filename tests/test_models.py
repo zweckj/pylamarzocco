@@ -212,24 +212,24 @@ def test_removed_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) ->
     config_data = {
         "connected": True,
         "removedWidgets": [
-            {"code": "NewWidget2026", "index": 1},         # Unknown - will be filtered
-            {"code": "UnknownFutureWidget", "index": 2},   # Unknown - will be filtered
-            {"code": "CMMachineStatus", "index": 3},       # Known - will be kept
+            {"code": "NewWidget2026", "index": 1},  # Unknown - will be filtered
+            {"code": "UnknownFutureWidget", "index": 2},  # Unknown - will be filtered
+            {"code": "CMMachineStatus", "index": 3},  # Known - will be kept
         ],
         "connectionDate": 1742439620235,
         "widgets": [],
         "uuid": "test-uuid",
         "commands": [],
     }
-    
+
     with caplog.at_level(logging.WARNING):
         config = ThingDashboardWebsocketConfig.from_dict(config_data)
-    
+
     # Only the known widget should remain
     assert len(config.removed_widgets) == 1
     assert config.removed_widgets[0].code == WidgetType.CM_MACHINE_STATUS
     assert isinstance(config.removed_widgets[0].code, WidgetType)
-    
+
     # Verify warnings were logged for unknown codes
     assert "NewWidget2026" in caplog.text
     assert "UnknownFutureWidget" in caplog.text
@@ -263,14 +263,14 @@ def test_widgets_with_unknown_codes(caplog: pytest.LogCaptureFixture) -> None:
         "uuid": "test-uuid",
         "commands": [],
     }
-    
+
     with caplog.at_level(logging.WARNING):
         config = ThingDashboardWebsocketConfig.from_dict(config_data)
-    
+
     # Only the known widget should remain
     assert len(config.widgets) == 1
     assert config.widgets[0].code == WidgetType.CM_MACHINE_STATUS
-    
+
     # Verify warning was logged for unknown code and includes JSON
     assert "UnknownWidget" in caplog.text
     # Verify that full JSON is logged for dict objects
@@ -282,29 +282,29 @@ def test_widget_code_strings_filtering(caplog: pytest.LogCaptureFixture) -> None
     stats_data = {
         "serialNumber": "test-serial",
         "selectedWidgetCodes": [
-            "CMMachineStatus",     # Known - will be kept
-            "UnknownCode1",        # Unknown - will be filtered
-            "CMCoffeeBoiler",      # Known - will be kept
-            "UnknownCode2",        # Unknown - will be filtered
+            "CMMachineStatus",  # Known - will be kept
+            "UnknownCode1",  # Unknown - will be filtered
+            "CMCoffeeBoiler",  # Known - will be kept
+            "UnknownCode2",  # Unknown - will be filtered
         ],
         "allWidgetCodes": [
             "CMSteamBoilerLevel",  # Known - will be kept
-            "FutureWidget",        # Unknown - will be filtered
+            "FutureWidget",  # Unknown - will be filtered
         ],
         "selectedWidgets": [],
     }
-    
+
     with caplog.at_level(logging.WARNING):
         stats = ThingStatistics.from_dict(stats_data)
-    
+
     # Only known codes should remain
     assert len(stats.selected_widget_codes) == 2
     assert WidgetType.CM_MACHINE_STATUS in stats.selected_widget_codes
     assert WidgetType.CM_COFFEE_BOILER in stats.selected_widget_codes
-    
+
     assert len(stats.all_widget_codes) == 1
     assert WidgetType.CM_STEAM_BOILER_LEVEL in stats.all_widget_codes
-    
+
     # Verify warnings were logged for unknown codes (strings, not dicts)
     assert "UnknownCode1" in caplog.text
     assert "UnknownCode2" in caplog.text
@@ -327,16 +327,16 @@ def test_mixed_valid_invalid_widgets(caplog: pytest.LogCaptureFixture) -> None:
         "uuid": "test-uuid",
         "commands": [],
     }
-    
+
     with caplog.at_level(logging.WARNING):
         config = ThingDashboardWebsocketConfig.from_dict(config_data)
-    
+
     # Should have 3 valid widgets
     assert len(config.removed_widgets) == 3
     assert config.removed_widgets[0].code == WidgetType.CM_MACHINE_STATUS
     assert config.removed_widgets[1].code == WidgetType.CM_COFFEE_BOILER
     assert config.removed_widgets[2].code == WidgetType.CM_STEAM_BOILER_LEVEL
-    
+
     # Verify both invalid widgets were logged with full JSON
     assert "InvalidWidget1" in caplog.text
     assert "InvalidWidget2" in caplog.text
@@ -354,9 +354,9 @@ def test_empty_widget_lists() -> None:
         "uuid": "test-uuid",
         "commands": [],
     }
-    
+
     config = ThingDashboardWebsocketConfig.from_dict(config_data)
-    
+
     assert len(config.removed_widgets) == 0
     assert len(config.widgets) == 0
 
@@ -375,13 +375,13 @@ def test_all_widgets_invalid(caplog: pytest.LogCaptureFixture) -> None:
         "uuid": "test-uuid",
         "commands": [],
     }
-    
+
     with caplog.at_level(logging.WARNING):
         config = ThingDashboardWebsocketConfig.from_dict(config_data)
-    
+
     # All widgets should be filtered out
     assert len(config.removed_widgets) == 0
-    
+
     # All three should have been logged
     assert "InvalidWidget1" in caplog.text
     assert "InvalidWidget2" in caplog.text
@@ -399,7 +399,9 @@ def test_shot_counter_supported(value: bool | None, expected: bool) -> None:
     )
     assert dashboard.shot_counter_supported is expected
     assert (
-        ThingDashboardConfig.from_dict({"serialNumber": "MR123456"}).shot_counter_supported
+        ThingDashboardConfig.from_dict(
+            {"serialNumber": "MR123456"}
+        ).shot_counter_supported
         is False
     )
 

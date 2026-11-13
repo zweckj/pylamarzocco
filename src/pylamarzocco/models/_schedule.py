@@ -76,11 +76,16 @@ class SmartWakeUpSleepSettings(DataClassJSONMixin):
 
     @classmethod
     @override
-    def __post_deserialize__(cls, obj: SmartWakeUpSleepSettings) -> SmartWakeUpSleepSettings:
+    def __post_deserialize__(
+        cls, obj: SmartWakeUpSleepSettings
+    ) -> SmartWakeUpSleepSettings:
         # move the firmware to a dict with type as key
-        obj.schedules_dict = {schedule.identifier: schedule for schedule in obj.schedules if schedule.identifier}
+        obj.schedules_dict = {
+            schedule.identifier: schedule
+            for schedule in obj.schedules
+            if schedule.identifier
+        }
         return obj
-
 
 
 @dataclass(kw_only=True)

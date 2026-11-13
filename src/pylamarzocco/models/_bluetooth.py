@@ -48,6 +48,7 @@ class BluetoothBoilerDetails(DataClassJSONMixin):
     target: int
     current: int
 
+
 @dataclass(kw_only=True)
 class BluetoothSmartStandbyDetails(DataClassJSONMixin):
     """Details for smart standby."""
@@ -55,6 +56,7 @@ class BluetoothSmartStandbyDetails(DataClassJSONMixin):
     mode: SmartStandByType
     minutes: int
     enabled: bool
+
 
 @dataclass(kw_only=True)
 class BluetoothCommandStatus(DataClassJSONMixin):
@@ -75,7 +77,9 @@ class _PartialNotification(DataClassJSONMixin):
     """Part of a shot counter notification, all fields are optional."""
 
     def _set_fields(self) -> dict[str, Any]:
-        return {f.name: v for f in fields(self) if (v := getattr(self, f.name)) is not None}
+        return {
+            f.name: v for f in fields(self) if (v := getattr(self, f.name)) is not None
+        }
 
     @property
     def is_empty(self) -> bool:

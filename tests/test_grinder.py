@@ -156,9 +156,7 @@ async def test_set_more_dose(
     )
 
     assert await mock_grinder.set_more_dose(2.5)
-    mock_cloud_client.set_grinder_more_dose.assert_called_once_with(
-        grinder_serial, 2.5
-    )
+    mock_cloud_client.set_grinder_more_dose.assert_called_once_with(grinder_serial, 2.5)
 
     more_dose = mock_grinder.dashboard.config[WidgetType.G_MORE_DOSE]
     assert isinstance(more_dose, GrinderMoreDose)

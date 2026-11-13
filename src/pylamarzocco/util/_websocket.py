@@ -2,6 +2,7 @@
 
 from pylamarzocco.const import StompMessageType
 
+
 def encode_stomp_ws_message(
     msg_type: StompMessageType, headers: dict[str, str], body: str | None = None
 ) -> str:
@@ -32,5 +33,3 @@ def decode_stomp_ws_message(
     if data.endswith("\x00"):
         data = data[:-1]
     return msg_type, headers, data
-
-
