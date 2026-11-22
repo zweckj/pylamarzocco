@@ -204,6 +204,8 @@ class ModelName(StrEnum):
             "GS3MP": "GS3 MP",
             "GS3AV": "GS3 AV",
             "LINEAMINI2023": "Linea Mini R",
+            # Bluetooth machineCapabilities family of the Linea Mini R
+            "LINEAR": "Linea Mini R",
             "LINEAMICRA": "Linea Micra",
             "LINEAMINI": "Linea Mini",
             # Bluetooth machineCapabilities family of the original Linea Mini
