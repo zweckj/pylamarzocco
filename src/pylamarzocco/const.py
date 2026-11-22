@@ -176,6 +176,7 @@ class ModelCode(StrEnum):
     STRADA_X = "STRADAX"
     PICO_GRINDER = "PICOGRINDER"
     SWAN_GRINDER = "SWANGRINDER"
+    JAY_GRINDER = "JAYGRINDER"
 
 
 # models that control the steam boiler by level instead of temperature
@@ -194,6 +195,7 @@ class ModelName(StrEnum):
     STRADA_X = "Strada X"
     PICO_GRINDER = "Pico"
     SWAN_GRINDER = "Swan"
+    JAY_GRINDER = "Jay"
 
     @classmethod
     def from_string(cls, name: str) -> ModelName:
@@ -214,6 +216,7 @@ class ModelName(StrEnum):
             "STRADAX": "Strada X",
             "PICOGRINDER": "Pico",
             "SWANGRINDER": "Swan",
+            "JAYGRINDER": "Jay",
         }
         if (key := "".join(name.upper().split())) not in mapping:
             raise ValueError(f"Invalid model name: {name}")

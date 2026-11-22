@@ -23,6 +23,7 @@ from aiohttp import (
     WSMsgType,
 )
 from aiohttp.client_exceptions import ClientError
+from mashumaro.exceptions import InvalidFieldValue, MissingField
 
 from pylamarzocco.const import (
     BASE_URL,
@@ -285,7 +286,18 @@ class LaMarzoccoCloudClient:
         """Get all things."""
         url = f"{CUSTOMER_APP_URL}/things"
         result = await self._rest_api_call(url=url, method=HTTPMethod.GET)
-        return [Thing.from_dict(device) for device in result]
+        things: list[Thing] = []
+        for device in result:
+            try:
+                things.append(Thing.from_dict(device))
+            except (InvalidFieldValue, MissingField) as err:
+                _LOGGER.warning(
+                    "Skipping unsupported device %s (model %s): %s",
+                    device.get("serialNumber"),
+                    device.get("modelCode"),
+                    err,
+                )
+        return things
 
     async def get_thing_dashboard(self, serial_number: str) -> ThingDashboardConfig:
         """Get the dashboard of a thing."""

@@ -22,6 +22,8 @@ from pylamarzocco.const import (
     DoseIndex,
     DoseMode,
     MachineMode,
+    ModelCode,
+    ModelName,
     GrinderDoseMode,
     GrinderGrindWithMode,
     GrinderMode,
@@ -318,6 +320,45 @@ async def test_list_things(
     result = await client.list_things()
     assert result[0].to_dict() == snapshot
 
+
+
+async def test_list_things_skips_unknown_models(
+    mock_aiointercept: aiointercept,
+    client: LaMarzoccoCloudClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test unknown devices are skipped instead of failing the whole list."""
+    machine = load_fixture("machine", "settings_micra.json")
+    jay = {
+        "serialNumber": "JA001234",
+        "type": "Grinder",
+        "name": "JAY",
+        "modelCode": "JAYGRINDER",
+        "modelName": "JAY GRINDER",
+        "connected": False,
+    }
+    unknown = {
+        "serialNumber": "XX001234",
+        "type": "Grinder",
+        "name": "Future",
+        "modelCode": "FUTUREGRINDER",
+        "modelName": "FUTURE GRINDER",
+    }
+    mock_aiointercept.get(
+        url=f"{CUSTOMER_APP_URL}/things",
+        status=200,
+        payload=[machine, jay, unknown],
+    )
+
+    result = await client.list_things()
+
+    assert [thing.serial_number for thing in result] == [
+        machine["serialNumber"],
+        "JA001234",
+    ]
+    assert result[1].model_code is ModelCode.JAY_GRINDER
+    assert result[1].model_name is ModelName.JAY_GRINDER
+    assert "Skipping unsupported device XX001234" in caplog.text
 
 async def test_debug_log_masks_bluetooth_token(
     mock_aiointercept: aiointercept, serial: str, caplog: pytest.LogCaptureFixture,
