@@ -409,6 +409,7 @@ def test_shot_counter_supported(value: bool | None, expected: bool) -> None:
     [
         ("LINEA", ModelName.LINEA_MINI),
         ("LINEAMINI2023", ModelName.LINEA_MINI_R),
+        ("LINEAR", ModelName.LINEA_MINI_R),
         ("MICRA", ModelName.LINEA_MICRA),
         ("GS3", ModelName.GS3_AV),
     ],
